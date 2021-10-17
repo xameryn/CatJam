@@ -1,0 +1,33 @@
+{
+  "name": "CatJamsUtilities",
+  "version": "1.0.0",
+  "main": "CatJamsUtilities.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "xameryn",
+  "license": "MIT",
+  "dependencies": {
+    "canvas": "^2.8.0",
+    "discord": "^0.8.2",
+    "discord-button-pages": "^1.1.9",
+    "discord-buttons": "^4.0.0",
+    "discord.io": "^2.5.3",
+    "discord.js": "^12.5.3",
+    "dotenv": "^8.6.0",
+    "fs": "0.0.1-security",
+    "http": "0.0.1-security",
+    "image-size": "^1.0.0",
+    "json-stringify": "^1.0.0",
+    "node-fetch": "^2.6.1",
+    "request": "^2.88.2",
+    "sharp": "^0.29.1",
+    "url": "^0.11.0",
+    "winston": "^3.3.3"
+  },
+  "keywords": [],
+  "description": "",
+  "devDependencies": {
+    "compress-images": "^1.9.9"
+  }
+}
