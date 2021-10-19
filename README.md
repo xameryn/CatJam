@@ -9,6 +9,6 @@ Run instructions:
 
 - Make sure Discord.js is using v12 and not v13 (v13 breaks nearly every part of the bot)!
 
-- If updating from branch Version-1.0, run:
+- If updating from branch Version-1.0 run:
   - npm update
   - npm install
