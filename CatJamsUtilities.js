@@ -7,6 +7,9 @@ const compress_images = require("compress-images")
 const Canvas = require('canvas')
 const SizeOf = require('image-size')
 
+//const comm = require("./commands.js")
+const func = require("./functions.js")
+
 const client = new Client({ intents: [Intents.FLAGS.GUILDS, Intents.FLAGS.GUILD_MESSAGES] });
 const DISCORDTOKEN = 'ODk2OTM0NjI1Mzg4MTM4NTI3.YWOVdg.gffqm3fD04KSvRGvq3puIwHmd54';
 const GuildID = '730691398768263198';
@@ -23,230 +26,6 @@ client.on("ready", () =>{
     client.user.setActivity('Iteration v7')
  });
 
- function download(fileURL, fileDir){
-   console.log('download');
-   request.get(fileURL).pipe(fs.createWriteStream(fileDir))
- }
-
- async function canvasInitialize(canvasWidth, canvasHeight, backgroundImage, modifier1, modifier2){
-   console.log('canvasInitialize');
-   var canvas = Canvas.createCanvas(canvasWidth, canvasHeight);
-   globalData.canvas = canvas;
-   var context = canvas.getContext('2d');
-   globalData.context = context;
-   var background = await Canvas.loadImage(backgroundImage);
-   if (modifier1 == 'png' || modifier2 == 'png') {
-     return;
-   }
-   else {
-     context.drawImage(background, 0, 0, canvas.width, canvas.height);
-     return;
-   }
- }
-
- async function canvasScaleDown(fileName){
-   console.log('canvasScale');
-   let canvas = globalData.canvas
-   let context = globalData.context
-   let memeSize = await SizeOf('./images/templates/buffer/' + fileName)
-
-   //sharp('./images/templates/buffer/' + fileName).resize({ height:100, width:100}).toFile('./images/templates/buffer/' + fileName)
-
-   let memeRatio = memeSize.width / memeSize.height;
-   if (memeRatio >= (canvas.width / canvas.height)) {
-     let scalingRatio = memeSize.width / canvas.width
-     if (scalingRatio < 1) {
-       //scalingRatio = Math.pow(scalingRatio, -1)
-       scalingRatio
-     }
-     var scaledWidth = canvas.width
-     var scaledHeight = memeSize.height * scalingRatio
-     var xAxis = 0
-     var yAxis = (Math.abs(canvas.height - scaledHeight)) / 2
-   }
-
-   else if (memeRatio < (canvas.width / canvas.height)) {
-     let scalingRatio = memeSize.height / canvas.height
-     if (scalingRatio < 1) {
-      //scalingRatio = Math.pow(scalingRatio, -1)
-     }
-     var scaledWidth = memeSize.width * scalingRatio
-     var scaledHeight = canvas.height
-     var xAxis = (Math.abs(canvas.width - scaledWidth)) / 2
-     var yAxis = 0
-   }
-   globalData.scaledWidth = scaledWidth;
-   globalData.scaledHeight = scaledHeight;
-   globalData.xAxis = xAxis;
-   globalData.yAxis = yAxis;
-   return;
-
-   /*
-   var memeRatio = memeSize.width / memeSize.height;
-   if (memeRatio>=(canvas.width/canvas.height)) {
-     var scalingRatio = memeSize.width / canvas.width
-     if (scalingRatio < 1) {
-       scalingRatio = Math.pow(scalingRatio, -1)
-     }
-     var scaledWidth = canvas.width
-     var scaledHeight = memeSize.height * scalingRatio
-     var xAxis = 0
-     var yAxis = (Math.abs(canvas.height - scaledHeight)) / 2
-   }
-
-   else if (memeRatio<(canvas.width/canvas.height)) {
-     var scalingRatio = memeSize.height / canvas.height
-     if (scalingRatio < 1) {
-       scalingRatio = Math.pow(scalingRatio, -1)
-     }
-     var scaledWidth = memeSize.width * scalingRatio
-     var scaledHeight = canvas.height
-     var xAxis = (Math.abs(canvas.width - scaledWidth)) / 2
-     var yAxis = 0
-   }
-   globalData.scaledWidth = scaledWidth;
-   globalData.scaledHeight = scaledHeight;
-   globalData.xAxis = xAxis;
-   globalData.yAxis = yAxis;
-   return;
-   */
- }
-
- async function canvasScaleUp(fileName, internalWidth, internalHeight, centerX, centerY){
-   console.log('canvasScale');
-   let canvas = globalData.canvas
-   let context = globalData.context;
-   var memeSize = await SizeOf('./images/templates/buffer/' + fileName)
-
-   if ((memeSize.width / memeSize.height) >= (internalWidth / internalHeight)) {
-     var scalingRatio = memeSize.height / internalHeight
-     if (scalingRatio < 1) {
-       scalingRatio = Math.pow(scalingRatio, -1)
-     }
-     var scaledWidth = memeSize.width * scalingRatio
-     var scaledHeight = internalHeight
-     var xAxis = centerX - (scaledWidth / 2)
-     var yAxis = centerY - (internalHeight / 2)
-   }
-
-   else if ((memeSize.width / memeSize.height) < (internalWidth / internalHeight)) {
-     var scalingRatio = memeSize.width / internalWidth
-     if (scalingRatio < 1) {
-       scalingRatio = Math.pow(scalingRatio, -1)
-     }
-     var scaledWidth = internalWidth
-     var scaledHeight = memeSize.height * scalingRatio
-     var xAxis = centerX - (internalWidth / 2)
-     var yAxis = centerY - (scaledHeight / 2)
-   }
-   globalData.scaledWidth = scaledWidth;
-   globalData.scaledHeight = scaledHeight;
-   globalData.xAxis = xAxis;
-   globalData.yAxis = yAxis;
-   return;
- }
-
- async function imageScraper(fileDir){
-   console.log('imageScraper');
-   let message = globalData.message;
-   if (message.attachments.size) {
-     var Attachment = message.attachments.last();
-     var attachedURL = Attachment ? Attachment.url : null;
-
-     let splitattachedURL = attachedURL.split('.');
-     let fileType = ['.', 'fileType'];
-     fileType[1] = splitattachedURL[3];
-     let fileTypeString = String(fileType);
-     fileTypeString = fileType.toString().replace(',', '').replace('.', '');;
-     globalData.fileTypeURL = fileTypeString;
-     fileDir = '.' + fileDir.replace(globalData.fileTypeAttached, globalData.fileTypeURL).replace('fileType', globalData.fileTypeURL).replace('.', '')
-
-     console.log('embed DIR: ' + fileDir)
-     download(attachedURL, fileDir);
-     const delay = ms => new Promise(resolve => setTimeout(resolve, ms))
-     delay(2500)
-   }
-   else {
-     for (let i = 2; i < 25; i++) {
-       var outputURLcringe = message.channel.messages.fetch({ limit: i }).then(async messages => {
-         globalData.messageAttachment = messages.last().attachments.size;
-         if (messages.last().attachments.size) {
-           let imageAttachment = JSON.stringify(messages.last().attachments)
-           let splitAttachment = String(imageAttachment).split('url":"', )
-           splitAttachment = String(splitAttachment[1]).split('","proxyURL')
-           var attachedURL = splitAttachment[0]
-           console.log('loop URL: ' + attachedURL)
-           let splitattachedURL = attachedURL.split('.');
-           let fileType = ['.', 'fileType'];
-           fileType[1] = splitattachedURL[3];
-           let fileTypeString = String(fileType);
-           fileTypeString = fileType.toString().replace(',', '').replace('.', '');;
-           globalData.fileTypeURL = fileTypeString;
-
-           return attachedURL;
-           }
-         })
-         var outputURL = await outputURLcringe.then();
-         if (globalData.messageAttachment) {
-           fileDir = '.' + fileDir.replace(globalData.fileTypeAttached, globalData.fileTypeURL).replace('fileType', globalData.fileTypeURL).replace('.', '')
-           download(outputURL, fileDir);
-           const delay = ms => new Promise(resolve => setTimeout(resolve, ms))
-           delay(1500)
-           break;
-         }
-       }
-    }
- }
-
- async function textAddition(font, stroke, fill, inputString, textBoxCenterX, textBoxCenterY, textBoxWidth, textBoxHeight, upperCaseBool) {
-   let canvas = globalData.canvas
-   let context = globalData.context
-   let textInput = inputString[1]
-   if (textInput == undefined) {
-     textInput = 'insert meme here'
-   }
-   if (upperCaseBool == true) {
-     textInput = textInput.toUpperCase();
-   }
-
-
-   console.log('Text Width')
-   console.log(getTextWidth(textInput, font))
-   console.log('Text Height')
-   console.log(getTextHeight(textInput, font))
-
-   let splitFont = font.split('px');
-
-   /*for () {
-     context.font.replace(/\d+px/, (parseInt(context.font.match(/\d+px/)) - 2) + "px")
-   }*/
-
-   let joinedFont = splitFont.join('px');
-
-   context.font = font;
-   context.fillStyle = fill;
-
-   let textX = textBoxCenterX - ((getTextWidth(textInput, font)) / 2)
-   //let textY = textBoxCenterY - ((getTextHeight(textInput, font)) / 2)
-   context.fillText(textInput, textX, textBoxCenterY + 25);
- }
-
- function getTextWidth(text, font = getCanvasFontSize()) {
-   let canvas = globalData.canvas
-   let context = globalData.context
-   context.font = font;
-   const metrics = context.measureText(text);
-   return metrics.width;
-}
-
-  function getTextHeight(text, font = getCanvasFontSize()) {
-    let canvas = globalData.canvas
-    let context = globalData.context
-    context.font = font;
-    const metrics = context.measureText(text);
-    return metrics.Height;
-}
-
 client.on('message', async message => {
 	if (!message.content.startsWith(prefix) || message.author.bot) return;
 	const args = message.content.slice(prefix.length).trim().split(' ');
@@ -254,9 +33,9 @@ client.on('message', async message => {
   let input = args[0];
   let input2 = args[1];
   let output = (Math.round((input)/5))*5;
+  globalData.message = message;
 
   if (command === 'catjam') {
-    //message.delete();
     if (input == 'help') {
 			return message.channel.send(`Send $catjam [bpm] for catjam to groove along with your song.`);
     }
@@ -437,25 +216,25 @@ client.on('message', async message => {
     return message.channel.send(attachment);
   }
   else if (command === 'point') {
-    await canvasInitialize(1920, 1518, './images/templates/blackBox.jpg', input, input2);
-    globalData.message = message;
+    await func.canvasInitialize(1920, 1518, './images/templates/blackBox.jpg', input, input2);
     let canvas = globalData.canvas
     let context = globalData.context;
     let pointImage = './images/templates/pointing/pointing.png';
     let fileDir = './images/templates/buffer/memePointingBuffer.png';
 
-    await imageScraper(fileDir)
+    fileURL = await func.fileScraper()
+    func.download(fileURL, fileDir)
 
     const delay = ms => new Promise(resolve => setTimeout(resolve, ms))
     await delay(2500)
 
-    await canvasScaleDown(fileName);
+    await func.canvasScaleDown(fileDir);
     let scaledWidth = globalData.scaledWidth;
     let scaledHeight = globalData.scaledHeight;
     let xAxis = globalData.xAxis;
     let yAxis = globalData.yAxis;
 
-    var meme = await Canvas.loadImage('./images/templates/buffer/' + fileName);
+    var meme = await Canvas.loadImage(fileDir);
     context.drawImage(meme, xAxis, yAxis, scaledWidth, scaledHeight);
 
     if (input == 'colonist') {
@@ -479,7 +258,6 @@ client.on('message', async message => {
   }
   else if (command === 'mario') {
     await canvasInitialize(1920, 1080, './images/templates/blackBox.jpg', input);
-    globalData.message = message
     let canvas = globalData.canvas
     let context = globalData.context
     let fileDir = './images/templates/buffer/memeMarioBuffer.png'
@@ -543,9 +321,7 @@ client.on('message', async message => {
     return message.channel.send({files: ["./images/videos/goodNight.mp4"]});
   }
   else if (command === 'arc' || command === 'a') {
-    globalData.message = message;
-    globalData.fileTypeAttached = 'fileType'
-    globalData.fileTypeURL = 'fileType'
+    globalData.fileType = 'fileType'
     let nameBypass = false
     let dir = './images/archive';
     let fileDir = ['./images/archive/', 'fileName', '.', 'fileType'];
@@ -554,47 +330,58 @@ client.on('message', async message => {
     let fileList = fs.readdirSync('./images/archive/');
     let fileListJoin = await fileList.join().replaceAll(',', '.').split('.')
 
-    for (var i = 0; i < (fileListJoin.length); i = i + 2) {
+    for (var i = 0; i < (fileListJoin.length); i = i + 2) { //Find file type of input name
       if (fileListJoin[i] == input) {
         fileDir[3] = fileListJoin[i + 1];
-        globalData.fileTypeAttached = fileListJoin[i + 1].toString()//.replace('.', '');
+        globalData.fileType = fileListJoin[i + 1].toString()
       }
     }
 
-    fileDir = fileDir.join('');
-    fileDir = fileDir.toString();
+    fileDir = fileDir.join('').toString();
 
-    if (input === undefined) {
+    if (input === undefined) { //No file name in message
       return message.channel.send(`No File Name.`);
     }
-    if (input == 'list' || input == 'l') {
+    if (input == 'list' || input == 'l') { //Search for file list
       for (var i = 0; i < fileList.length; i++) {
-        fileList[i] = fileList[i].replace(/.png/g, '').replace(/.jpg/g, '').replace(/.mp3/g, '').replace(/.mp4/g, '').replace(/.gif/g, '').replace(/.wav/g, '').replace(/.fileType/g, '');
+        fileList[i] = fileList[i].split('.').shift()
       }
       fileList = fileList.join(', ');
-      return message.channel.send(`Providing List: ` + fileList);
+      return message.channel.send(`File List: ` + fileList);
     }
-    if (input == 'help' || input == 'h') {
+    if (input == 'help' || input == 'h') { //Search for help
       return message.channel.send(`Save Image: $arc [Name]` +  "\n" + `Post Image: $arc [Name]` +  "\n" + `See File List: $arc list` +  "\n" + `Delete File: $arc [Name] delete` +  "\n" + `Replace File: $arc [Name] replace`);
     }
-    if (input2 == 'replace' || input2 == 'r') {
+    if (input2 == 'replace' || input2 == 'r') { //Replace file
       nameBypass = true
       fs.unlinkSync(fileDir);
-      //message.channel.send(`Replacing File ` + input);
     }
-    if (input2 == 'delete' || input2 == 'd') {
-      await fs.unlinkSync(fileDir);
-      return message.channel.send(`Deleted File ` + input);
+    if (input2 == 'delete' || input2 == 'd') { //Delete file
+      if (fs.existsSync(fileDir)) {
+        await fs.unlinkSync(fileDir);
+        return message.channel.send(`Deleted File ` + input);
+      }
+      else {
+        return message.channel.send('File Name ' + '"' + input + '"' + ' does not exist.');
+      }
     }
-    if (fs.existsSync(fileDir)) {
+    if (fs.existsSync(fileDir)) { //Send file
       if (nameBypass == false) {
         var attachment = await new MessageAttachment(fileDir);
         return message.channel.send(attachment);
       }
     }
-    await imageScraper(fileDir)
-    return message.channel.send(`Image Archived as ` + input + '.');
+    var fileURL = await func.fileScraper(); //Archive most recent file
+    var fileType =  fileURL.split('.').pop()
+    fileDir = dir + '/' + input + '.' + fileType
+    func.download(fileURL, fileDir);
+    return message.channel.send(`File Archived as ` + input + '.');
+  }
+  else if (command === 'test' || command === 't') {
+    console.log('test function')
+    return;
   }
 });
 
+export { globalData };
 client.login(DISCORDTOKEN);
