@@ -80,8 +80,8 @@ async function canvasInitialize(canvasWidth, canvasHeight, backgroundImage, modi
   ____) | | |____   / ____ \  | |____  | |____           | |       _| |_     | |
  |_____/   \_____| /_/    \_\ |______| |______|          |_|      |_____|    |_|
 */
-async function canvasScaleDown(fileDir, boxWidth, boxHeight){
-  console.log('canvasScale');
+async function canvasScaleFit(fileDir, boxWidth, boxHeight){
+  console.log('canvasScaleFit');
   let canvas = globalData.canvas;
   let context = globalData.context;
   let memeSize = await SizeOf(fileDir)
@@ -120,8 +120,8 @@ async function canvasScaleDown(fileDir, boxWidth, boxHeight){
   ____) | | |____   / ____ \  | |____  | |____           | |       _| |_  | |____  | |____
  |_____/   \_____| /_/    \_\ |______| |______|          |_|      |_____| |______| |______|
 */
-async function canvasScaleUp(fileName, internalWidth, internalHeight, centerX, centerY){
-  console.log('canvasScale');
+async function canvasScaleFill(fileName, internalWidth, internalHeight, centerX, centerY){
+  console.log('canvasScaleFill');
   let canvas = globalData.canvas;
   let context = globalData.context;
   var memeSize = await SizeOf('./images/templates/buffer/' + fileName);
@@ -152,6 +152,58 @@ async function canvasScaleUp(fileName, internalWidth, internalHeight, centerX, c
   globalData.xAxis = xAxis;
   globalData.yAxis = yAxis;
   return;
+}
+/*
+  _____   __  __    _____             _____              _   _  __      __              _____
+ |_   _| |  \/  |  / ____|           / ____|     /\     | \ | | \ \    / /     /\      / ____|
+   | |   | \  / | | |  __   ______  | |         /  \    |  \| |  \ \  / /     /  \    | (___
+   | |   | |\/| | | | |_ | |______| | |        / /\ \   | . ` |   \ \/ /     / /\ \    \___ \
+  _| |_  | |  | | | |__| |          | |____   / ____ \  | |\  |    \  /     / ____ \   ____) |
+ |_____| |_|  |_|  \_____|           \_____| /_/    \_\ |_| \_|     \/     /_/    \_\ |_____/
+*/
+//-----------------------
+// SUMMARY:
+// calculates the canvas size for a canvas based on an image (equal to image if suitable, based on parameters it can be found to wide or too tall)
+//-----------------------
+// ARGUMENTS (that aren't self-explanatory):
+// widestRatio, tallestRatio - the maximum allowed (width / height) or (height / width) respectively
+// wideDims, tallDims - if the image is too wide (wideDims) or too tall (tallDims), these dimensions are used instead
+// scaleLength - what size the final image should be scaled to (height or width)
+// scaleAxis - 'height' or 'width' depending on what scaleLength represents
+// (above 2 arguments can be left undefined for no scaling)
+//-----------------------
+async function imageToCanvas(imageDims, widestRatio, tallestRatio, wideDims, tallDims, scaleLength, scaleAxis) {
+  console.log('imageToCanvas');
+  let imageWidth = imageDims[0];
+  let imageHeight = imageDims[1];
+  let wideWidth = wideDims[0];
+  let wideHeight = wideDims[1];
+  let tallWidth = tallDims[0];
+  let tallHeight = tallDims[1];
+
+  let width = imageWidth;
+  let height = imageHeight;
+  let imgEval = '';
+  // if too wide, height scaled to the "wide" dimensions (width is fit to edges)
+  if (imageWidth / imageHeight > widestRatio) {
+    imgEval = 'wide';
+    height = (imageWidth / wideWidth) * wideHeight;
+  } // if too tall, width scaled to the "tall" dimensions (height is fit to edges)
+  else if (imageHeight / imageWidth > tallestRatio) {
+    imgEval = 'tall';
+    width = (imageHeight / tallHeight) * tallWidth;
+  }
+
+  let scaleFactor = 1;
+  if (scaleAxis == 'height') {
+    scaleFactor = scaleLength / height;
+  }
+  else if (scaleAxis == 'width') {
+    scaleFactor = scaleLength / width;
+  }
+  globalData.imgCanvasX = width * scaleFactor;
+  globalData.imgCanvasY = height * scaleFactor;
+  globalData.imgCanvasEval = imgEval;
 }
 /*
   _______   ______  __   __  _______            ______   _    _   _   _    _____    _____
@@ -223,11 +275,12 @@ function getTextWidth(text, font = getCanvasFontSize()) {
 //-----------------------
 // ARGUMENTS (that aren't self-explanatory):
 // style - bold, italic, etc., must be in form 'bold ' with the space since I am lazy
+// byLine - if true, treats maxHeight as number of lines instead of pixels
 // spacing - amount of extra space between lines (as a fraction of the line height)
 // maxHeight - set to 0 for no max height
 // yAlign - 'top' or 'bottom' to have text positioned down from or up from baseY respectively (any other value or no value for alignment centered to baseY)
 //-----------------------
-function textHandler(text, font, style, maxSize, minSize, maxWidth, maxHeight, lines, spacing, centerX, baseY, yAlign) {
+function textHandler(text, font, style, maxSize, minSize, maxWidth, maxHeight, byLine, spacing, centerX, baseY, yAlign) {
   console.log('textHandler');
   let context = globalData.context;
   //we need to be able to change the max width
@@ -251,7 +304,7 @@ function textHandler(text, font, style, maxSize, minSize, maxWidth, maxHeight, l
     while (((totalWidth - (best-1)*spaceWidth) / best) >= maxWidthDyn) {
       best += 1;
     }
-    if (lines == false) {
+    if (!byLine) {
       var maxLines = Math.floor(maxHeight / (height + (height * spacing)));
     } else {
       var maxLines = maxHeight;
@@ -415,6 +468,7 @@ function textHandler(text, font, style, maxSize, minSize, maxWidth, maxHeight, l
   globalData.textX = xPos;
   globalData.textY = yPos;
   globalData.textSize = size;
+  globalData.textHeight = (height + space) * lineNum;
 }
 
-module.exports = { fileScraper, download, canvasInitialize, canvasScaleDown, canvasScaleUp, textAddition, getTextWidth, getTextHeight, textHandler };
+module.exports = { fileScraper, download, canvasInitialize, canvasScaleFit, canvasScaleFill, imageToCanvas, textAddition, getTextWidth, getTextHeight, textHandler };
