@@ -1,5 +1,5 @@
 # CatJam
-A very scuffed bot made by a very scuffed man.
+A very scuffed bot made by some very scuffed men.
 
 Run instructions:
 
