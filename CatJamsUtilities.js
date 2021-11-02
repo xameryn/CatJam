@@ -12,7 +12,7 @@ const func = require("./functions.js");
 
 const client = new Client({ intents: [Intents.FLAGS.GUILDS, Intents.FLAGS.GUILD_MESSAGES] });
 const DISCORDTOKEN = '';
-//const GuildID = '';
+//const GuildID = '629574376278327316';
 const prefix = '`';
 
 const catJamArray = ["https://i.imgur.com/m1RcS2E.gif", "https://i.imgur.com/YtFyPCM.gif", "https://i.imgur.com/HStrwbj.gif", "https://i.imgur.com/SGJa70g.gif", "https://i.imgur.com/JIWZM8V.gif", "https://i.imgur.com/ZjwgQ6F.gif", "https://i.imgur.com/qeOwz9D.gif", "https://i.imgur.com/8HBqVxX.gif", "https://i.imgur.com/1wzjB5q.gif", "https://i.imgur.com/dIcdgPc.gif", "https://i.imgur.com/WJliVos.gif", "https://i.imgur.com/0DGTf7P.gif", "https://i.imgur.com/GHA41XQ.gif", "https://i.imgur.com/OCdpolV.gif", "https://i.imgur.com/KrhcPSW.gif", "https://i.imgur.com/pZi5q2a.gif", "https://i.imgur.com/3tc47Kp.gif", "https://i.imgur.com/bokEy7G.gif", "https://i.imgur.com/x4VMK9L.gif", "https://i.imgur.com/QFZjDnx.gif", "https://i.imgur.com/Gw24CRS.gif", "https://i.imgur.com/m6zcZU9.gif", "https://i.imgur.com/JchmSaG.gif", "https://i.imgur.com/RUnFtKo.gif", "https://i.imgur.com/uMjl7qF.gif"];
@@ -183,7 +183,7 @@ client.on('message', async message => {
     // GET IMAGE AND ITS SIZE
     //-----------------------
     let fileDir = './images/templates/buffer/memePosterBuffer.png';
-    fileURL = await func.fileScraper();
+    let fileURL = await func.fileScraper();
     await func.download(fileURL, fileDir);
     //delay so download work
     const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
@@ -203,7 +203,7 @@ client.on('message', async message => {
     //dummy canvas so context works in textHandler
     await func.canvasInitialize(1400, 700, './images/templates/blackBox.jpg');
     //big text
-    func.textHandler(inputString[1].toUpperCase(), 'Times New Roman', '', 150, 1, (canvasWidth + 100), 1, true, 0, centerX, 711, 'top');
+    await func.textHandler(inputString[1].toUpperCase(), 'Times New Roman', '', 150, 1, (canvasWidth + 100), 1, true, 0, centerX, 711, 'top');
     let lines1 = globalData.textLines;
     let xPos1 = globalData.textX;
     let yPos1 = globalData.textY;
@@ -212,7 +212,7 @@ client.on('message', async message => {
     //spacing between the two texts, and each text and its upper and lower bounds
     let spacing = textHeight1 * 0.5;
     //small text
-    func.textHandler(inputString[3], 'Arial', '', Math.floor(size1 / 3), 1, (canvasWidth + 100), 3, true, 0.2, centerX, (711 + textHeight1 + (2 * spacing)), 'top');
+    await func.textHandler(inputString[3], 'Arial', '', Math.floor(size1 / 3), 1, (canvasWidth + 100), 3, true, 0.2, centerX, (711 + textHeight1 + (2 * spacing)), 'top');
     let lines2 = globalData.textLines;
     let xPos2 = globalData.textX;
     let yPos2 = globalData.textY;
@@ -348,84 +348,39 @@ client.on('message', async message => {
     | |    / /  | (_) |    | |
     |_|   /_/    \___/     |_|
   */
-  else if (command === 'literally1984') {
-    const canvas = Canvas.createCanvas(1400, 1036);
-	  const context = canvas.getContext('2d');
-
-    const background = await Canvas.loadImage('./images/templates/literally1984.jpg');
-    context.drawImage(background, 0, 0, canvas.width, canvas.height);
-
-    let inputString = await message.content.slice(prefix.length).trim().split('"');
-
-    let fontSize = 200;
-
-    let textWidth;
-    do {
-    fontSize -= 10;
-		context.font = `${fontSize}px sans-serif`;
-    textWidth = context.measureText(inputString[1]).width;
-	  } while (textWidth > 700 || fontSize < 50);
-
-    //textHeight = context.measureText(inputString[1]).height;
-    console.log(fontSize);
-
-    //context.font = '200px sans-serif';
-    context.fillStyle = '#000000';
-    //context.textAlign = 'center';
-    context.fillText(inputString[1], 450 - (textWidth / 2), 220);
-
-    var attachment = new MessageAttachment(canvas.toBuffer(), 'literally1984meme.jpg');
-    return message.channel.send(attachment);
-  }
-/*
-  _______   ______  __   __  _______  __     __
- |__   __| |  ____| \ \ / / |__   __| \ \   / /
-    | |    | |__     \ V /     | |     \ \_/ /
-    | |    |  __|     > <      | |      \   /
-    | |    | |____   / . \     | |       | |
-    |_|    |______| /_/ \_\    |_|       |_|
-*/
-  else if (command === 'texty' && input != undefined) {
-    await func.canvasInitialize(1000, 1000, './images/templates/blackBox.jpg', input, input2)
+  else if (command === 'literally1984' || command === 'l1984') {
+    await func.canvasInitialize(1440, 1036, './images/templates/literally1984.jpg');
     let canvas = globalData.canvas
     let context = globalData.context
+    let inputString = await message.content.slice(prefix.length).trim().split('"');
+    //if text input present, does text stuff, if not, scrapes image
+    if (inputString[1] != undefined) {
+      await func.textHandler(inputString[1], 'sans-serif', '', 175, 1, 699, 242, false, 0.2, 455.5, 150)
+      let lines = globalData.textLines
+      let xPos = globalData.textX
+      let yPos = globalData.textY
+      context.fillStyle = '#000000'
+      for (i = 0; i < lines.length; i++) {
+        context.fillText(lines[i], xPos[i], yPos[i])
+      }
+    } else {
+      let fileDir = './images/templates/buffer/meme1984Buffer.png';
+      let fileURL = await func.fileScraper();
+      await func.download(fileURL, fileDir);
+      const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
+      await delay(2500);
+      let imageSize = await SizeOf(fileDir);
 
-    let bg = await Canvas.loadImage('./images/templates/texty.png')
-    context.drawImage(bg, 0, 0, 1000, 1000)
+      await func.canvasScaleFit(fileDir, 699, 242);
+      let scaledWidth = globalData.scaledWidth
+      let scaledHeight = globalData.scaledHeight
+      let xAxis = globalData.xAxis
+      let yAxis = globalData.yAxis
 
-    let inputString = await message.content.slice(prefix.length).trim().split('"')
-
-    let arguements = inputString[2].split(' ')
-    let arg1 = arguements[1]
-    let arg2 = arguements[2]
-    let style = ''
-    if (arg1 == 'bold' || arg2 == 'bold') {
-      style += 'bold '
+      let image = await Canvas.loadImage(fileDir)
+      context.drawImage(image, xAxis+106, yAxis+29, scaledWidth, scaledHeight)
     }
-    if (arg1 == 'italic' || arg2 == 'italic') {
-      style += 'italic '
-    }
-    //box dimensions: 878x237
-    //center: 503, 831.5
-    //top edge: 713
-    //bottom edge: 950
-    await func.textHandler(inputString[1], 'sans-serif', style, 120, 1, 878, 237, false, 0.1, 503, 831.5)
-
-    let lines = globalData.textLines
-    let xPos = globalData.textX
-    let yPos = globalData.textY
-    let size = globalData.textSize
-    //console.log('final values:')
-    //console.log(lines)
-    //console.log(xPos)
-    //console.log(yPos)
-    //console.log(size)
-
-    context.fillStyle = '#000000'
-    for (i = 0; i < lines.length; i++) {
-      context.fillText(lines[i], xPos[i], yPos[i])
-    }
-    var attachment = new MessageAttachment(canvas.toBuffer(), 'textyOutput.png');
+    var attachment = new MessageAttachment(canvas.toBuffer(), 'literally1984meme.jpg');
     return message.channel.send(attachment);
   }
   /*
@@ -441,7 +396,7 @@ client.on('message', async message => {
     // GET IMAGE AND ITS SIZE
     //-----------------------
     let fileDir = './images/templates/buffer/memePointingBuffer.png';
-    fileURL = await func.fileScraper();
+    let fileURL = await func.fileScraper();
     await func.download(fileURL, fileDir);
     //put a delay here since otherwise the download would happen too late
     const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
@@ -564,44 +519,36 @@ client.on('message', async message => {
    |_|  |_| /_/    \_\ |_|  \_\ |_____|  \____/
   */
   else if (command === 'mario') {
-    await func.canvasInitialize(1920, 1080, './images/templates/blackBox.jpg', input);
+    await func.canvasInitialize(1920, 1080, './images/templates/buffer/memeMarioBuffer.png');
     let canvas = globalData.canvas
     let context = globalData.context
+
     let fileDir = './images/templates/buffer/memeMarioBuffer.png'
-    let fileName = 'memeMarioBuffer.png'
-    let internalWidth = 729
-    let internalHeight = 973
-    let boxWidth = 729
-    let boxHeight = 973
-    let textBoxCenterX = 530
-    let textBoxCenterY = 895
-    let textBoxWidth = 560
-    let textBoxHeight = null
-    let font = '60px Arial'
-    let stroke = '#ffffff'
-    let fill = '#ffffff'
-    let upperCaseBool = true;
+    let fileURL = await func.fileScraper();
+    await func.download(fileURL, fileDir);
+    const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
+    await delay(2500);
+    let imageSize = await SizeOf(fileDir);
 
-
-    await func.fileScraper(fileDir)
-
-    const delay = ms => new Promise(resolve => setTimeout(resolve, ms))
-    await delay(2500)
-
-    await func.canvasScaleFill(fileName, internalWidth, internalHeight, 960, 539);
+    await func.canvasScaleFill('memeMarioBuffer.png', 730, 973, 960, 539.5);
     let scaledWidth = globalData.scaledWidth;
     let scaledHeight = globalData.scaledHeight;
     let xAxis = globalData.xAxis;
     let yAxis = globalData.yAxis;
 
-    var meme = await Canvas.loadImage('./images/templates/buffer/' + fileName);
+    var meme = await Canvas.loadImage(fileDir);
     context.drawImage(meme, xAxis, yAxis, scaledWidth, scaledHeight);
 
     const foreground = await Canvas.loadImage('./images/templates/mario.png');
     context.drawImage(foreground, 0, 0, canvas.width, canvas.height);
 
     let inputString = await message.content.slice(prefix.length).trim().split('"');
-    func.textAddition(font, stroke, fill, inputString, textBoxCenterX, textBoxCenterY, textBoxWidth, textBoxHeight, upperCaseBool)
+    func.textHandler(inputString[1].toUpperCase(), 'Trebuchet MS', 'bold ', 75, 1, 526, 1, true, 0, 275, 897, 'center', 'left')
+    let lines = globalData.textLines
+    let xPos = globalData.textX
+    let yPos = globalData.textY
+    context.fillStyle = '#ffffff'
+    context.fillText(lines[0], xPos[0], yPos[0])
 
     var attachment = await new MessageAttachment(canvas.toBuffer(), 'marioMeme.png');
     return message.channel.send(attachment);

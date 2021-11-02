@@ -280,7 +280,7 @@ function getTextWidth(text, font = getCanvasFontSize()) {
 // maxHeight - set to 0 for no max height
 // yAlign - 'top' or 'bottom' to have text positioned down from or up from baseY respectively (any other value or no value for alignment centered to baseY)
 //-----------------------
-function textHandler(text, font, style, maxSize, minSize, maxWidth, maxHeight, byLine, spacing, centerX, baseY, yAlign) {
+function textHandler(text, font, style, maxSize, minSize, maxWidth, maxHeight, byLine, spacing, baseX, baseY, yAlign, xAlign) {
   console.log('textHandler');
   let context = globalData.context;
   //we need to be able to change the max width
@@ -425,10 +425,21 @@ function textHandler(text, font, style, maxSize, minSize, maxWidth, maxHeight, b
   //-----------------------
   // X POSITIONS
   //-----------------------
-  //super simple since at the moment x is always centered, plus no cringe spacing to deal with
+  //write comments later
   let xPos = [];
-  for (var lineWidth of widths) {
-    xPos.push(centerX - (lineWidth / 2));
+  if (xAlign == 'left') {
+    for (var lineWidth of widths) {
+      xPos.push(baseX);
+    }
+  }
+  else if (xAlign == 'right') {
+    for (var lineWidth of widths) {
+      xPos.push(baseX - lineWidth);
+    }
+  } else {
+    for (var lineWidth of widths) {
+      xPos.push(baseX - (lineWidth / 2));
+    }
   }
   //-----------------------
   // Y POSITIONS
