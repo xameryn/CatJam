@@ -33,8 +33,9 @@ client.on('message', async message => {
   const user = message.author.id;
   let input = args[0];
   let input2 = args[1];
-  let output = (Math.round((input)/5))*5;
   globalData.message = message;
+  globalData.prefix = prefix;
+  globalData.args = args;
 /*
    _____              _______        _              __  __
   / ____|     /\     |__   __|      | |     /\     |  \/  |
@@ -44,6 +45,7 @@ client.on('message', async message => {
   \_____| /_/    \_\    |_|     \____/  /_/    \_\ |_|  |_|
 */
   if (command === 'catjam') {
+    let output = (Math.round((input) / 5)) * 5;
     if (input == 'help') {
 			return message.channel.send(`Send $catjam [bpm] for catjam to groove along with your song.`);
     }
@@ -199,11 +201,13 @@ client.on('message', async message => {
     //-----------------------
     // CALCULATE TEXT PARAMETERS
     //-----------------------
-    let inputString = await message.content.slice(prefix.length).trim().split('"');
+    await func.textArgs();
+    let inputs = globalData.textInputs;
+    let argsText = globalData.argsText;
     //dummy canvas so context works in textHandler
-    await func.canvasInitialize(1400, 700, './images/templates/blackBox.jpg');
+    await func.canvasInitialize(1400, 700, './images/templates/blackBox.jpg', []);
     //big text
-    await func.textHandler(inputString[1].toUpperCase(), 'Times New Roman', '', 150, 1, (canvasWidth + 100), 1, true, 0, centerX, 711, 'top');
+    await func.textHandler(inputs[0].toUpperCase(), 'Times New Roman', '', 150, 1, (canvasWidth + 100), 1, true, 0, centerX, 711, 'top');
     let lines1 = globalData.textLines;
     let xPos1 = globalData.textX;
     let yPos1 = globalData.textY;
@@ -212,7 +216,7 @@ client.on('message', async message => {
     //spacing between the two texts, and each text and its upper and lower bounds
     let spacing = textHeight1 * 0.5;
     //small text
-    await func.textHandler(inputString[3], 'Arial', '', Math.floor(size1 / 3), 1, (canvasWidth + 100), 3, true, 0.2, centerX, (711 + textHeight1 + (2 * spacing)), 'top');
+    await func.textHandler(inputs[1], 'Arial', '', Math.floor(size1 / 3), 1, (canvasWidth + 100), 3, true, 0.2, centerX, (711 + textHeight1 + (2 * spacing)), 'top');
     let lines2 = globalData.textLines;
     let xPos2 = globalData.textX;
     let yPos2 = globalData.textY;
@@ -222,7 +226,7 @@ client.on('message', async message => {
     // CANVAS THINGS
     //-----------------------
     //canvas is padded on all sides, lower padding is dependent on text heights
-    await func.canvasInitialize(canvasWidth + 200, (canvasHeight + 111  + (spacing * 3) + textHeight1 + textHeight2), './images/templates/blackBox.jpg');
+    await func.canvasInitialize(canvasWidth + 200, (canvasHeight + 111  + (spacing * 3) + textHeight1 + textHeight2), './images/templates/blackBox.jpg', []);
     let canvas = globalData.canvas;
     let context = globalData.context;
     let image = await Canvas.loadImage(fileDir);
@@ -239,11 +243,10 @@ client.on('message', async message => {
     context.strokeStyle = '#ffffff';
     context.lineWidth = 2;
     // inner canvas is filled white by default, can be specified to black (doesnt fill anything) or png (erases part of black background)
-    let arguements = inputString[4].split(' ');
-    if(!arguements.includes('black') && !arguements.includes('b') && !arguements.includes('png')) {
+    if(!argsText.includes('black') && !argsText.includes('b') && !argsText.includes('png')) {
       context.fillRect(100, 100, canvasWidth, canvasHeight);
     }
-    else if (arguements.includes('png')) {
+    else if (argsText.includes('png')) {
       context.clearRect(100, 100, canvasWidth, canvasHeight);
     }
     context.strokeRect(100-10, 100-10, canvasWidth+20, canvasHeight+20);
@@ -262,6 +265,125 @@ client.on('message', async message => {
     }
 
     var attachment = await new MessageAttachment(canvas.toBuffer(), 'posterMeme.png');
+    return message.channel.send(attachment);
+  }
+  /*
+     __  __   ______   __  __   ______
+    |  \/  | |  ____| |  \/  | |  ____|
+    | \  / | | |__    | \  / | | |__
+    | |\/| | |  __|   | |\/| | |  __|
+    | |  | | | |____  | |  | | | |____
+    |_|  |_| |______| |_|  |_| |______|
+  */
+  else if (command === 'meme') {
+    let fileDir = './images/templates/buffer/memeBuffer.png';
+    let fileURL = await func.fileScraper();
+    await func.download(fileURL, fileDir);
+    const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
+    await delay(2500);
+    let imageSize = await SizeOf(fileDir);
+
+    func.imageToCanvas([imageSize.width, imageSize.height], 3, 3, [imageSize.width,(imageSize.width / 3)], [(imageSize.height / 3),imageSize.height]);
+    let width = globalData.imgCanvasX;
+    let height = globalData.imgCanvasY;
+
+    await func.textArgs();
+    let inputs = globalData.textInputs;
+    let argsText = globalData.argsText;
+
+    await func.canvasInitialize(width, height, './images/templates/blackBox.jpg', ['png']);
+    let canvas = globalData.canvas;
+    let context = globalData.context;
+
+    await func.canvasScaleFit(fileDir, width, height);
+    let scaledWidth = globalData.scaledWidth;
+    let scaledHeight = globalData.scaledHeight;
+    let xAxis = globalData.xAxis;
+    let yAxis = globalData.yAxis;
+    let image = await Canvas.loadImage(fileDir);
+    context.drawImage(image, xAxis, yAxis, scaledWidth, scaledHeight);
+
+    context.fillStyle = '#ffffff';
+    context.strokeStyle = '000000';
+    context.lineJoin = 'round'
+    if (inputs.length < 3) {
+      let max = height / 4;
+      //top text
+      if (inputs[0] !== undefined) {
+        await func.textHandler(inputs[0].toUpperCase(), 'impact', '', max, 1, (0.95 * width), max, false, 0.2, (width / 2), (0.01 * height), 'top');
+        let lines = globalData.textLines;
+        let xPos = globalData.textX;
+        let yPos = globalData.textY;
+        let size = globalData.baselineTextHeight;
+        context.lineWidth = 2 * (size * 0.06);
+
+        for (i = 0; i < lines.length; i++) {
+          context.strokeText(lines[i], xPos[i], yPos[i]);
+          context.fillText(lines[i], xPos[i], yPos[i]);
+        }
+      }
+      //bottom text
+      if (inputs[1] !== undefined) {
+        await func.textHandler(inputs[1].toUpperCase(), 'impact', '', max, 1, (0.95 * width), max, false, 0.2, (width / 2), (0.99 * height), 'bottom');
+        let lines = globalData.textLines;
+        let xPos = globalData.textX;
+        let yPos = globalData.textY;
+        let size = globalData.baselineTextHeight;
+        context.lineWidth = 2 * (size * 0.06);
+
+        for (i = 0; i < lines.length; i++) {
+          context.strokeText(lines[i], xPos[i], yPos[i]);
+          context.fillText(lines[i], xPos[i], yPos[i]);
+        }
+      }
+    }
+    else {
+      let max = height / 5;
+      //top text
+      if (inputs[0] !== undefined) {
+        await func.textHandler(inputs[0].toUpperCase(), 'impact', '', max, 1, (0.95 * width), max, false, 0.2, (width / 2), (0.01 * height), 'top');
+        let lines = globalData.textLines;
+        let xPos = globalData.textX;
+        let yPos = globalData.textY;
+        let size = globalData.baselineTextHeight;
+        context.lineWidth = 2 * (size * 0.06);
+
+        for (i = 0; i < lines.length; i++) {
+          context.strokeText(lines[i], xPos[i], yPos[i]);
+          context.fillText(lines[i], xPos[i], yPos[i]);
+        }
+      }
+      //middle text
+      if (inputs[1] !== undefined) {
+        await func.textHandler(inputs[1].toUpperCase(), 'impact', '', max, 1, (0.95 * width), max, false, 0.2, (width / 2), (height / 2));
+        let lines = globalData.textLines;
+        let xPos = globalData.textX;
+        let yPos = globalData.textY;
+        let size = globalData.baselineTextHeight;
+        context.lineWidth = 2 * (size * 0.06);
+
+        for (i = 0; i < lines.length; i++) {
+          context.strokeText(lines[i], xPos[i], yPos[i]);
+          context.fillText(lines[i], xPos[i], yPos[i]);
+        }
+      }
+      //bottom text
+      if (inputs[2] !== undefined) {
+        await func.textHandler(inputs[2].toUpperCase(), 'impact', '', max, 1, (0.95 * width), max, false, 0.2, (width / 2), (0.99 * height), 'bottom');
+        let lines = globalData.textLines;
+        let xPos = globalData.textX;
+        let yPos = globalData.textY;
+        let size = globalData.baselineTextHeight;
+        context.lineWidth = 2 * (size * 0.06);
+
+        for (i = 0; i < lines.length; i++) {
+          context.strokeText(lines[i], xPos[i], yPos[i]);
+          context.fillText(lines[i], xPos[i], yPos[i]);
+        }
+      }
+    }
+
+    var attachment = await new MessageAttachment(canvas.toBuffer(), 'meme.png');
     return message.channel.send(attachment);
   }
   /*
@@ -349,19 +471,20 @@ client.on('message', async message => {
     |_|   /_/    \___/     |_|
   */
   else if (command === 'literally1984' || command === 'l1984') {
-    await func.canvasInitialize(1440, 1036, './images/templates/literally1984.jpg');
-    let canvas = globalData.canvas
-    let context = globalData.context
-    let inputString = await message.content.slice(prefix.length).trim().split('"');
+    await func.canvasInitialize(1440, 1036, './images/templates/literally1984.jpg', []);
+    let canvas = globalData.canvas;
+    let context = globalData.context;
+    await func.textArgs();
+    let inputs = globalData.textInputs
     //if text input present, does text stuff, if not, scrapes image
-    if (inputString[1] != undefined) {
-      await func.textHandler(inputString[1], 'sans-serif', '', 175, 1, 699, 242, false, 0.2, 455.5, 150)
-      let lines = globalData.textLines
-      let xPos = globalData.textX
-      let yPos = globalData.textY
-      context.fillStyle = '#000000'
+    if (inputs[0] != undefined) {
+      await func.textHandler(inputs[0], 'sans-serif', '', 175, 1, 699, 242, false, 0.2, 455.5, 150);
+      let lines = globalData.textLines;
+      let xPos = globalData.textX;
+      let yPos = globalData.textY;
+      context.fillStyle = '#000000';
       for (i = 0; i < lines.length; i++) {
-        context.fillText(lines[i], xPos[i], yPos[i])
+        context.fillText(lines[i], xPos[i], yPos[i]);
       }
     } else {
       let fileDir = './images/templates/buffer/meme1984Buffer.png';
@@ -372,13 +495,13 @@ client.on('message', async message => {
       let imageSize = await SizeOf(fileDir);
 
       await func.canvasScaleFit(fileDir, 699, 242);
-      let scaledWidth = globalData.scaledWidth
-      let scaledHeight = globalData.scaledHeight
-      let xAxis = globalData.xAxis
-      let yAxis = globalData.yAxis
+      let scaledWidth = globalData.scaledWidth;
+      let scaledHeight = globalData.scaledHeight;
+      let xAxis = globalData.xAxis;
+      let yAxis = globalData.yAxis;
 
-      let image = await Canvas.loadImage(fileDir)
-      context.drawImage(image, xAxis+106, yAxis+29, scaledWidth, scaledHeight)
+      let image = await Canvas.loadImage(fileDir);
+      context.drawImage(image, xAxis+106, yAxis+29, scaledWidth, scaledHeight);
     }
     var attachment = new MessageAttachment(canvas.toBuffer(), 'literally1984meme.jpg');
     return message.channel.send(attachment);
@@ -434,7 +557,7 @@ client.on('message', async message => {
     //-----------------------
     // CANVAS
     //-----------------------
-    await func.canvasInitialize(memeWidth, memeHeight, './images/templates/blackBox.jpg', input, input2);
+    await func.canvasInitialize(memeWidth, memeHeight, './images/templates/blackBox.jpg');
     let canvas = globalData.canvas;
     let context = globalData.context;
     //-----------------------
@@ -519,11 +642,11 @@ client.on('message', async message => {
    |_|  |_| /_/    \_\ |_|  \_\ |_____|  \____/
   */
   else if (command === 'mario') {
-    await func.canvasInitialize(1920, 1080, './images/templates/buffer/memeMarioBuffer.png');
-    let canvas = globalData.canvas
-    let context = globalData.context
+    await func.canvasInitialize(1920, 1080, './images/templates/blackBox.jpg', []);
+    let canvas = globalData.canvas;
+    let context = globalData.context;
 
-    let fileDir = './images/templates/buffer/memeMarioBuffer.png'
+    let fileDir = './images/templates/buffer/memeMarioBuffer.png';
     let fileURL = await func.fileScraper();
     await func.download(fileURL, fileDir);
     const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
@@ -542,13 +665,15 @@ client.on('message', async message => {
     const foreground = await Canvas.loadImage('./images/templates/mario.png');
     context.drawImage(foreground, 0, 0, canvas.width, canvas.height);
 
-    let inputString = await message.content.slice(prefix.length).trim().split('"');
-    func.textHandler(inputString[1].toUpperCase(), 'Trebuchet MS', 'bold ', 75, 1, 526, 1, true, 0, 275, 897, 'center', 'left')
-    let lines = globalData.textLines
-    let xPos = globalData.textX
-    let yPos = globalData.textY
-    context.fillStyle = '#ffffff'
-    context.fillText(lines[0], xPos[0], yPos[0])
+    await func.textArgs();
+    let inputs = globalData.textInputs
+
+    func.textHandler(inputs[0].toUpperCase(), 'Trebuchet MS', 'bold ', 75, 1, 526, 1, true, 0, 275, 897, 'center', 'left');
+    let lines = globalData.textLines;
+    let xPos = globalData.textX;
+    let yPos = globalData.textY;
+    context.fillStyle = '#ffffff';
+    context.fillText(lines[0], xPos[0], yPos[0]);
 
     var attachment = await new MessageAttachment(canvas.toBuffer(), 'marioMeme.png');
     return message.channel.send(attachment);

@@ -57,14 +57,20 @@ function download(fileURL, fileDir){
 //-----------------------
 // CANVAS-INITIALIZE
 //-----------------------
-async function canvasInitialize(canvasWidth, canvasHeight, backgroundImage, modifier1, modifier2){
+async function canvasInitialize(canvasWidth, canvasHeight, backgroundImage, pngArgs){
   console.log('canvasInitialize');
+  //can be given specific arguments, otherwise uses global ones
+  let args = globalData.args;
+  if (pngArgs !== undefined) {
+    args = pngArgs
+  }
   var canvas = Canvas.createCanvas(canvasWidth, canvasHeight);
   globalData.canvas = canvas;
   var context = canvas.getContext('2d');
   globalData.context = context;
+
   var background = await Canvas.loadImage(backgroundImage);
-  if (modifier1 == 'png' || modifier2 == 'png') {
+  if (args.includes('png')) {
     return;
   }
   else {
@@ -206,60 +212,26 @@ async function imageToCanvas(imageDims, widestRatio, tallestRatio, wideDims, tal
   globalData.imgCanvasEval = imgEval;
 }
 /*
-  _______   ______  __   __  _______            ______   _    _   _   _    _____    _____
- |__   __| |  ____| \ \ / / |__   __|          |  ____| | |  | | | \ | |  / ____|  / ____|
-    | |    | |__     \ V /     | |     ______  | |__    | |  | | |  \| | | |      | (___
-    | |    |  __|     > <      | |    |______| |  __|   | |  | | | . ` | | |       \___ \
-    | |    | |____   / . \     | |             | |      | |__| | | |\  | | |____   ____) |
-    |_|    |______| /_/ \_\    |_|             |_|       \____/  |_| \_|  \_____| |_____/
+  _______   ______  __   __  _______                       _____     _____    _____
+ |__   __| |  ____| \ \ / / |__   __|              /\     |  __ \   / ____|  / ____|
+    | |    | |__     \ V /     | |     ______     /  \    | |__) | | |  __  | (___
+    | |    |  __|     > <      | |    |______|   / /\ \   |  _  /  | | |_ |  \___ \
+    | |    | |____   / . \     | |              / ____ \  | | \ \  | |__| |  ____) |
+    |_|    |______| /_/ \_\    |_|             /_/    \_\ |_|  \_\  \_____| |_____/
 */
-async function textAddition(font, stroke, fill, inputString, textBoxCenterX, textBoxCenterY, textBoxWidth, textBoxHeight, upperCaseBool) {
-  let canvas = globalData.canvas
-  let context = globalData.context
-  let textInput = inputString[1]
-  if (textInput == undefined) {
-    textInput = 'insert meme here'
+function textArgs() {
+  let message = globalData.message;
+  let prefix = globalData.prefix;
+  let strings = message.content.slice(prefix.length).trim().split('"');
+  let inputs = [];
+  for (var i = 0; i < strings.length; i++) {
+    if (i % 2 != 0) {
+      inputs.push(strings[i])
+    }
   }
-  if (upperCaseBool == true) {
-    textInput = textInput.toUpperCase();
-  }
-
-
-  console.log('Text Width')
-  console.log(getTextWidth(textInput, font))
-  console.log('Text Height')
-  console.log(getTextHeight(textInput, font))
-
-  let splitFont = font.split('px');
-
-  /*for () {
-    context.font.replace(/\d+px/, (parseInt(context.font.match(/\d+px/)) - 2) + "px")
-  }*/
-
-  let joinedFont = splitFont.join('px');
-
-  context.font = font;
-  context.fillStyle = fill;
-
-  let textX = textBoxCenterX - ((getTextWidth(textInput, font)) / 2)
-  //let textY = textBoxCenterY - ((getTextHeight(textInput, font)) / 2)
-  context.fillText(textInput, textX, textBoxCenterY + 25);
-}
-
-function getTextWidth(text, font = getCanvasFontSize()) {
-  let canvas = globalData.canvas
-  let context = globalData.context
-  context.font = font;
-  const metrics = context.measureText(text);
-  return metrics.width;
-}
-
- function getTextHeight(text, font = getCanvasFontSize()) {
-   let canvas = globalData.canvas
-   let context = globalData.context
-   context.font = font;
-   const metrics = context.measureText(text);
-   return metrics.Height;
+  let args = strings[strings.length - 1].trim().split(' ');
+  globalData.textInputs = inputs
+  globalData.argsText = args
 }
 /*
   _______   ______  __   __  _______            _    _              _   _   _____    _        ______   _____
@@ -346,6 +318,9 @@ function textHandler(text, font, style, maxSize, minSize, maxWidth, maxHeight, b
         splitWords.push(cutWord);
       }
     }
+    //if all the spillovers are only 1-fold (only need to be split once), shirnk text size instead
+    let uniqueIndexes = indexes.filter((index, i, array) => array.indexOf(index) === i)
+    if (indexes.length > uniqueIndexes.length && n > minSize) { continue; }
     //goes through the split up words and their indexes, deleting the original word and putting these in their place
     if (indexes.length != 0) {
       for (var i = indexes.length - 1; i >= 0; i--) {
@@ -480,6 +455,7 @@ function textHandler(text, font, style, maxSize, minSize, maxWidth, maxHeight, b
   globalData.textY = yPos;
   globalData.textSize = size;
   globalData.textHeight = (height + space) * lineNum;
+  globalData.baselineTextHeight = heights[1]
 }
 
-module.exports = { fileScraper, download, canvasInitialize, canvasScaleFit, canvasScaleFill, imageToCanvas, textAddition, getTextWidth, getTextHeight, textHandler };
+module.exports = { fileScraper, download, canvasInitialize, canvasScaleFit, canvasScaleFill, imageToCanvas, textArgs, textHandler };
