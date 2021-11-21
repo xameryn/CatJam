@@ -50,7 +50,7 @@ async function fileScraper() {
 //-----------------------
 // DOWNLOAD
 //-----------------------
-function download(fileURL, fileDir){
+async function download(fileURL, fileDir){
   console.log('download');
   request.get(fileURL).pipe(fs.createWriteStream(fileDir));
 }
@@ -78,6 +78,92 @@ async function canvasInitialize(canvasWidth, canvasHeight, backgroundImage, pngA
     return;
   }
 }
+/*
+  _    _    _____   ______   _____             _____               _______
+ | |  | |  / ____| |  ____| |  __ \           |  __ \      /\     |__   __|     /\
+ | |  | | | (___   | |__    | |__) |  ______  | |  | |    /  \       | |       /  \
+ | |  | |  \___ \  |  __|   |  _  /  |______| | |  | |   / /\ \      | |      / /\ \
+ | |__| |  ____) | | |____  | | \ \           | |__| |  / ____ \     | |     / ____ \
+  \____/  |_____/  |______| |_|  \_\          |_____/  /_/    \_\    |_|    /_/    \_\
+*/
+//reads and writes to user-data.json
+//-----------------------
+//action - 'get' to get preferences and store them in globalData, 'set' to change a preference
+//tag - preference to change
+//arg - thing to set preference to
+async function userData(action, tag, arg) {
+  let user = globalData.authorID;
+  let doc = fs.readFileSync('user-data.json', 'utf8')
+  let lines = doc.split('\r\n')
+  //-----------------------
+  // GET
+  //-----------------------
+  if (action == 'get') {
+    //goes through lines, if id matches, sets values using that line
+    for (var i = 0; i < lines.length; i++) {
+      let line = JSON.parse(lines[i])
+      if (line.id == user) {
+        globalData.pointBG = line.pointBG
+        globalData.posterBG = line.posterBG
+        globalData.posterTXT = line.posterTXT
+        globalData.authorIndex = i;
+        return;
+      }
+    }
+    //will only be run if no id found (since if it was found function returns), sets values to defaults and adds new line
+    globalData.pointBG = 'black'
+    globalData.posterBG = 'white'
+    globalData.posterTXT = 'big'
+    globalData.authorIndex = lines.length - 1
+    lines.push(`{"id":"${user}","pointBG":"black","posterBG":"white","posterTXT":"big"}`)
+  }
+  //-----------------------
+  // SET
+  //-----------------------
+  //depending on tag and args, changes the data of the given line, and creates message to be sent
+  else if (action == 'set') {
+    let data = JSON.parse(lines[globalData.authorIndex])
+    globalData.toggledMSG = `Couldn't set that preference... :Ɛ`
+    //background changes
+    if (arg == 'white' || arg == 'black' || arg == 'png') {
+      if (tag == 'point') {
+        data.pointBG = arg
+      }
+      else if (tag == 'poster') {
+        data.posterBG = arg
+      }
+      if (tag == 'point' || tag == 'poster') {
+        globalData.toggledMSG = 'Preferences for `' + `${tag}` + '` background set to ' + `**${arg}**` + '! :3'
+      }
+    }
+    //poster text change
+    else if (tag == 'poster' && (arg == 'big' || arg == 'small')) {
+      data.posterTXT = arg;
+      globalData.toggledMSG = 'Preferences for `' + `${tag}` + '` text priority set to ' + `**${arg}**` + '! :3'
+    }
+    //reset to default
+    else if (tag == 'reset') {
+      data = JSON.parse(`{"id":"${user}","pointBG":"black","posterBG":"white","posterTXT":"big"}`)
+      globalData.toggledMSG = `Preferences reset! :3`
+    }
+    lines[globalData.authorIndex] = JSON.stringify(data)
+  }
+  //-----------------------
+  // DATA UPDATE
+  //-----------------------
+  //updates the doc to match the lines here
+  //(runs for set and if no id found in get)
+  let output = lines[0];
+  if (lines.length != 1) {
+    output += '\r\n'
+    for (var i = 1; i < lines.length - 1; i++) {
+      output += lines[i] + '\r\n'
+    }
+    output += lines[lines.length - 1]
+  }
+  fs.writeFileSync('user-data.json', output, 'utf8')
+}
+
 /*
    _____    _____              _        ______            ______   _____   _______
   / ____|  / ____|     /\     | |      |  ____|          |  ____| |_   _| |__   __|
@@ -167,17 +253,13 @@ async function canvasScaleFill(fileName, internalWidth, internalHeight, centerX,
   _| |_  | |  | | | |__| |          | |____   / ____ \  | |\  |    \  /     / ____ \   ____) |
  |_____| |_|  |_|  \_____|           \_____| /_/    \_\ |_| \_|     \/     /_/    \_\ |_____/
 */
-//-----------------------
-// SUMMARY:
 // calculates the canvas size for a canvas based on an image (equal to image if suitable, based on parameters it can be found to wide or too tall)
 //-----------------------
-// ARGUMENTS (that aren't self-explanatory):
 // widestRatio, tallestRatio - the maximum allowed (width / height) or (height / width) respectively
 // wideDims, tallDims - if the image is too wide (wideDims) or too tall (tallDims), these dimensions are used instead
 // scaleLength - what size the final image should be scaled to (height or width)
 // scaleAxis - 'height' or 'width' depending on what scaleLength represents
 // (above 2 arguments can be left undefined for no scaling)
-//-----------------------
 async function imageToCanvas(imageDims, widestRatio, tallestRatio, wideDims, tallDims, scaleLength, scaleAxis) {
   console.log('imageToCanvas');
   let imageWidth = imageDims[0];
@@ -219,19 +301,26 @@ async function imageToCanvas(imageDims, widestRatio, tallestRatio, wideDims, tal
     | |    | |____   / . \     | |              / ____ \  | | \ \  | |__| |  ____) |
     |_|    |______| /_/ \_\    |_|             /_/    \_\ |_|  \_\  \_____| |_____/
 */
-function textArgs() {
+//for inputs that involve strings enclosed by quotes, this extracts those strings
+async function textArgs() {
   let message = globalData.message;
   let prefix = globalData.prefix;
   let strings = message.content.slice(prefix.length).trim().split('"');
   let inputs = [];
+  //odd indexes are the areas enclosed by strings, so they are what's retrieved
   for (var i = 0; i < strings.length; i++) {
     if (i % 2 != 0) {
       inputs.push(strings[i])
     }
   }
-  let args = strings[strings.length - 1].trim().split(' ');
+  //if no quotes are found, uses individual args as the strings (so stuff like "$meme text1 text2" will work with no quotes)
+  if (strings.length == 1) {
+    inputs = globalData.args
+  }
+  //args are set as everything after the last quotes (split into array by spaces), useful to distinguish text content from actual args
+  let argsText = strings[strings.length - 1].trim().split(' ');
   globalData.textInputs = inputs
-  globalData.argsText = args
+  globalData.argsText = argsText
 }
 /*
   _______   ______  __   __  _______            _    _              _   _   _____    _        ______   _____
@@ -241,18 +330,15 @@ function textArgs() {
     | |    | |____   / . \     | |             | |  | |  / ____ \  | |\  | | |__| | | |____  | |____  | | \ \
     |_|    |______| /_/ \_\    |_|             |_|  |_| /_/    \_\ |_| \_| |_____/  |______| |______| |_|  \_\
 */
-//-----------------------
-// SUMMARY:
 // fits text into the given dimensions, keeping size as large as possible, and outputs the size, lines, and their positions
 //-----------------------
-// ARGUMENTS (that aren't self-explanatory):
 // style - bold, italic, etc., must be in form 'bold ' with the space since I am lazy
+// maxHeight - set to 0 for no max height
 // byLine - if true, treats maxHeight as number of lines instead of pixels
 // spacing - amount of extra space between lines (as a fraction of the line height)
-// maxHeight - set to 0 for no max height
-// yAlign - 'top' or 'bottom' to have text positioned down from or up from baseY respectively (any other value or no value for alignment centered to baseY)
-//-----------------------
-function textHandler(text, font, style, maxSize, minSize, maxWidth, maxHeight, byLine, spacing, baseX, baseY, yAlign, xAlign) {
+// yAlign - 'top' or 'bottom' to have text positioned down from or up from baseY respectively (any other value or no value for alignment will center on baseY)
+// xAlign - 'left' or 'right' to have text positioned right from or left from baseX respectively (any other value or no value for alignment will center on baseX)
+async function textHandler(text, font, style, maxSize, minSize, maxWidth, maxHeight, byLine, spacing, baseX, baseY, yAlign, xAlign) {
   console.log('textHandler');
   let context = globalData.context;
   //we need to be able to change the max width
@@ -313,12 +399,11 @@ function textHandler(text, font, style, maxSize, minSize, maxWidth, maxHeight, b
       }
       //push done here since the last word portion causes entire loop to terminate
       if (split == true) {
-        //console.log('SPLIT')
         indexes.push(i);
         splitWords.push(cutWord);
       }
     }
-    //if all the spillovers are only 1-fold (only need to be split once), shirnk text size instead
+    //if all the spillovers are only 1-fold (only need to be split once), shrink text size instead
     let uniqueIndexes = indexes.filter((index, i, array) => array.indexOf(index) === i)
     if (indexes.length > uniqueIndexes.length && n > minSize) { continue; }
     //goes through the split up words and their indexes, deleting the original word and putting these in their place
@@ -458,4 +543,4 @@ function textHandler(text, font, style, maxSize, minSize, maxWidth, maxHeight, b
   globalData.baselineTextHeight = heights[1]
 }
 
-module.exports = { fileScraper, download, canvasInitialize, canvasScaleFit, canvasScaleFill, imageToCanvas, textArgs, textHandler };
+module.exports = { fileScraper, download, canvasInitialize, userData, canvasScaleFit, canvasScaleFill, imageToCanvas, textArgs, textHandler };
