@@ -8,69 +8,110 @@ const Canvas = require('canvas');
 const SizeOf = require('image-size');
 
 import { globalData } from './CatJamsUtilities.js';
-/*
-  _____    _____    _____   __  __              _____   __     __
- |  __ \  |  __ \  |_   _| |  \/  |     /\     |  __ \  \ \   / /
- | |__) | | |__) |   | |   | \  / |    /  \    | |__) |  \ \_/ /
- |  ___/  |  _  /    | |   | |\/| |   / /\ \   |  _  /    \   /
- | |      | | \ \   _| |_  | |  | |  / ____ \  | | \ \     | |
- |_|      |_|  \_\ |_____| |_|  |_| /_/    \_\ |_|  \_\    |_|
-*/
-//-----------------------
 // FILE-SCRAPER
-//-----------------------
 async function fileScraper() {
   console.log('fileScraper');
   let message = globalData.message;
-  if (message.attachments.size) {
-    var Attachment = message.attachments.last();
-    var attachedFileURL = Attachment.url.toString();
-    return attachedFileURL;
+  var scraperURL = message.channel.messages.fetch().then(async messageList => {
+  let lastMessage = await messageList.sort((a, b) => b.createdTimestamp - a.createdTimestamp).filter((m) => ((m.embeds.length > 0 && (m.embeds[0].type == 'image' || m.embeds[0].type == 'video' || m.embeds[0].type == 'gifv')) || m.attachments.size > 0)).first();
+  if (lastMessage == undefined) {
+    return undefined;
+  }
+
+  if (lastMessage.attachments.size > 0) {
+    let url = lastMessage.attachments.first().url;
+    return url;
+  }
+
+  if (lastMessage.embeds.length > 0) {
+    let url = lastMessage.embeds[0].url;
+    if (await url.includes('tenor.com/view')) { //If a Tenor link
+      url = url + ".gif" //Add .gif file type
+    }
+    return url;
+  }
+  });
+  var attachedFileURL = await scraperURL.then();
+  let outputURL = attachedFileURL;
+  return outputURL;
+}
+async function linkScraper() {
+  console.log('linkScraper');
+  let message = globalData.message;
+  var websiteMessage = message.channel.messages.fetch().then(async messageList => {
+  let lastMessage = await messageList.sort((a, b) => b.createdTimestamp - a.createdTimestamp).filter((m) => ((m.embeds.length > 0 && (m.embeds[0].type == 'rich') && (m.embeds[0].url.includes('twitter.com'))))).first();
+  return lastMessage;
+});
+return websiteMessage;
+}
+async function uploadLimitCheck(fileDir) {
+  const statz = fs.statSync(fileDir);
+  const fileSizeInBytes = statz.size;
+  if (fileSizeInBytes > 8000000) {
+    console.log(fileSizeInBytes);
+    return true;
   }
   else {
-    var exitForLoop = false;
-    for (let i = 2; i < 25; i++) {
-      if (exitForLoop) {return;}
-      var scraperURL = message.channel.messages.fetch({ limit: i }).then(async messageList => {
-        let messageListLastAttachment = messageList.last().attachments;
-        if (messageListLastAttachment.size) {
-          var Attachment = await messageList.last().attachments.first();
-          var attachedFileURL = Attachment.url;
-          exitForLoop = true;
-          return attachedFileURL;
-        }
-      })
-      var attachedFileURL = await scraperURL.then();
-      if (attachedFileURL !== undefined) {
-        return attachedFileURL;
-      }
-    }
+    return false;
   }
 }
-//-----------------------
 // DOWNLOAD
-//-----------------------
 async function download(fileURL, fileDir){
   console.log('download');
-  request.get(fileURL).pipe(fs.createWriteStream(fileDir));
-}
-//-----------------------
-// CANVAS-INITIALIZE
-//-----------------------
-async function canvasInitialize(canvasWidth, canvasHeight, backgroundImage, pngArgs){
-  console.log('canvasInitialize');
-  //can be given specific arguments, otherwise uses global ones
-  let args = globalData.args;
-  if (pngArgs !== undefined) {
-    args = pngArgs
+  if (await fileURL == undefined || fileDir == undefined) { //Prevents a download if the provided URL or directory is undefined
+    return;
   }
+  else {
+    if (await fs.existsSync(fileDir) == true) {fs.unlinkSync(fileDir)} //Deletes the provided dir if it is already downloaded
+    await request.get(fileURL).pipe(fs.createWriteStream(fileDir)); //Downloads URL in directory
+    await downloadCheck(fileDir)
+    return;
+  }
+}
+async function downloadCheck(fileDir){ //Checks if the download is complete before moving on
+  while (await fs.existsSync(fileDir) == false) { //Checks if the downloaded file exists
+    await wait(25)
+  }
+  while (await fs.statSync(fileDir).size == 0) { //Checks if the downloaded file is larger than 0 bytes
+    await wait(25)
+  }
+  await wait(250) // :3
+  return;
+}
+async function typeCheck(fileURL){ //Checks the file type of the URL
+  let fileTypeArray = await fileURL.split('.'); //Splits URL at every '.'
+  let suffix = await fileTypeArray.pop(); //Takes the last split part (the file type)
+  if (await suffix.includes('?')) {
+    suffix = await suffix.split('?');
+    await suffix.pop();
+  }
+  return suffix;
+}
+async function sendFile(fileURL, fileDir){
+  let message = globalData.message;
+  if (await uploadLimitCheck(fileDir)) { //If gif is over 8MB, embeds as link
+    console.log("over 8 mb");
+    if (await fileURL.includes('tenor.com/view') || fileURL.includes('.gif')) { //Fuck you Tenor
+      console.log(fileURL);
+      fileURL = await fileURL.split('.'); //Splits URL at every '.'
+                fileURL.pop(); //Removes file type (.gif)
+      fileURL = await fileURL.join('.'); //Joins URL at every '.'
+    }
+    console.log("embed");
+    return message.channel.send(fileURL);
+  }
+  var attachment = await new MessageAttachment(fileDir);
+  return message.channel.send(attachment);
+}
+// CANVAS-INITIALIZE
+async function canvasInitialize(canvasWidth, canvasHeight, backgroundImage, modifier1, modifier2){
+  console.log('canvasInitialize');
   var canvas = Canvas.createCanvas(canvasWidth, canvasHeight);
   globalData.canvas = canvas;
   var context = canvas.getContext('2d');
   globalData.context = context;
-
   var background = await Canvas.loadImage(backgroundImage);
-  if (args.includes('png')) {
+  if (modifier1 == 'png' || modifier2 == 'png') {
     return;
   }
   else {
@@ -78,100 +119,7 @@ async function canvasInitialize(canvasWidth, canvasHeight, backgroundImage, pngA
     return;
   }
 }
-/*
-  _    _    _____   ______   _____             _____               _______
- | |  | |  / ____| |  ____| |  __ \           |  __ \      /\     |__   __|     /\
- | |  | | | (___   | |__    | |__) |  ______  | |  | |    /  \       | |       /  \
- | |  | |  \___ \  |  __|   |  _  /  |______| | |  | |   / /\ \      | |      / /\ \
- | |__| |  ____) | | |____  | | \ \           | |__| |  / ____ \     | |     / ____ \
-  \____/  |_____/  |______| |_|  \_\          |_____/  /_/    \_\    |_|    /_/    \_\
-*/
-//reads and writes to user-data.json
-//-----------------------
-//action - 'get' to get preferences and store them in globalData, 'set' to change a preference
-//tag - preference to change
-//arg - thing to set preference to
-async function userData(action, tag, arg) {
-  let user = globalData.authorID;
-  let doc = fs.readFileSync('user-data.json', 'utf8')
-  let lines = doc.split('\r\n')
-  //-----------------------
-  // GET
-  //-----------------------
-  if (action == 'get') {
-    //goes through lines, if id matches, sets values using that line
-    for (var i = 0; i < lines.length; i++) {
-      let line = JSON.parse(lines[i])
-      if (line.id == user) {
-        globalData.pointBG = line.pointBG
-        globalData.posterBG = line.posterBG
-        globalData.posterTXT = line.posterTXT
-        globalData.authorIndex = i;
-        return;
-      }
-    }
-    //will only be run if no id found (since if it was found function returns), sets values to defaults and adds new line
-    globalData.pointBG = 'black'
-    globalData.posterBG = 'white'
-    globalData.posterTXT = 'big'
-    globalData.authorIndex = lines.length - 1
-    lines.push(`{"id":"${user}","pointBG":"black","posterBG":"white","posterTXT":"big"}`)
-  }
-  //-----------------------
-  // SET
-  //-----------------------
-  //depending on tag and args, changes the data of the given line, and creates message to be sent
-  else if (action == 'set') {
-    let data = JSON.parse(lines[globalData.authorIndex])
-    globalData.toggledMSG = `Couldn't set that preference... :Ɛ`
-    //background changes
-    if (arg == 'white' || arg == 'black' || arg == 'png') {
-      if (tag == 'point') {
-        data.pointBG = arg
-      }
-      else if (tag == 'poster') {
-        data.posterBG = arg
-      }
-      if (tag == 'point' || tag == 'poster') {
-        globalData.toggledMSG = 'Preferences for `' + `${tag}` + '` background set to ' + `**${arg}**` + '! :3'
-      }
-    }
-    //poster text change
-    else if (tag == 'poster' && (arg == 'big' || arg == 'small')) {
-      data.posterTXT = arg;
-      globalData.toggledMSG = 'Preferences for `' + `${tag}` + '` text priority set to ' + `**${arg}**` + '! :3'
-    }
-    //reset to default
-    else if (tag == 'reset') {
-      data = JSON.parse(`{"id":"${user}","pointBG":"black","posterBG":"white","posterTXT":"big"}`)
-      globalData.toggledMSG = `Preferences reset! :3`
-    }
-    lines[globalData.authorIndex] = JSON.stringify(data)
-  }
-  //-----------------------
-  // DATA UPDATE
-  //-----------------------
-  //updates the doc to match the lines here
-  //(runs for set and if no id found in get)
-  let output = lines[0];
-  if (lines.length != 1) {
-    output += '\r\n'
-    for (var i = 1; i < lines.length - 1; i++) {
-      output += lines[i] + '\r\n'
-    }
-    output += lines[lines.length - 1]
-  }
-  fs.writeFileSync('user-data.json', output, 'utf8')
-}
-
-/*
-   _____    _____              _        ______            ______   _____   _______
-  / ____|  / ____|     /\     | |      |  ____|          |  ____| |_   _| |__   __|
- | (___   | |         /  \    | |      | |__     ______  | |__      | |      | |
-  \___ \  | |        / /\ \   | |      |  __|   |______| |  __|     | |      | |
-  ____) | | |____   / ____ \  | |____  | |____           | |       _| |_     | |
- |_____/   \_____| /_/    \_\ |______| |______|          |_|      |_____|    |_|
-*/
+// SCALE-FIT
 async function canvasScaleFit(fileDir, boxWidth, boxHeight){
   console.log('canvasScaleFit');
   let canvas = globalData.canvas;
@@ -204,14 +152,7 @@ async function canvasScaleFit(fileDir, boxWidth, boxHeight){
   globalData.yAxis = yAxis;
   return;
 }
-/*
-   _____    _____              _        ______            ______   _____   _        _
-  / ____|  / ____|     /\     | |      |  ____|          |  ____| |_   _| | |      | |
- | (___   | |         /  \    | |      | |__     ______  | |__      | |   | |      | |
-  \___ \  | |        / /\ \   | |      |  __|   |______| |  __|     | |   | |      | |
-  ____) | | |____   / ____ \  | |____  | |____           | |       _| |_  | |____  | |____
- |_____/   \_____| /_/    \_\ |______| |______|          |_|      |_____| |______| |______|
-*/
+// SCALE-FILL
 async function canvasScaleFill(fileName, internalWidth, internalHeight, centerX, centerY){
   console.log('canvasScaleFill');
   let canvas = globalData.canvas;
@@ -245,21 +186,6 @@ async function canvasScaleFill(fileName, internalWidth, internalHeight, centerX,
   globalData.yAxis = yAxis;
   return;
 }
-/*
-  _____   __  __    _____             _____              _   _  __      __              _____
- |_   _| |  \/  |  / ____|           / ____|     /\     | \ | | \ \    / /     /\      / ____|
-   | |   | \  / | | |  __   ______  | |         /  \    |  \| |  \ \  / /     /  \    | (___
-   | |   | |\/| | | | |_ | |______| | |        / /\ \   | . ` |   \ \/ /     / /\ \    \___ \
-  _| |_  | |  | | | |__| |          | |____   / ____ \  | |\  |    \  /     / ____ \   ____) |
- |_____| |_|  |_|  \_____|           \_____| /_/    \_\ |_| \_|     \/     /_/    \_\ |_____/
-*/
-// calculates the canvas size for a canvas based on an image (equal to image if suitable, based on parameters it can be found to wide or too tall)
-//-----------------------
-// widestRatio, tallestRatio - the maximum allowed (width / height) or (height / width) respectively
-// wideDims, tallDims - if the image is too wide (wideDims) or too tall (tallDims), these dimensions are used instead
-// scaleLength - what size the final image should be scaled to (height or width)
-// scaleAxis - 'height' or 'width' depending on what scaleLength represents
-// (above 2 arguments can be left undefined for no scaling)
 async function imageToCanvas(imageDims, widestRatio, tallestRatio, wideDims, tallDims, scaleLength, scaleAxis) {
   console.log('imageToCanvas');
   let imageWidth = imageDims[0];
@@ -293,52 +219,54 @@ async function imageToCanvas(imageDims, widestRatio, tallestRatio, wideDims, tal
   globalData.imgCanvasY = height * scaleFactor;
   globalData.imgCanvasEval = imgEval;
 }
-/*
-  _______   ______  __   __  _______                       _____     _____    _____
- |__   __| |  ____| \ \ / / |__   __|              /\     |  __ \   / ____|  / ____|
-    | |    | |__     \ V /     | |     ______     /  \    | |__) | | |  __  | (___
-    | |    |  __|     > <      | |    |______|   / /\ \   |  _  /  | | |_ |  \___ \
-    | |    | |____   / . \     | |              / ____ \  | | \ \  | |__| |  ____) |
-    |_|    |______| /_/ \_\    |_|             /_/    \_\ |_|  \_\  \_____| |_____/
-*/
-//for inputs that involve strings enclosed by quotes, this extracts those strings
-async function textArgs() {
-  let message = globalData.message;
-  let prefix = globalData.prefix;
-  let strings = message.content.slice(prefix.length).trim().split('"');
-  let inputs = [];
-  //odd indexes are the areas enclosed by strings, so they are what's retrieved
-  for (var i = 0; i < strings.length; i++) {
-    if (i % 2 != 0) {
-      inputs.push(strings[i])
-    }
+//TEXT-FUNCS
+async function textAddition(font, stroke, fill, inputString, textBoxCenterX, textBoxCenterY, textBoxWidth, textBoxHeight, upperCaseBool) {
+  let canvas = globalData.canvas
+  let context = globalData.context
+  let textInput = inputString[1]
+  if (textInput == undefined) {
+    textInput = 'insert meme here'
   }
-  //if no quotes are found, uses individual args as the strings (so stuff like "$meme text1 text2" will work with no quotes)
-  if (strings.length == 1) {
-    inputs = globalData.args
+  if (upperCaseBool == true) {
+    textInput = textInput.toUpperCase();
   }
-  //args are set as everything after the last quotes (split into array by spaces), useful to distinguish text content from actual args
-  let argsText = strings[strings.length - 1].trim().split(' ');
-  globalData.textInputs = inputs
-  globalData.argsText = argsText
+
+
+  console.log('Text Width')
+  console.log(getTextWidth(textInput, font))
+  console.log('Text Height')
+  console.log(getTextHeight(textInput, font))
+
+  let splitFont = font.split('px');
+
+  /*for () {
+    context.font.replace(/\d+px/, (parseInt(context.font.match(/\d+px/)) - 2) + "px")
+  }*/
+
+  let joinedFont = splitFont.join('px');
+
+  context.font = font;
+  context.fillStyle = fill;
+
+  let textX = textBoxCenterX - ((getTextWidth(textInput, font)) / 2)
+  //let textY = textBoxCenterY - ((getTextHeight(textInput, font)) / 2)
+  context.fillText(textInput, textX, textBoxCenterY + 25);
 }
-/*
-  _______   ______  __   __  _______            _    _              _   _   _____    _        ______   _____
- |__   __| |  ____| \ \ / / |__   __|          | |  | |     /\     | \ | | |  __ \  | |      |  ____| |  __ \
-    | |    | |__     \ V /     | |     ______  | |__| |    /  \    |  \| | | |  | | | |      | |__    | |__) |
-    | |    |  __|     > <      | |    |______| |  __  |   / /\ \   | . ` | | |  | | | |      |  __|   |  _  /
-    | |    | |____   / . \     | |             | |  | |  / ____ \  | |\  | | |__| | | |____  | |____  | | \ \
-    |_|    |______| /_/ \_\    |_|             |_|  |_| /_/    \_\ |_| \_| |_____/  |______| |______| |_|  \_\
-*/
-// fits text into the given dimensions, keeping size as large as possible, and outputs the size, lines, and their positions
-//-----------------------
-// style - bold, italic, etc., must be in form 'bold ' with the space since I am lazy
-// maxHeight - set to 0 for no max height
-// byLine - if true, treats maxHeight as number of lines instead of pixels
-// spacing - amount of extra space between lines (as a fraction of the line height)
-// yAlign - 'top' or 'bottom' to have text positioned down from or up from baseY respectively (any other value or no value for alignment will center on baseY)
-// xAlign - 'left' or 'right' to have text positioned right from or left from baseX respectively (any other value or no value for alignment will center on baseX)
-async function textHandler(text, font, style, maxSize, minSize, maxWidth, maxHeight, byLine, spacing, baseX, baseY, yAlign, xAlign) {
+function getTextWidth(text, font = getCanvasFontSize()) {
+  let canvas = globalData.canvas
+  let context = globalData.context
+  context.font = font;
+  const metrics = context.measureText(text);
+  return metrics.width;
+}
+function getTextHeight(text, font = getCanvasFontSize()) {
+   let canvas = globalData.canvas
+   let context = globalData.context
+   context.font = font;
+   const metrics = context.measureText(text);
+   return metrics.Height;
+}
+function textHandler(text, font, style, maxSize, minSize, maxWidth, maxHeight, byLine, spacing, baseX, baseY, yAlign, xAlign) {
   console.log('textHandler');
   let context = globalData.context;
   //we need to be able to change the max width
@@ -399,13 +327,11 @@ async function textHandler(text, font, style, maxSize, minSize, maxWidth, maxHei
       }
       //push done here since the last word portion causes entire loop to terminate
       if (split == true) {
+        //console.log('SPLIT')
         indexes.push(i);
         splitWords.push(cutWord);
       }
     }
-    //if all the spillovers are only 1-fold (only need to be split once), shrink text size instead
-    let uniqueIndexes = indexes.filter((index, i, array) => array.indexOf(index) === i)
-    if (indexes.length > uniqueIndexes.length && n > minSize) { continue; }
     //goes through the split up words and their indexes, deleting the original word and putting these in their place
     if (indexes.length != 0) {
       for (var i = indexes.length - 1; i >= 0; i--) {
@@ -540,7 +466,38 @@ async function textHandler(text, font, style, maxSize, minSize, maxWidth, maxHei
   globalData.textY = yPos;
   globalData.textSize = size;
   globalData.textHeight = (height + space) * lineNum;
-  globalData.baselineTextHeight = heights[1]
+}
+function getTime(startTime) {
+  const time = new Date();
+  if (startTime == undefined) {
+    let startTime = time.getTime();
+    return startTime;
+  }
+  else {
+    let endTime = time.getTime() - startTime;
+    return endTime;
+  }
+}
+async function wait(time) {
+  const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
+  await delay(time);
+}
+// DEBUG:
+async function infoScraper() {
+  console.log('infoScraper');
+  let message = globalData.message;
+  var scraperINFO = message.channel.messages.fetch({ limit: 2 }).then(async messageList => {
+    let messageListLastAttachment = messageList.last();
+    //console.log(messageListLastAttachment);
+    console.log(messageListLastAttachment);
+    let tenorURL = messageListLastAttachment.embeds[0].type;
+    //console.log(tenorURL);
+    return messageListLastAttachment;
+  })
+  var information = await scraperINFO.then();
+  return;
 }
 
-module.exports = { fileScraper, download, canvasInitialize, userData, canvasScaleFit, canvasScaleFill, imageToCanvas, textArgs, textHandler };
+module.exports = { fileScraper, download, canvasInitialize, canvasScaleFit, canvasScaleFill, imageToCanvas,
+                  textAddition, getTextWidth, getTextHeight, textHandler, getTime, wait, typeCheck, infoScraper,
+                  uploadLimitCheck, sendFile, linkScraper };
