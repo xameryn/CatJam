@@ -55,8 +55,8 @@ client.on('message', async message => {
       "__**List of Commands:**__" + "\n" + "\n" + "__Media Commands:__" + "\n" + "$catjam" + "\n" + "$stellaris" + "\n" + "$dadon" +
       "\n" + "$1984" + "\n" + "\n" + "__Filter Commands:__" + "\n" + "$scatter" + "\n" + "$glitch" + "\n" + "$obra" + "\n" + "\n" +
       "__Media Editing Commands:__" + "\n" + "$poster" + "\n" + "$point" + "\n" + "$meme" + "\n" + "$mario" + "\n" + "$literally1984" +
-      "\n" + "\n" + "__Utility Commands:__" + "\n" + "$archive" + "\n" + "$bpm (WIP)" + "\n" + "$twitter" + "\n" + "$flip" + "\n" +
-      "$get" + "\n" + "$pref" + "\n" + "$help");
+      "\n" + "\n" + "__Utility Commands:__" + "\n" + "$archive" + "\n" + "$bpm" + "\n" + "$twitter" + "\n" + "$flip" + "\n" + "$get" +
+      "\n" + "$pref" + "\n" + "$help");
     }
   }
   else if (command === 'catjam') {
@@ -520,33 +520,44 @@ client.on('message', async message => {
     return message.channel.send(`File Archived as ` + input + '.');
   }
   else if (command === 'bpm') {
-    if (!args.length) {
-      const msg = await message.channel.send(`At \'GO\' count the beats until you see \'STOP\'.`);
-      setTimeout(function(){
-        msg.edit("3");
-      }, 2000);
-      setTimeout(function(){
-        msg.edit("2");
-      }, 3000);
-      setTimeout(function(){
-        msg.edit("1");
-      }, 4000);
-      setTimeout(function(){
-        msg.edit("GO");
-      }, 5000);
-      setTimeout(function(){
+    const msg = await message.channel.send(`Press 🏁 to begin, count 10 beats (starting on 1) then press the 🛑.`);
+    let iterator = await 0;
+    await msg.react("🏁")
+    await func.wait(500)
+    while (await msg.reactions.cache.get('🏁').count < 2) {
+      await func.wait(10)
+      iterator++
+      if (iterator > 3000) {
         msg.delete();
-        message.channel.send(`STOP`);
-      }, 15000);
-      setTimeout(function(){
-        return message.channel.send(`Enter the amount of beats using $bpm [beats]`);
-      }, 16000);
+        return message.channel.send(`Command Timed Out`);
+      }
     }
-    else {
-      let roundInput = (Math.round(input))*6;
-      let roundBPM = (Math.round((roundInput)/5))*5;
-      return message.channel.send(roundBPM);
+
+    let startTimer = func.getTime()
+
+    iterator = await 0
+    await msg.reactions.cache.get('🏁').remove()
+    await msg.react("🛑")
+    msg.edit("Count 10 beats then press the 🛑.")
+
+    while (await msg.reactions.cache.get('🛑').count < 2) {
+      await func.wait(10)
+      iterator++
+      if (iterator > 3000) {
+        msg.delete();
+        return message.channel.send(`Command Timed Out`);
+      }
     }
+    let endTimer = func.getTime(startTimer)
+    await msg.reactions.cache.get('🛑').remove()
+
+    let minutesPerBeat = endTimer / 60000;
+    let bpm = (1 / minutesPerBeat) * 9;
+
+    return msg.edit('The BPM is: ' + Math.round(bpm))
+  }
+  else if (command === 'phas') {
+
   }
   // MISC
   else if (command === 'flip' || command === 'toss' || command === 'coin') {
@@ -585,13 +596,13 @@ client.on('message', async message => {
       return message.channel.send("This is not a twitter link.");
     }
   }
-  else if (command === 'repost' || command === 'rpst') {
+  else if (command === 'repost' || command === 'r') {
     console.log('repost function');
     //let startTimer = func.getTime()
     //let endTimer = func.getTime(startTimer)
     //console.log("Download Complete: " + endTimer + "ms")
 
-    let fileURL = await func.fileScraper();
+    let fileURL = await func.imageScraper();
 
     if (fileURL == undefined) {return message.channel.send("No File Found")}
 
@@ -608,6 +619,7 @@ client.on('message', async message => {
     console.log(link);
     return;
   }
+  else if (command === 'kill') {log()}
   else if (command === 'test' || command === 't') {
     console.log('test function');
   }

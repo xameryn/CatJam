@@ -1,4 +1,4 @@
-const { Client, Intents, MessageAttachment, MessageActionRow, MessageButton } = require('discord.js');
+const { Client, Intents, MessageAttachment, MessageEmbed, MessageActionRow, MessageButton } = require('discord.js');
 const fs = require(`fs`);
 const sharp = require('sharp');
 const request = require(`request`);
@@ -8,6 +8,7 @@ const Canvas = require('canvas');
 const SizeOf = require('image-size');
 
 import { globalData } from './CatJamsUtilities.js';
+
 // FILE-SCRAPER
 async function fileScraper() {
   console.log('fileScraper');
@@ -33,6 +34,33 @@ async function fileScraper() {
   });
   var attachedFileURL = await scraperURL.then();
   let outputURL = attachedFileURL;
+  return outputURL;
+}
+async function imageScraper() {
+  console.log('imageScraper');
+  let message = globalData.message;
+  let atc = null
+  let emb = null
+  var scraperURL = message.channel.messages.fetch().then(async messageList => {
+  let lastMessage = await messageList.sort((a, b) => b.createdTimestamp - a.createdTimestamp).filter((m) =>
+  (atc = m.attachments.first(), emb = m.embeds, ((m.attachments.size > 0) && (atc != undefined) && ((atc.url.includes('.png')) || (atc.url.includes('.jpg')) || (atc.url.includes('.bmp')))) || (emb.length > 0 && (emb[0].type == 'image')))).first();
+  if (lastMessage == undefined) {
+    return undefined;
+  }
+
+  if (lastMessage.attachments.size > 0) {
+    let url = lastMessage.attachments.first().url;
+    return url;
+  }
+
+  if (lastMessage.embeds.length > 0) {
+    let url = lastMessage.embeds[0].url;
+    return url;
+  }
+  });
+  var attachedFileURL = await scraperURL.then();
+  let outputURL = attachedFileURL;
+  //console.log(outputURL);
   return outputURL;
 }
 async function linkScraper() {
@@ -79,13 +107,16 @@ async function downloadCheck(fileDir){ //Checks if the download is complete befo
   return;
 }
 async function typeCheck(fileURL){ //Checks the file type of the URL
-  let fileTypeArray = await fileURL.split('.'); //Splits URL at every '.'
-  let suffix = await fileTypeArray.pop(); //Takes the last split part (the file type)
-  if (await suffix.includes('?')) {
-    suffix = await suffix.split('?');
-    await suffix.pop();
+  if (fileURL != await undefined) {
+    fileURL = await fileURL.toString()
+    let fileTypeArray = await fileURL.split('.'); //Splits URL at every '.'
+    let suffix = await fileTypeArray.pop(); //Takes the last split part (the file type)
+    if (await suffix.includes('?')) {
+      suffix = await suffix.split('?');
+      await suffix.pop();
+    }
+    return suffix;
   }
-  return suffix;
 }
 async function sendFile(fileURL, fileDir){
   let message = globalData.message;
@@ -484,7 +515,7 @@ async function wait(time) {
 }
 // DEBUG:
 async function infoScraper() {
-  console.log('infoScraper');
+  //console.log('infoScraper');
   let message = globalData.message;
   var scraperINFO = message.channel.messages.fetch({ limit: 2 }).then(async messageList => {
     let messageListLastAttachment = messageList.last();
@@ -500,4 +531,4 @@ async function infoScraper() {
 
 module.exports = { fileScraper, download, canvasInitialize, canvasScaleFit, canvasScaleFill, imageToCanvas,
                   textAddition, getTextWidth, getTextHeight, textHandler, getTime, wait, typeCheck, infoScraper,
-                  uploadLimitCheck, sendFile, linkScraper };
+                  uploadLimitCheck, sendFile, linkScraper, imageScraper };
