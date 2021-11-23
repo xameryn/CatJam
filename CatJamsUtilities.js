@@ -1,16 +1,19 @@
 const { Client, Intents, MessageAttachment, MessageEmbed, MessageActionRow, MessageButton } = require('discord.js');
-const fs = require(`fs`)
+const fs = require(`fs`);
 const sharp = require('sharp');
-const request = require(`request`)
-const stringify = require('json-stringify')
-const compress_images = require("compress-images")
-const Canvas = require('canvas')
-const SizeOf = require('image-size')
+const request = require(`request`);
+const stringify = require('json-stringify');
+const compress_images = require("compress-images");
+const emojiRegex = require('emoji-regex');
+const { convertFile } = require('convert-svg-to-png');
+const glitch = require('glitch-canvas');
+const Canvas = require('canvas');
+const SizeOf = require('image-size');
 
-const func = require("./functions.js")
+const func = require("./functions.js");
 
 const client = new Client({ intents: [Intents.FLAGS.GUILDS, Intents.FLAGS.GUILD_MESSAGES] });
-const DISCORDTOKEN = 'ODk2OTM0NjI1Mzg4MTM4NTI3.YWOVdg.gffqm3fD04KSvRGvq3puIwHmd54';
+const DISCORDTOKEN = '';
 const GuildID = '730691398768263198';
 const prefix = '`';
 
@@ -37,14 +40,19 @@ client.on("ready", () =>{
 
 client.on('message', async message => {
 	if (!message.content.startsWith(prefix) || message.author.bot) return;
+  let start = func.getTime();
 	const args = message.content.slice(prefix.length).trim().split(' ');
 	const command = args.shift().toLowerCase();
   const user = message.author.id;
   let input = args[0];
   let input2 = args[1];
-  let output = (Math.round((input)/5))*5;
   globalData.message = message;
-  // SET-MEDIA-POSTING
+  globalData.prefix = prefix;
+  globalData.args = args;
+  globalData.authorID = message.author.id;
+  await func.userData('get');
+  /* HELP
+  -----------------------*/
   if (command === 'help') {
     switch(input) {
   case 'catjam':
@@ -52,48 +60,62 @@ client.on('message', async message => {
     break;
   default:
     return message.channel.send(
-      "__**List of Commands:**__" + "\n" + "\n" + "__Media Commands:__" + "\n" + "$catjam" + "\n" + "$stellaris" + "\n" + "$dadon" +
-      "\n" + "$1984" + "\n" + "\n" + "__Filter Commands:__" + "\n" + "$scatter" + "\n" + "$glitch" + "\n" + "$obra" + "\n" + "\n" +
-      "__Media Editing Commands:__" + "\n" + "$poster" + "\n" + "$point" + "\n" + "$meme" + "\n" + "$mario" + "\n" + "$literally1984" +
-      "\n" + "\n" + "__Utility Commands:__" + "\n" + "$archive" + "\n" + "$bpm" + "\n" + "$twitter" + "\n" + "$flip" + "\n" + "$get" +
-      "\n" + "$pref" + "\n" + "$help");
+      "__**List of Commands:**__" + "\n\n" +
+      "__Media Commands:__" + "\n" + "$catjam" + "\n" + "$stellaris" + "\n" + "$dadon" + "\n" + "$1984" + "\n\n" +
+      "__Filter Commands:__" + "\n" + "$scatter" + "\n" + "$glitch" + "\n" + "$obra" + "\n\n" +
+      "__Media Editing Commands:__" + "\n" + "$poster" + "\n" + "$point" + "\n" + "$meme" + "\n" + "$mario" + "\n" + "$literally1984" + "\n\n" +
+      "__Utility Commands:__" + "\n" + "$archive" + "\n" + "$bpm (WIP)" + "\n" + "$twitter" + "\n" + "$flip" + "\n" + "$get" + "\n" + "$pref" + "\n" + "$help");
     }
   }
+  /*
+    __  __   ______   _____    _____
+   |  \/  | |  ____| |  __ \  |_   _|     /\
+   | \  / | | |__    | |  | |   | |      /  \
+   | |\/| | |  __|   | |  | |   | |     / /\ \
+   | |  | | | |____  | |__| |  _| |_   / ____ \
+   |_|  |_| |______| |_____/  |_____| /_/    \_\
+  */
+  /* CATJAM
+  -----------------------*/
   else if (command === 'catjam') {
-    if (input == 'help') {
-			return message.channel.send(`Send $catjam [bpm] for catjam to groove along with your song.`);
-    }
-    else if (!args.length) {
+    let output = (Math.round((input)/5))*5;
+    if (!args.length) {
       attachment = new MessageAttachment(catJamArray[12]);
       return message.channel.send(attachment);
 		}
     else if (output < 60 || output > 180) {
+      console.log(command + ' - ' + func.getTime(start).toString() + 'ms');
 			return message.channel.send(`BPM not within range.`);
 		}
     else {
       let gifNum = (output - 60) / 5;
       attachment = new MessageAttachment(catJamArray[gifNum]);
+      console.log(command + ' - ' + func.getTime(start).toString() + 'ms');
       return message.channel.send(attachment);
     }
 	}
+  /* STELLARIS
+  -----------------------*/
   else if (command === 'stellaris') {
     //message.delete();
-    if (input == 'help') {
-      return message.channel.send(`Send $stellaris [hour of day] for funny Ali gif.`);
-    }
-    else if (!args.length) {
+    if (!args.length) {
       attachment = new MessageAttachment(stellarisArray[0]);
+      console.log(command + ' - ' + func.getTime(start).toString() + 'ms');
       return message.channel.send(attachment);
     }
     else if (input > 0 && input < 13) {
       attachment = new MessageAttachment(stellarisArray[input]);
+      console.log(command + ' - ' + func.getTime(start).toString() + 'ms');
       return message.channel.send(attachment);
     }
     else {
       attachment = new MessageAttachment(stellarisArray[0]);
+      console.log(command + ' - ' + func.getTime(start).toString() + 'ms');
       return message.channel.send(attachment);
     }
   }
+  /* DADON
+  -----------------------*/
   else if (command === 'dadon') {
     let dir = './images/dadon';
     let dadonArray = ['./images/dadon/', 'dadon (', 'num', ').png'];
@@ -105,29 +127,41 @@ client.on('message', async message => {
     }
     let joinedArray = dadonArray.join('');
     var attachment = await new MessageAttachment(joinedArray);
+    console.log(command + ' - ' + func.getTime(start).toString() + 'ms');
     return message.channel.send(attachment);
   }
+  /* 1984
+  -----------------------*/
   else if (command === '1984') {
     if ((Math.floor(Math.random() * 11)) >= 5) {
         attachment = new MessageAttachment('https://i.imgur.com/59QZNLa.gif');
+        console.log(command + ' - ' + func.getTime(start).toString() + 'ms');
         return message.channel.send(attachment);
       }
     else {
         attachment = new MessageAttachment('https://i.imgur.com/wInH3ud.gif');
+        console.log(command + ' - ' + func.getTime(start).toString() + 'ms');
         return message.channel.send(attachment);
     }
   }
-  // EDITED-MEDIA-POSTING
+  /*
+    ______   _____    _____   _______
+   |  ____| |  __ \  |_   _| |__   __|
+   | |__    | |  | |   | |      | |
+   |  __|   | |  | |   | |      | |
+   | |____  | |__| |  _| |_     | |
+   |______| |_____/  |_____|    |_|
+  */
+  /* POSTER
+  -----------------------*/
   else if (command === 'poster' || command === 'canvas') {
     //-----------------------
     // GET IMAGE AND ITS SIZE
     //-----------------------
     let fileDir = './images/templates/buffer/memePosterBuffer.png';
-    let fileURL = await func.fileScraper();
+    let fileURL = await func.imageScraper();
+    if (fileURL == undefined) {return message.channel.send("No File Found :(");}
     await func.download(fileURL, fileDir);
-    //delay so download work
-    const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
-    await delay(2500);
     let imageSize = await SizeOf(fileDir);
     //-----------------------
     // FIND INNER CANVAS SIZE
@@ -139,11 +173,23 @@ client.on('message', async message => {
     //-----------------------
     // CALCULATE TEXT PARAMETERS
     //-----------------------
-    let inputString = await message.content.slice(prefix.length).trim().split('"');
+    await func.textArgs();
+    let inputs = globalData.textInputs;
+    let argsText = globalData.argsText;
+    if (inputs[0] === undefined) {
+      inputs[0] = '';
+    }
+    if (inputs[1] === undefined) {
+      inputs[1] = '';
+      if (globalData.posterTXT == 'small') {
+        inputs[1] = inputs[0];
+        inputs[0] = '';
+      }
+    }
     //dummy canvas so context works in textHandler
-    await func.canvasInitialize(1400, 700, './images/templates/blackBox.jpg');
+    await func.canvasInitialize(1400, 700, './images/templates/blackBox.jpg', []);
     //big text
-    await func.textHandler(inputString[1].toUpperCase(), 'Times New Roman', '', 150, 1, (canvasWidth + 100), 1, true, 0, centerX, 711, 'top');
+    await func.textHandler(inputs[0].toUpperCase(), 'Times New Roman', '', 150, 1, (canvasWidth + 100), 1, true, 0, centerX, 711, 'top');
     let lines1 = globalData.textLines;
     let xPos1 = globalData.textX;
     let yPos1 = globalData.textY;
@@ -152,7 +198,7 @@ client.on('message', async message => {
     //spacing between the two texts, and each text and its upper and lower bounds
     let spacing = textHeight1 * 0.5;
     //small text
-    await func.textHandler(inputString[3], 'Arial', '', Math.floor(size1 / 3), 1, (canvasWidth + 100), 3, true, 0.2, centerX, (711 + textHeight1 + (2 * spacing)), 'top');
+    await func.textHandler(inputs[1], 'Arial', '', Math.floor(size1 / 3), 1, (canvasWidth + 100), 3, true, 0.2, centerX, (711 + textHeight1 + (2 * spacing)), 'top');
     let lines2 = globalData.textLines;
     let xPos2 = globalData.textX;
     let yPos2 = globalData.textY;
@@ -162,7 +208,25 @@ client.on('message', async message => {
     // CANVAS THINGS
     //-----------------------
     //canvas is padded on all sides, lower padding is dependent on text heights
-    await func.canvasInitialize(canvasWidth + 200, (canvasHeight + 111  + (spacing * 3) + textHeight1 + textHeight2), './images/templates/blackBox.jpg');
+    //
+    //if one of the inputs is empty, spacing is adjusted accordingly, if both are empty it becomes a symmetric square border
+    if (inputs[0] != '' && inputs[1] == '') {
+      await func.canvasInitialize(canvasWidth + 200, (canvasHeight + 111  + (spacing * 2) + textHeight1), './images/templates/blackBox.jpg', []);
+    }
+    else if (inputs[0] == '' && inputs[1] != '') {
+      spacing = textHeight2 * 0.75;
+      for (i = 0; i < lines2.length; i++) {
+        yPos2[i] += spacing;
+      }
+      await func.canvasInitialize(canvasWidth + 200, (canvasHeight + 111  + (spacing * 2) + textHeight2), './images/templates/blackBox.jpg', []);
+    }
+    else if (inputs[0] == '' && inputs[1] == '') {
+      await func.canvasInitialize(canvasWidth + 200, (canvasHeight + 111  + 100), './images/templates/blackBox.jpg', []);
+    }
+    else {
+      await func.canvasInitialize(canvasWidth + 200, (canvasHeight + 111  + (spacing * 3) + textHeight1 + textHeight2), './images/templates/blackBox.jpg', []);
+    }
+    //rest of the boring canvas stuff
     let canvas = globalData.canvas;
     let context = globalData.context;
     let image = await Canvas.loadImage(fileDir);
@@ -178,12 +242,12 @@ client.on('message', async message => {
     context.fillStyle = '#ffffff';
     context.strokeStyle = '#ffffff';
     context.lineWidth = 2;
-    // inner canvas is filled white by default, can be specified to black (doesnt fill anything) or png (erases part of black background)
-    let arguements = inputString[4].split(' ');
-    if(!arguements.includes('black') && !arguements.includes('b') && !arguements.includes('png')) {
+    //this ensures that if the inputs are included, background follows them, and if no inputs are given, it falls back on given default from globalData
+    //(bg is black if nothing is done, can be filled with white, or cleared to create transparency)
+    if (argsText.includes('w') || argsText.includes('white') || (globalData.posterBG == 'white' && !argsText.includes('png') && !argsText.includes('black') && !argsText.includes('b'))) {
       context.fillRect(100, 100, canvasWidth, canvasHeight);
     }
-    else if (arguements.includes('png')) {
+    else if (argsText.includes('png') || (globalData.posterBG == 'png' && !argsText.includes('black') && !argsText.includes('b'))) {
       context.clearRect(100, 100, canvasWidth, canvasHeight);
     }
     context.strokeRect(100-10, 100-10, canvasWidth+20, canvasHeight+20);
@@ -202,53 +266,193 @@ client.on('message', async message => {
     }
 
     var attachment = await new MessageAttachment(canvas.toBuffer(), 'posterMeme.png');
+    console.log(command + ' - ' + func.getTime(start).toString() + 'ms');
     return message.channel.send(attachment);
   }
-  else if (command === 'literally1984' || command === 'l1984') {
-    await func.canvasInitialize(1440, 1036, './images/templates/literally1984.jpg');
-    let canvas = globalData.canvas
-    let context = globalData.context
-    let inputString = await message.content.slice(prefix.length).trim().split('"');
-    //if text input present, does text stuff, if not, scrapes image
-    if (inputString[1] != undefined) {
-      await func.textHandler(inputString[1], 'sans-serif', '', 175, 1, 699, 242, false, 0.2, 455.5, 150)
-      let lines = globalData.textLines
-      let xPos = globalData.textX
-      let yPos = globalData.textY
-      context.fillStyle = '#000000'
-      for (i = 0; i < lines.length; i++) {
-        context.fillText(lines[i], xPos[i], yPos[i])
+  /* MEME
+  -----------------------*/
+  else if (command === 'meme') {
+    //-----------------------
+    // GET DA FILE AND DO DA THING
+    //-----------------------
+    let fileDir = './images/templates/buffer/memeBuffer.png';
+    let fileURL = await func.imageScraper();
+    if (fileURL == undefined) {return message.channel.send("No File Found :(");}
+    await func.download(fileURL, fileDir);
+    let imageSize = await SizeOf(fileDir);
+    //-----------------------
+    // IMAGE TOO BIG OR TOO SMALL
+    //-----------------------
+    //discord still angy so image is shrink
+    if (imageSize.height > 1500 || imageSize.width > 1500) {
+      if (imageSize.height > imageSize.width) {
+        imageSize.width = (1500 / imageSize.height) * imageSize.width;
+        imageSize.height = 1500;
       }
-    } else {
+      else {
+        imageSize.height = (1500 / imageSize.width) * imageSize.height;
+        imageSize.width = 1500;
+      }
+    }
+    //dimensions scaled so they're at least 100
+    if (imageSize.height < 100 || imageSize.width < 100) {
+      if (imageSize.height > imageSize.width) {
+        imageSize.height = (100 / imageSize.width) * imageSize.height;
+        imageSize.width = 100;
+      }
+      else {
+        imageSize.width = (100 / imageSize.height) * imageSize.width;
+        imageSize.height = 100;
+      }
+    }
+    //-----------------------
+    // FUNCTIONS AND CANVAS STUFF
+    //-----------------------
+    //image is the canvas (fairly generous scale parameters here)
+    func.imageToCanvas([imageSize.width, imageSize.height], 3, 3, [imageSize.width,(imageSize.width / 3)], [(imageSize.height / 3),imageSize.height]);
+    let width = globalData.imgCanvasX;
+    let height = globalData.imgCanvasY;
+    //handling text input
+    await func.textArgs();
+    let inputs = globalData.textInputs;
+    let argsText = globalData.argsText;
+    //canvas
+    await func.canvasInitialize(width, height, './images/templates/blackBox.jpg', ['png']);
+    let canvas = globalData.canvas;
+    let context = globalData.context;
+    //image scaled to fit (mostly redundant), then drawn
+    await func.canvasScaleFit(fileDir, width, height);
+    let scaledWidth = globalData.scaledWidth;
+    let scaledHeight = globalData.scaledHeight;
+    let xAxis = globalData.xAxis;
+    let yAxis = globalData.yAxis;
+    let image = await Canvas.loadImage(fileDir);
+    context.drawImage(image, xAxis, yAxis, scaledWidth, scaledHeight);
+    //-----------------------
+    // TEXT PREP
+    //-----------------------
+    context.fillStyle = '#ffffff';
+    context.strokeStyle = '000000';
+    context.lineJoin = 'round';
+    //two input case will have larger text, and inputs assigned to memeInput to match top and bottom
+    let max;
+    let memeInput;
+    if (inputs.length < 3) {
+      max = height / 4;
+      memeInput = [inputs[0],undefined,inputs[1]];
+    }
+    else {
+      max = height / 5;
+      memeInput = [inputs[0],inputs[1],inputs[2]];
+    }
+    //-----------------------
+    // TEXT
+    //-----------------------
+    //top text
+    if (memeInput[0] !== undefined) {
+      await func.textHandler(memeInput[0].toUpperCase(), 'impact', '', max, 1, (0.95 * width), max, false, 0.2, (width / 2), (0.01 * height), 'top');
+      let lines = globalData.textLines;
+      let xPos = globalData.textX;
+      let yPos = globalData.textY;
+      let size = globalData.baselineTextHeight;
+      context.lineWidth = 2 * (size * 0.06);
+
+      for (i = 0; i < lines.length; i++) {
+        context.strokeText(lines[i], xPos[i], yPos[i]);
+        context.fillText(lines[i], xPos[i], yPos[i]);
+      }
+    }
+    //middle text
+    if (memeInput[1] !== undefined) {
+      await func.textHandler(memeInput[1].toUpperCase(), 'impact', '', max, 1, (0.95 * width), max, false, 0.2, (width / 2), (height / 2));
+      let lines = globalData.textLines;
+      let xPos = globalData.textX;
+      let yPos = globalData.textY;
+      let size = globalData.baselineTextHeight;
+      context.lineWidth = 2 * (size * 0.06);
+
+      for (i = 0; i < lines.length; i++) {
+        context.strokeText(lines[i], xPos[i], yPos[i]);
+        context.fillText(lines[i], xPos[i], yPos[i]);
+      }
+    }
+    //bottom text
+    if (memeInput[2] !== undefined) {
+      await func.textHandler(memeInput[2].toUpperCase(), 'impact', '', max, 1, (0.95 * width), max, false, 0.2, (width / 2), (0.99 * height), 'bottom');
+      let lines = globalData.textLines;
+      let xPos = globalData.textX;
+      let yPos = globalData.textY;
+      let size = globalData.baselineTextHeight;
+      context.lineWidth = 2 * (size * 0.06);
+
+      for (i = 0; i < lines.length; i++) {
+        context.strokeText(lines[i], xPos[i], yPos[i]);
+        context.fillText(lines[i], xPos[i], yPos[i]);
+      }
+    }
+    var attachment = await new MessageAttachment(canvas.toBuffer(), 'meme.png');
+    console.log(command + ' - ' + func.getTime(start).toString() + 'ms');
+    return message.channel.send(attachment);
+  }
+  /* LITERALLY1984
+  -----------------------*/
+  else if (command === 'literally1984' || command === 'l1984') {
+    //-----------------------
+    // CANVAS AND TEXT SETUP
+    //-----------------------
+    await func.canvasInitialize(1440, 1036, './images/templates/literally1984.jpg', []);
+    let canvas = globalData.canvas;
+    let context = globalData.context;
+    //gets text inputs
+    await func.textArgs();
+    let inputs = globalData.textInputs;
+    //-----------------------
+    // TEXT CASE
+    //-----------------------
+    //if text input present, does text stuff
+    if (inputs[0] != undefined) {
+      await func.textHandler(inputs[0], 'sans-serif', '', 175, 1, 699, 242, false, 0.2, 455.5, 150);
+      let lines = globalData.textLines;
+      let xPos = globalData.textX;
+      let yPos = globalData.textY;
+      context.fillStyle = '#000000';
+      for (i = 0; i < lines.length; i++) {
+        context.fillText(lines[i], xPos[i], yPos[i]);
+      }
+    }
+    //-----------------------
+    // IMAGE CASE
+    //-----------------------
+    //if no text inputs, scrapes image
+    else {
       let fileDir = './images/templates/buffer/meme1984Buffer.png';
-      let fileURL = await func.fileScraper();
+      let fileURL = await func.imageScraper();
+      if (fileURL == undefined) {return message.channel.send("No File Found :(");}
       await func.download(fileURL, fileDir);
-      const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
-      await delay(2500);
       let imageSize = await SizeOf(fileDir);
-
+      //fits and draws image in text bubble
       await func.canvasScaleFit(fileDir, 699, 242);
-      let scaledWidth = globalData.scaledWidth
-      let scaledHeight = globalData.scaledHeight
-      let xAxis = globalData.xAxis
-      let yAxis = globalData.yAxis
-
-      let image = await Canvas.loadImage(fileDir)
-      context.drawImage(image, xAxis+106, yAxis+29, scaledWidth, scaledHeight)
+      let scaledWidth = globalData.scaledWidth;
+      let scaledHeight = globalData.scaledHeight;
+      let xAxis = globalData.xAxis;
+      let yAxis = globalData.yAxis;
+      let image = await Canvas.loadImage(fileDir);
+      context.drawImage(image, xAxis+106, yAxis+29, scaledWidth, scaledHeight);
     }
     var attachment = new MessageAttachment(canvas.toBuffer(), 'literally1984meme.jpg');
+    console.log(command + ' - ' + func.getTime(start).toString() + 'ms');
     return message.channel.send(attachment);
   }
+  /* POINT
+  -----------------------*/
   else if (command === 'point') {
     //-----------------------
     // GET IMAGE AND ITS SIZE
     //-----------------------
     let fileDir = './images/templates/buffer/memePointingBuffer.png';
-    let fileURL = await func.fileScraper();
+    let fileURL = await func.imageScraper();
+    if (fileURL == undefined) {return message.channel.send("No File Found :(");}
     await func.download(fileURL, fileDir);
-    //put a delay here since otherwise the download would happen too late
-    const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
-    await delay(2500);
     let imageSize = await SizeOf(fileDir);
     //-----------------------
     // IF IMAGE IS TOO BIG
@@ -282,7 +486,17 @@ client.on('message', async message => {
     //-----------------------
     // CANVAS
     //-----------------------
-    await func.canvasInitialize(memeWidth, memeHeight, './images/templates/blackBox.jpg', input, input2);
+    //this ensures that if the inputs are included, background follows them, and if no inputs are given, it falls back on given default from globalData
+    //(canvasInitialize has baked in logic for detecting png args, the first two cases can still return png if the args are there, so we don't need to check for them)
+    if (args.includes('b') || args.includes('black') || (globalData.pointBG == 'black' && !args.includes('white') && !args.includes('w'))) {
+      await func.canvasInitialize(memeWidth, memeHeight, './images/templates/blackBox.jpg');
+    }
+    else if (args.includes('w') || args.includes('white') || globalData.pointBG == 'white') {
+      await func.canvasInitialize(memeWidth, memeHeight, './images/templates/whiteBox.jpg');
+    }
+    else {
+      await func.canvasInitialize(memeWidth, memeHeight, './images/templates/blackBox.jpg', ['png']);
+    }
     let canvas = globalData.canvas;
     let context = globalData.context;
     //-----------------------
@@ -312,20 +526,20 @@ client.on('message', async message => {
     //-----------------------
     // TWO DUDES
     //-----------------------
-    if (input == 'colonist') {
+    if (args.includes('colonist')) {
       var pointImage1 = './images/templates/pointing/pointingColonist1.png';
       var pointImage2 = './images/templates/pointing/pointingColonist2.png';
-    } else if (input == 'real') {
+    } else if (args.includes('real')) {
       var pointImage1 = './images/templates/pointing/pointingReal1.png';
       var pointImage2 = './images/templates/pointing/pointingReal2.png';
-    } else if (input == 'myth') {
+    } else if (args.includes('myth')) {
       var pointImage1 = './images/templates/pointing/pointingMyth1.png';
       var pointImage2 = './images/templates/pointing/pointingMyth2.png';
       var explosionImage = './images/templates/pointing/pointingMythExplosion.png';
-    } else if (input == 'catholic') {
+    } else if (args.includes('catholic')) {
       var pointImage1 = './images/templates/pointing/pointingCatholic1.png';
       var pointImage2 = './images/templates/pointing/pointingCatholic2.png';
-    } else if (input == 'hearthian') {
+    } else if (args.includes('hearthian')) {
       var pointImage1 = './images/templates/pointing/pointingHearthian1.png';
       var pointImage2 = './images/templates/pointing/pointingHearthian2.png';
     } else {
@@ -356,72 +570,106 @@ client.on('message', async message => {
     context.drawImage(pointing1, 0, 0, scaledWidth1, scaledHeightP);
 
     var attachment = await new MessageAttachment(canvas.toBuffer(), 'pointerMeme.png');
+    console.log(command + ' - ' + func.getTime(start).toString() + 'ms');
     return message.channel.send(attachment);
   }
+  /* MARIO
+  -----------------------*/
   else if (command === 'mario') {
-    await func.canvasInitialize(1920, 1080, './images/templates/buffer/memeMarioBuffer.png');
-    let canvas = globalData.canvas
-    let context = globalData.context
+    //-----------------------
+    // CANVAS AND BASICS
+    //-----------------------
+    await func.canvasInitialize(1920, 1080, './images/templates/blackBox.jpg', []);
+    let canvas = globalData.canvas;
+    let context = globalData.context;
 
-    let fileDir = './images/templates/buffer/memeMarioBuffer.png'
-    let fileURL = await func.fileScraper();
+    let fileDir = './images/templates/buffer/memeMarioBuffer.png';
+    let fileURL = await func.imageScraper();
+    if (fileURL == undefined) {return message.channel.send("No File Found :(");}
     await func.download(fileURL, fileDir);
-    const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
-    await delay(2500);
     let imageSize = await SizeOf(fileDir);
-
+    //-----------------------
+    // IMAGE
+    //-----------------------
+    //scale to fill entire canvas
     await func.canvasScaleFill('memeMarioBuffer.png', 730, 973, 960, 539.5);
     let scaledWidth = globalData.scaledWidth;
     let scaledHeight = globalData.scaledHeight;
     let xAxis = globalData.xAxis;
     let yAxis = globalData.yAxis;
-
+    //draw given image and mario template on top
     var meme = await Canvas.loadImage(fileDir);
     context.drawImage(meme, xAxis, yAxis, scaledWidth, scaledHeight);
-
     const foreground = await Canvas.loadImage('./images/templates/mario.png');
     context.drawImage(foreground, 0, 0, canvas.width, canvas.height);
-
-    let inputString = await message.content.slice(prefix.length).trim().split('"');
-    func.textHandler(inputString[1].toUpperCase(), 'Trebuchet MS', 'bold ', 75, 1, 526, 1, true, 0, 275, 897, 'center', 'left')
-    let lines = globalData.textLines
-    let xPos = globalData.textX
-    let yPos = globalData.textY
-    context.fillStyle = '#ffffff'
-    context.fillText(lines[0], xPos[0], yPos[0])
+    //-----------------------
+    // TEXT
+    //-----------------------
+    //get text string
+    await func.textArgs();
+    let inputs = globalData.textInputs;
+    if (inputs[0] === undefined) {
+      inputs[0] = '';
+    }
+    //text string left aligned in its place on template
+    func.textHandler(inputs[0].toUpperCase(), 'Trebuchet MS', 'bold ', 75, 1, 526, 1, true, 0, 275, 897, 'center', 'left');
+    let lines = globalData.textLines;
+    let xPos = globalData.textX;
+    let yPos = globalData.textY;
+    context.fillStyle = '#ffffff';
+    context.fillText(lines[0], xPos[0], yPos[0]);
 
     var attachment = await new MessageAttachment(canvas.toBuffer(), 'marioMeme.png');
+    console.log(command + ' - ' + func.getTime(start).toString() + 'ms');
     return message.channel.send(attachment);
   }
-  // FILTER
-  else if (command === 'scatter') {
+  /*
+    ______   _____   _        _______   ______   _____
+   |  ____| |_   _| | |      |__   __| |  ____| |  __ \
+   | |__      | |   | |         | |    | |__    | |__) |
+   |  __|     | |   | |         | |    |  __|   |  _  /
+   | |       _| |_  | |____     | |    | |____  | | \ \
+   |_|      |_____| |______|    |_|    |______| |_|  \_\
+  */
+  else if (command === 'scatter' || command === 'obra' || command === 'dinn' || command === 'glitch' || command === 'corrupt') {
+    //-----------------------
+    // UNIVERSAL STUFF
+    //-----------------------
     let filter = command;
     //basic get image make canvas from that image
     let fileDir = './images/templates/buffer/filterBuffer.png';
-    let fileURL = await func.fileScraper();
+    let fileURL = await func.imageScraper();
+    if (fileURL == undefined) {return message.channel.send("No File Found :(");}
     await func.download(fileURL, fileDir);
-    const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
-    await delay(2500);
     let imageSize = await SizeOf(fileDir);
-    await func.canvasInitialize(imageSize.width, imageSize.height, fileDir);
+    //obra dinn shrinks image to 250 pixels tall
+    if (filter == 'obra' || filter == 'dinn') {
+      await func.canvasInitialize(250 * imageSize.width / imageSize.height, 250, fileDir);
+    }
+    else {
+      await func.canvasInitialize(imageSize.width, imageSize.height, fileDir);
+    }
     let canvas = globalData.canvas;
     let context = globalData.context;
+    //this shorthand is mainly useful for obra dinn where we don't need to do any operations
+    let canvasWidth = canvas.width;
+    let canvasHeight = canvas.height;
     //-----------------------
     // SCATTER
     //-----------------------
     if (filter == 'scatter') {
       //the pixelData is just an array of all the rgb (and alpha) values of the pixels of the canvas, as in [r1, g1, b1, a1, r2, g2, b2, a2...]
       //this is why stuff like i += 4 appears later, since these values aren't separated by anything
-      let pixelData = context.getImageData(0, 0, imageSize.width, imageSize.height);
+      let pixelData = context.getImageData(0, 0, canvasWidth, canvasHeight);
+      let pixelDataLength = pixelData.data.length;
       //flattens the colours by making the RGB values multiples of 5 (to make it faster)
-      //console.log('LOOP 1')
-      for (var i = 0; i < pixelData.data.length; i++) {
+      for (var i = 0; i < pixelDataLength; i++) {
         pixelData.data[i] = Math.round(pixelData.data[i] / 5) * 5;
       }
       //goes through each pixel, and checks if its colour has already been logged in colours (final result is array of all unique colours)
-      //console.log('LOOP 2')
       let colours = [[pixelData.data[0], pixelData.data[1], pixelData.data[2]]];
-      for (var i = 0; i < pixelData.data.length; i += 4) {
+      for (var i = 0; i < pixelDataLength; i += 4) {
+
         let rgb = [pixelData.data[i], pixelData.data[i+1], pixelData.data[i+2]];
         //if all RGB values match, move on, if not keep going until last colour
         for (var n = 0; n < colours.length; n++) {
@@ -432,15 +680,13 @@ client.on('message', async message => {
         }
       }
       //creates an array with the same dimensions as colours, but filling the RGB values with random ones
-      //console.log('LOOP 3')
       let newColours = [];
       for (var i = 0; i < colours.length; i++) {
         let randRGB = [Math.floor(Math.random()*256), Math.floor(Math.random()*256), Math.floor(Math.random()*256)];
         newColours.push(randRGB);
       }
       //similar to loop 2, except when a colour matches it replaces it with the counterpart in newColours
-      //console.log('LOOP 4')
-      for (var i = 0; i < pixelData.data.length; i += 4) {
+      for (var i = 0; i < pixelDataLength; i += 4) {
         let rgb = [pixelData.data[i], pixelData.data[i+1], pixelData.data[i+2]];
         for (var n = 0; n < colours.length; n++) {
           let colour = colours[n];
@@ -453,15 +699,89 @@ client.on('message', async message => {
           }
         }
       }
-      //console.log('DONE!')
-      //applies pixelData to canvas
       context.putImageData(pixelData,0,0);
 
       var attachment = await new MessageAttachment(canvas.toBuffer(), 'scatter.png');
+      console.log(command + ' - ' + func.getTime(start).toString() + 'ms');
       return message.channel.send(attachment);
     }
+    //-----------------------
+    // OBRA DINN
+    //-----------------------
+    else if (filter == 'obra' || filter == 'dinn') {
+      //same pixelData stuff as scatter (see there for details)
+      let pixelData = context.getImageData(0, 0, canvasWidth, canvasHeight);
+      let pixelDataLength = pixelData.data.length;
+      //sets the "luminance" of each colour
+      let lumR = [];
+      let lumG = [];
+      let lumB = [];
+      for (var i = 0; i < 256; i++) {
+        lumR[i] = i * 0.299;
+        lumG[i] = i * 0.587;
+        lumB[i] = i * 0.114;
+      }
+      //sets the R value of each pixel to the overall luminance value
+      for (var i = 0; i < pixelDataLength; i += 4) {
+        pixelData.data[i] = Math.floor(lumR[pixelData.data[i]] + lumG[pixelData.data[i+1]] + lumB[pixelData.data[i+2]]);
+      }
+      //Bill Atkinson dithering algorithm
+      let width = pixelData.width;
+      let newPixel, err;
+      for (var currentPixel = 0; currentPixel < pixelDataLength; currentPixel += 4) {
+        newPixel = pixelData.data[currentPixel] < 200 ? 50 : 230;
+        err = Math.floor((pixelData.data[currentPixel] - newPixel) / 8);
+        pixelData.data[currentPixel] = newPixel;
+
+        pixelData.data[currentPixel + 4] += err;
+        pixelData.data[currentPixel + 8] += err;
+        pixelData.data[currentPixel + 4 * width - 4] += err;
+        pixelData.data[currentPixel + 4 * width] += err;
+        pixelData.data[currentPixel + 4 * width + 4] += err;
+        pixelData.data[currentPixel + 8 * width] += err;
+        //sets the B and G values to match the R value
+        //the complexity comes from the fact that the black value is (50, 50, 25), and the white is (230, 255, 255), so R->G,B depends on multiple factors
+        if (newPixel == 50) {
+          //black
+          pixelData.data[currentPixel + 1] = pixelData.data[currentPixel];
+          pixelData.data[currentPixel + 2] = pixelData.data[currentPixel] / 2;
+        }
+        else {
+          //white
+          pixelData.data[currentPixel + 1] = pixelData.data[currentPixel] * 1.1;
+          pixelData.data[currentPixel + 2] = pixelData.data[currentPixel] * 1.1;
+        }
+
+      }
+      context.putImageData(pixelData,0,0);
+      var attachment = await new MessageAttachment(canvas.toBuffer(), 'obraDinn.png');
+      console.log(command + ' - ' + func.getTime(start).toString() + 'ms');
+      return message.channel.send(attachment);
+    }
+    //-----------------------
+    // GLITCH
+    //-----------------------
+    else if (filter == 'glitch' || filter == 'corrupt') {
+      //glitch-canvas module using buffer
+      let buffer = canvas.toBuffer();
+      glitch({ amount: 0, seed: Math.floor(Math.random()* 101), iterations: Math.floor(Math.random() * 91 + 10), quality: 60}).fromBuffer(buffer).toBuffer().then((glitched) => {
+        var attachment = new MessageAttachment(glitched, 'glitch.png');
+        console.log(command + ' - ' + func.getTime(start).toString() + 'ms');
+        return message.channel.send(attachment);
+      }).catch(console.error);
+      //sometimes throws errors, but seems out of our control
+    }
   }
-  // UTILITY
+  /*
+    _    _   _______   _____   _        _____   _______  __     __
+   | |  | | |__   __| |_   _| | |      |_   _| |__   __| \ \   / /
+   | |  | |    | |      | |   | |        | |      | |     \ \_/ /
+   | |  | |    | |      | |   | |        | |      | |      \   /
+   | |__| |    | |     _| |_  | |____   _| |_     | |       | |
+    \____/     |_|    |_____| |______| |_____|    |_|       |_|
+  */
+  /* ARCHIVE
+  -----------------------*/
   else if (command === 'arc' || command === 'a' || command === 'archive') {
     globalData.fileType = 'fileType';
     let nameBypass = false;
@@ -519,47 +839,138 @@ client.on('message', async message => {
     func.download(fileURL, fileDir);
     return message.channel.send(`File Archived as ` + input + '.');
   }
+  /* PREFERENCES
+  -----------------------*/
+  else if (command === 'pref') {
+    if (input !== undefined) {
+      if (input2 === undefined) {
+        input2 = '';
+      }
+      //(see userData function)
+      await func.userData('set', input.toLowerCase(), input2.toLowerCase());
+      console.log(command + ' - ' + func.getTime(start).toString() + 'ms');
+      return message.channel.send(`${globalData.toggledMSG}`);
+    }
+    //if input undefined sends your preferences
+    else {
+      console.log(command + ' - ' + func.getTime(start).toString() + 'ms');
+      return message.channel.send('**__Your preferences:__**\n`point` background - ' + `**${globalData.pointBG}**` + '\n`poster` background - ' + `**${globalData.posterBG}**` + '\n`poster` text priority - ' + `**${globalData.posterTXT}**`);
+    }
+  }
+  /* GET
+  -----------------------*/
+  else if (command === 'get') {
+    //-----------------------
+    // AVATAR
+    //-----------------------
+    if (input == 'ava' || input == 'av' || input == 'avatar' || input == 'pfp') {
+      let link
+      //avatar of author
+      if (input2 === undefined) {
+        link = message.author.avatarURL();
+      }
+      //avatar from mention
+      else if (message.mentions.users.first() !== undefined) {
+        link = message.mentions.users.first().avatarURL();
+      }
+      //server avatar
+      else if ((input2 == 'server' || input2 == 's') && message.guild.iconURL() != null) {
+        link = message.guild.iconURL();
+      }
+      //avatar from id
+      else {
+        //special case since promises are cringe
+        client.users.fetch(input2).then((targetUser) => {
+          let index = targetUser.avatarURL().indexOf('.webp');
+          console.log(command + ' - ' + func.getTime(start).toString() + 'ms');
+          message.channel.send(targetUser.avatarURL().slice(0,index) + '.png?size=1024');
+        }).catch(console.error);
+        return;
+      }
+      //changed .webp to .png, and sets large size to make it display native res
+      let index = link.indexOf('.webp');
+      console.log(command + ' - ' + func.getTime(start).toString() + 'ms');
+      return message.channel.send(link.slice(0,index) + '.png?size=1024');
+    }
+    //-----------------------
+    // EMOJI
+    //-----------------------
+    else if (input == 'em' || input == 'emoji') {
+      let cSplit = message.content.slice(prefix.length).trim().split(':');
+      //basically just database of emoji
+      let regex = emojiRegex();
+      //custom emoji
+      //messages with custom emoji will have two colons, scuffed way of detecting them but idk how else
+      if (cSplit.length == 3) {
+        console.log(command + ' - ' + func.getTime(start).toString() + 'ms');
+        return message.channel.send('https://cdn.discordapp.com/emojis/' + cSplit[2].slice(0,18) + '.png?size=1024');
+      }
+      //default emoji (if input2 contains an emoji)
+      else if (regex.test(input2)) {
+        let names = [input2.codePointAt(0).toString(16)];
+        let i = 1;
+        while (input2.codePointAt(i) != undefined) {
+          if (input2.codePointAt(i).toString(16)[0] != 'd') {
+            names.push(input2.codePointAt(i).toString(16));
+          }
+          i += 1;
+        }
+        //gets character code and converts it to hexadecimal
+        let name = names[0];
+        for (i = 1; i < names.length; i++) {
+          name += '-' + names[i];
+        }
+        //grabs png and puts on canvas
+        await func.canvasInitialize(1024, 1024, './images/emoji/' + name + '.png', []);
+        let canvas = globalData.canvas;
+
+        var attachment = await new MessageAttachment(canvas.toBuffer(), 'emoji.png');
+        console.log(command + ' - ' + func.getTime(start).toString() + 'ms');
+        return message.channel.send(attachment);
+      }
+    }
+  }
+  /* BPM
+  -----------------------*/
   else if (command === 'bpm') {
     const msg = await message.channel.send(`Press 🏁 to begin, count 10 beats (starting on 1) then press the 🛑.`);
     let iterator = await 0;
-    await msg.react("🏁")
-    await func.wait(500)
+    await msg.react("🏁");
+    await func.wait(500);
     while (await msg.reactions.cache.get('🏁').count < 2) {
-      await func.wait(10)
-      iterator++
+      await func.wait(10);
+      iterator++;
       if (iterator > 3000) {
         msg.delete();
         return message.channel.send(`Command Timed Out`);
       }
     }
 
-    let startTimer = func.getTime()
+    let startTimer = func.getTime();
 
-    iterator = await 0
-    await msg.reactions.cache.get('🏁').remove()
-    await msg.react("🛑")
-    msg.edit("Count 10 beats then press the 🛑.")
+    iterator = await 0;
+    await msg.reactions.cache.get('🏁').remove();
+    await msg.react("🛑");
+    msg.edit("Count 10 beats then press the 🛑.");
 
     while (await msg.reactions.cache.get('🛑').count < 2) {
-      await func.wait(10)
-      iterator++
+      await func.wait(10);
+      iterator++;
       if (iterator > 3000) {
         msg.delete();
         return message.channel.send(`Command Timed Out`);
       }
     }
-    let endTimer = func.getTime(startTimer)
-    await msg.reactions.cache.get('🛑').remove()
+    let endTimer = func.getTime(startTimer);
+    await msg.reactions.cache.get('🛑').remove();
 
     let minutesPerBeat = endTimer / 60000;
     let bpm = (1 / minutesPerBeat) * 9;
 
-    return msg.edit('The BPM is: ' + Math.round(bpm))
+    return msg.edit('The BPM is: ' + Math.round(bpm));
   }
-  else if (command === 'phas') {
-
-  }
-  // MISC
+  /* FLIP
+  -----------------------*/
   else if (command === 'flip' || command === 'toss' || command === 'coin') {
     if (!args.length) {
       var odds = 0.5;
@@ -573,56 +984,69 @@ client.on('message', async message => {
     await delay(2500);
     msg.delete();
     if (odds > Math.random()) {
+      console.log(command + ' - ' + func.getTime(start).toString() + 'ms');
       return message.channel.send(`Success!`);
     }
     else {
+      console.log(command + ' - ' + func.getTime(start).toString() + 'ms');
       return message.channel.send(`Failure!`);
     }
   }
+  /* TWITTER
+  -----------------------*/
   else if (command === 'twt' || command === 'twitter') {
     let lastMessage = await func.linkScraper();
-    let nickName = lastMessage.member.displayName
-    console.log(nickName);
+    if (lastMessage == undefined) { return message.channel.send("No Link Found :(");}
+    let nickName = lastMessage.member.displayName;
     let originalURL = lastMessage.content;
     let splitURL = originalURL.split('/');
     if (splitURL[2] == 'twitter.com') {
       splitURL[2] = 'fxtwitter.com';
       let joinedURL = splitURL.join('/');
-      message.delete()
-      lastMessage.delete()
+      message.delete();
+      lastMessage.delete();
+      console.log(command + ' - ' + func.getTime(start).toString() + 'ms');
       return message.channel.send("Tweet was sent by: **" + nickName + "\n**" + joinedURL);
     }
     else {
+      console.log(command + ' - ' + func.getTime(start).toString() + 'ms');
       return message.channel.send("This is not a twitter link.");
     }
   }
-  else if (command === 'repost' || command === 'r') {
-    console.log('repost function');
-    //let startTimer = func.getTime()
-    //let endTimer = func.getTime(startTimer)
-    //console.log("Download Complete: " + endTimer + "ms")
+  /* REPOST
+  -----------------------*/
+  else if (command === 'repost' || command === 'rp') {
+    let fileURL = await func.fileScraper();
 
-    let fileURL = await func.imageScraper();
-
-    if (fileURL == undefined) {return message.channel.send("No File Found")}
+    if (fileURL == undefined) {return message.channel.send("No File Found :(");}
 
     let fileType = await func.typeCheck(fileURL).then();
+    if (fileType == undefined) {return message.channel.send("Bad Embed :(");}
+
     let fileDir = await './images/templates/buffer/testBuffer.' + fileType;
 
     await func.download(fileURL, fileDir);
-
+    console.log(command + ' - ' + func.getTime(start).toString() + 'ms');
     return func.sendFile(fileURL, fileDir);
 
   }
+  /* PROBE
+  -----------------------*/
   else if (command === 'probe' || command === 'prb') {
     await func.infoScraper();
     console.log(link);
+    console.log(command + ' - ' + func.getTime(start).toString() + 'ms');
     return;
   }
-  else if (command === 'kill') {log()}
+  /* KILL
+  -----------------------*/
+  else if (command === 'kill') {log();}
+  /* TEST
+  -----------------------*/
   else if (command === 'test' || command === 't') {
-    console.log('test function');
+    console.log(command + ' - ' + func.getTime(start).toString() + 'ms');
   }
+
 });
 
 export { globalData };

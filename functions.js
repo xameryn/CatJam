@@ -1,4 +1,4 @@
-const { Client, Intents, MessageAttachment, MessageEmbed, MessageActionRow, MessageButton } = require('discord.js');
+const { Client, Intents, MessageAttachment, MessageActionRow, MessageButton } = require('discord.js');
 const fs = require(`fs`);
 const sharp = require('sharp');
 const request = require(`request`);
@@ -8,15 +8,23 @@ const Canvas = require('canvas');
 const SizeOf = require('image-size');
 
 import { globalData } from './CatJamsUtilities.js';
-
-// FILE-SCRAPER
+/* FILE-SCRAPER
+-----------------------*/
 async function fileScraper() {
-  console.log('fileScraper');
+  let start = getTime();
   let message = globalData.message;
   var scraperURL = message.channel.messages.fetch().then(async messageList => {
   let lastMessage = await messageList.sort((a, b) => b.createdTimestamp - a.createdTimestamp).filter((m) => ((m.embeds.length > 0 && (m.embeds[0].type == 'image' || m.embeds[0].type == 'video' || m.embeds[0].type == 'gifv')) || m.attachments.size > 0)).first();
+
   if (lastMessage == undefined) {
     return undefined;
+  }
+
+  if (message.reference != undefined) {
+    let replyMessage =  await message.channel.messages.fetch(message.reference.messageID);
+    if ((replyMessage.embeds.length > 0 && (replyMessage.embeds[0].type == 'image' || replyMessage.embeds[0].type == 'video' || replyMessage.embeds[0].type == 'gifv')) || replyMessage.attachments.size > 0) {
+      lastMessage = replyMessage
+    }
   }
 
   if (lastMessage.attachments.size > 0) {
@@ -27,25 +35,35 @@ async function fileScraper() {
   if (lastMessage.embeds.length > 0) {
     let url = lastMessage.embeds[0].url;
     if (await url.includes('tenor.com/view')) { //If a Tenor link
-      url = url + ".gif" //Add .gif file type
+      url = url + ".gif"; //Add .gif file type
     }
     return url;
   }
   });
   var attachedFileURL = await scraperURL.then();
   let outputURL = attachedFileURL;
+  console.log('fileScraper - ' + getTime(start).toString() + 'ms');
   return outputURL;
 }
 async function imageScraper() {
-  console.log('imageScraper');
+  let start = getTime();
   let message = globalData.message;
-  let atc = null
-  let emb = null
+  let atc = null;
+  let emb = null;
   var scraperURL = message.channel.messages.fetch().then(async messageList => {
   let lastMessage = await messageList.sort((a, b) => b.createdTimestamp - a.createdTimestamp).filter((m) =>
-  (atc = m.attachments.first(), emb = m.embeds, ((m.attachments.size > 0) && (atc != undefined) && ((atc.url.includes('.png')) || (atc.url.includes('.jpg')) || (atc.url.includes('.bmp')))) || (emb.length > 0 && (emb[0].type == 'image')))).first();
+  (atc = m.attachments.first(), emb = m.embeds, ((m.attachments.size > 0) && (atc != undefined) && ((atc.url.includes('.png')) || (atc.url.includes('.jpg')) || (atc.url.includes('.bmp')) || (atc.url.includes('.jpeg')) || (atc.url.includes('.jfif')) || (atc.url.includes('.tiff')) || (atc.url.includes('.webp')))) || (emb.length > 0 && (emb[0].type == 'image')))).first();
+
   if (lastMessage == undefined) {
     return undefined;
+  }
+
+  if (message.reference != undefined) {
+    let replyMessage =  await message.channel.messages.fetch(message.reference.messageID);
+    let replyATC = replyMessage.attachments.first()
+    if (((replyMessage.attachments.size > 0) && (replyATC != undefined) && ((replyATC.url.includes('.png')) || (replyATC.url.includes('.jpg')) || (replyATC.url.includes('.bmp')) || (replyATC.url.includes('.jpeg')) || (replyATC.url.includes('.jfif')) || (replyATC.url.includes('.tiff')) || (replyATC.url.includes('.webp')))) || (replyMessage.embeds.length > 0 && (replyMessage.embeds[0].type == 'image'))) {
+      lastMessage = replyMessage
+    }
   }
 
   if (lastMessage.attachments.size > 0) {
@@ -60,65 +78,77 @@ async function imageScraper() {
   });
   var attachedFileURL = await scraperURL.then();
   let outputURL = attachedFileURL;
-  //console.log(outputURL);
+  console.log('imageScraper - ' + getTime(start).toString() + 'ms');
   return outputURL;
 }
 async function linkScraper() {
-  console.log('linkScraper');
+  let start = getTime();
   let message = globalData.message;
   var websiteMessage = message.channel.messages.fetch().then(async messageList => {
   let lastMessage = await messageList.sort((a, b) => b.createdTimestamp - a.createdTimestamp).filter((m) => ((m.embeds.length > 0 && (m.embeds[0].type == 'rich') && (m.embeds[0].url.includes('twitter.com'))))).first();
   return lastMessage;
 });
+console.log('linkScraper - ' + getTime(start).toString() + 'ms');
 return websiteMessage;
 }
 async function uploadLimitCheck(fileDir) {
+  let start = getTime();
   const statz = fs.statSync(fileDir);
   const fileSizeInBytes = statz.size;
   if (fileSizeInBytes > 8000000) {
     console.log(fileSizeInBytes);
+    console.log('uploadLimitCheck - ' + getTime(start).toString() + 'ms');
     return true;
   }
   else {
+    console.log('uploadLimitCheck - ' + getTime(start).toString() + 'ms');
     return false;
   }
 }
-// DOWNLOAD
+/* DOWNLOAD
+-----------------------*/
 async function download(fileURL, fileDir){
-  console.log('download');
+  let start = getTime();
   if (await fileURL == undefined || fileDir == undefined) { //Prevents a download if the provided URL or directory is undefined
+    console.log('download - ' + getTime(start).toString() + 'ms');
     return;
   }
   else {
-    if (await fs.existsSync(fileDir) == true) {fs.unlinkSync(fileDir)} //Deletes the provided dir if it is already downloaded
+    if (await fs.existsSync(fileDir) == true) {fs.unlinkSync(fileDir);} //Deletes the provided dir if it is already downloaded
     await request.get(fileURL).pipe(fs.createWriteStream(fileDir)); //Downloads URL in directory
-    await downloadCheck(fileDir)
+    await downloadCheck(fileDir);
+    console.log('download - ' + getTime(start).toString() + 'ms');
     return;
   }
 }
 async function downloadCheck(fileDir){ //Checks if the download is complete before moving on
+  let start = getTime();
   while (await fs.existsSync(fileDir) == false) { //Checks if the downloaded file exists
-    await wait(25)
+    await wait(25);
   }
   while (await fs.statSync(fileDir).size == 0) { //Checks if the downloaded file is larger than 0 bytes
-    await wait(25)
+    await wait(25);
   }
-  await wait(250) // :3
+  await wait(400); // :3
+  console.log('downloadCheck - ' + getTime(start).toString() + 'ms');
   return;
 }
 async function typeCheck(fileURL){ //Checks the file type of the URL
-  if (fileURL != await undefined) {
-    fileURL = await fileURL.toString()
-    let fileTypeArray = await fileURL.split('.'); //Splits URL at every '.'
-    let suffix = await fileTypeArray.pop(); //Takes the last split part (the file type)
-    if (await suffix.includes('?')) {
-      suffix = await suffix.split('?');
-      await suffix.pop();
-    }
-    return suffix;
+  let start = getTime();
+  let fileTypeArray = await fileURL.split('.'); //Splits URL at every '.'
+  let suffix = await fileTypeArray.pop(); //Takes the last split part (the file type)
+  if (await suffix.includes('?')) {
+    suffix = await suffix.split('?');
+    await suffix.pop();
   }
+  if (suffix.length > 5) {
+    return undefined;
+  }
+  console.log('typeCheck - ' + getTime(start).toString() + 'ms');
+  return suffix;
 }
 async function sendFile(fileURL, fileDir){
+  let start = getTime();
   let message = globalData.message;
   if (await uploadLimitCheck(fileDir)) { //If gif is over 8MB, embeds as link
     console.log("over 8 mb");
@@ -132,30 +162,40 @@ async function sendFile(fileURL, fileDir){
     return message.channel.send(fileURL);
   }
   var attachment = await new MessageAttachment(fileDir);
+  console.log('sendFile - ' + getTime(start).toString() + 'ms')
   return message.channel.send(attachment);
 }
-// CANVAS-INITIALIZE
-async function canvasInitialize(canvasWidth, canvasHeight, backgroundImage, modifier1, modifier2){
-  console.log('canvasInitialize');
+/* CANVAS
+-----------------------*/
+async function canvasInitialize(canvasWidth, canvasHeight, backgroundImage, pngArgs){
+  let start = getTime();
+  //can be given specific arguments, otherwise uses global ones
+  let args = globalData.args;
+  if (pngArgs !== undefined) {
+    args = pngArgs;
+  }
   var canvas = Canvas.createCanvas(canvasWidth, canvasHeight);
   globalData.canvas = canvas;
   var context = canvas.getContext('2d');
   globalData.context = context;
+
   var background = await Canvas.loadImage(backgroundImage);
-  if (modifier1 == 'png' || modifier2 == 'png') {
+  if (args.includes('png')) {
+    console.log('canvasInitialize - ' + getTime(start).toString() + 'ms');
     return;
   }
   else {
     context.drawImage(background, 0, 0, canvas.width, canvas.height);
+    console.log('canvasInitialize - ' + getTime(start).toString() + 'ms');
     return;
   }
 }
 // SCALE-FIT
 async function canvasScaleFit(fileDir, boxWidth, boxHeight){
-  console.log('canvasScaleFit');
+  let start = getTime();
   let canvas = globalData.canvas;
   let context = globalData.context;
-  let memeSize = await SizeOf(fileDir)
+  let memeSize = await SizeOf(fileDir);
   if (boxWidth === undefined || boxHeight === undefined) {
     var boxWidth = canvas.width;
     var boxHeight = canvas.height;
@@ -181,11 +221,12 @@ async function canvasScaleFit(fileDir, boxWidth, boxHeight){
   globalData.scaledHeight = scaledHeight;
   globalData.xAxis = xAxis;
   globalData.yAxis = yAxis;
+  console.log('canvasScaleFit - ' + getTime(start).toString() + 'ms');
   return;
 }
 // SCALE-FILL
 async function canvasScaleFill(fileName, internalWidth, internalHeight, centerX, centerY){
-  console.log('canvasScaleFill');
+  let start = getTime();
   let canvas = globalData.canvas;
   let context = globalData.context;
   var memeSize = await SizeOf('./images/templates/buffer/' + fileName);
@@ -215,10 +256,17 @@ async function canvasScaleFill(fileName, internalWidth, internalHeight, centerX,
   globalData.scaledHeight = scaledHeight;
   globalData.xAxis = xAxis;
   globalData.yAxis = yAxis;
+  console.log('canvasScaleFill - ' + getTime(start).toString() + 'ms');
   return;
 }
+// IMAGE-CANVAS
 async function imageToCanvas(imageDims, widestRatio, tallestRatio, wideDims, tallDims, scaleLength, scaleAxis) {
-  console.log('imageToCanvas');
+  let start = getTime();
+  // widestRatio, tallestRatio - the maximum allowed (width / height) or (height / width) respectively
+  // wideDims, tallDims - if the image is too wide (wideDims) or too tall (tallDims), these dimensions are used instead
+  // scaleLength - what size the final image should be scaled to (height or width)
+  // scaleAxis - 'height' or 'width' depending on what scaleLength represents
+  // (above 2 arguments can be left undefined for no scaling)
   let imageWidth = imageDims[0];
   let imageHeight = imageDims[1];
   let wideWidth = wideDims[0];
@@ -249,56 +297,146 @@ async function imageToCanvas(imageDims, widestRatio, tallestRatio, wideDims, tal
   globalData.imgCanvasX = width * scaleFactor;
   globalData.imgCanvasY = height * scaleFactor;
   globalData.imgCanvasEval = imgEval;
+  console.log('imageToCanvas - ' + getTime(start).toString() + 'ms');
+  return;
 }
-//TEXT-FUNCS
-async function textAddition(font, stroke, fill, inputString, textBoxCenterX, textBoxCenterY, textBoxWidth, textBoxHeight, upperCaseBool) {
-  let canvas = globalData.canvas
-  let context = globalData.context
-  let textInput = inputString[1]
-  if (textInput == undefined) {
-    textInput = 'insert meme here'
+/* USER-DATA
+-----------------------*/
+async function userData(action, tag, arg) {
+  let start = getTime();
+  //action - 'get' to get preferences and store them in globalData, 'set' to change a preference
+  //tag - preference to change
+  //arg - thing to set preference to
+  let user = globalData.authorID;
+  let doc = fs.readFileSync('user-data.json', 'utf8');
+  let lines = doc.split('\r\n');
+  //-----------------------
+  // GET
+  //-----------------------
+  if (action == 'get') {
+    //goes through lines, if id matches, sets values using that line
+    for (var i = 0; i < lines.length; i++) {
+      let line = JSON.parse(lines[i]);
+      if (line.id == user) {
+        globalData.pointBG = line.pointBG;
+        globalData.posterBG = line.posterBG;
+        globalData.posterTXT = line.posterTXT;
+        globalData.authorIndex = i;
+        console.log('userData - ' + getTime(start).toString() + 'ms');
+        return;
+      }
+    }
+    //will only be run if no id found (since if it was found function returns), sets values to defaults and adds new line
+    globalData.pointBG = 'black';
+    globalData.posterBG = 'white';
+    globalData.posterTXT = 'big';
+    globalData.authorIndex = lines.length - 1;
+    lines.push(`{"id":"${user}","pointBG":"black","posterBG":"white","posterTXT":"big"}`);
   }
-  if (upperCaseBool == true) {
-    textInput = textInput.toUpperCase();
+  //-----------------------
+  // SET
+  //-----------------------
+  //depending on tag and args, changes the data of the given line, and creates message to be sent
+  else if (action == 'set') {
+    let data = JSON.parse(lines[globalData.authorIndex]);
+    globalData.toggledMSG = `Couldn't set that preference... :Ɛ`;
+    //background changes
+    if (arg == 'white' || arg == 'black' || arg == 'png') {
+      if (tag == 'point') {
+        data.pointBG = arg;
+      }
+      else if (tag == 'poster') {
+        data.posterBG = arg;
+      }
+      if (tag == 'point' || tag == 'poster') {
+        globalData.toggledMSG = 'Preferences for `' + `${tag}` + '` background set to ' + `**${arg}**` + '! :3';
+      }
+    }
+    //poster text change
+    else if (tag == 'poster' && (arg == 'big' || arg == 'small')) {
+      data.posterTXT = arg;
+      globalData.toggledMSG = 'Preferences for `' + `${tag}` + '` text priority set to ' + `**${arg}**` + '! :3';
+    }
+    //reset to default
+    else if (tag == 'reset') {
+      data = JSON.parse(`{"id":"${user}","pointBG":"black","posterBG":"white","posterTXT":"big"}`);
+      globalData.toggledMSG = `Preferences reset! :3`;
+    }
+    lines[globalData.authorIndex] = JSON.stringify(data);
   }
-
-
-  console.log('Text Width')
-  console.log(getTextWidth(textInput, font))
-  console.log('Text Height')
-  console.log(getTextHeight(textInput, font))
-
-  let splitFont = font.split('px');
-
-  /*for () {
-    context.font.replace(/\d+px/, (parseInt(context.font.match(/\d+px/)) - 2) + "px")
-  }*/
-
-  let joinedFont = splitFont.join('px');
-
-  context.font = font;
-  context.fillStyle = fill;
-
-  let textX = textBoxCenterX - ((getTextWidth(textInput, font)) / 2)
-  //let textY = textBoxCenterY - ((getTextHeight(textInput, font)) / 2)
-  context.fillText(textInput, textX, textBoxCenterY + 25);
+  //-----------------------
+  // DATA UPDATE
+  //-----------------------
+  //updates the doc to match the lines here
+  //(runs for set and if no id found in get)
+  let output = lines[0];
+  if (lines.length != 1) {
+    output += '\r\n';
+    for (var i = 1; i < lines.length - 1; i++) {
+      output += lines[i] + '\r\n';
+    }
+    output += lines[lines.length - 1];
+  }
+  fs.writeFileSync('user-data.json', output, 'utf8');
+  console.log('userData - ' + getTime(start).toString() + 'ms');
+  return;
 }
-function getTextWidth(text, font = getCanvasFontSize()) {
-  let canvas = globalData.canvas
-  let context = globalData.context
-  context.font = font;
-  const metrics = context.measureText(text);
-  return metrics.width;
+/* TEXT-ARGS
+-----------------------*/
+async function textArgs() {
+  let start = getTime();
+  let message = globalData.message;
+  let prefix = globalData.prefix;
+  let content = message.content.slice(prefix.length).trim();
+  console.log(content)
+  while (content.includes('“') || content.includes('”')) {
+    content = content.replace('“','"');
+    content = content.replace('”','"');
+  }
+  let strings;
+  if (content.indexOf("'") == -1) {
+    strings = content.split('"')
+  }
+  else if (content.indexOf('"') == -1) {
+    strings = content.split("'")
+  }
+  else {
+    if (content.indexOf("'") > content.indexOf('"')) {
+      strings = content.split('"')
+    }
+    else {
+      strings = content.split("'")
+    }
+  }
+  console.log(strings)
+  let inputs = [];
+  //odd indexes are the areas enclosed by strings, so they are what's retrieved
+  for (var i = 0; i < strings.length; i++) {
+    if (i % 2 != 0) {
+      inputs.push(strings[i]);
+    }
+  }
+  //if no quotes are found, uses individual args as the strings (so stuff like "$meme text1 text2" will work with no quotes)
+  if (strings.length == 1) {
+    inputs = globalData.args;
+  }
+  //args are set as everything after the last quotes (split into array by spaces), useful to distinguish text content from actual args
+  let argsText = strings[strings.length - 1].trim().split(' ');
+  globalData.textInputs = inputs;
+  globalData.argsText = argsText;
+  console.log('textArgs - ' + getTime(start).toString() + 'ms');
+  return;
 }
-function getTextHeight(text, font = getCanvasFontSize()) {
-   let canvas = globalData.canvas
-   let context = globalData.context
-   context.font = font;
-   const metrics = context.measureText(text);
-   return metrics.Height;
-}
-function textHandler(text, font, style, maxSize, minSize, maxWidth, maxHeight, byLine, spacing, baseX, baseY, yAlign, xAlign) {
-  console.log('textHandler');
+/* TEXT-HANDLER
+-----------------------*/
+async function textHandler(text, font, style, maxSize, minSize, maxWidth, maxHeight, byLine, spacing, baseX, baseY, yAlign, xAlign) {
+  let start = getTime();
+  // style - bold, italic, etc., must be in form 'bold ' with the space since I am lazy
+  // maxHeight - set to 0 for no max height
+  // byLine - if true, treats maxHeight as number of lines instead of pixels
+  // spacing - amount of extra space between lines (as a fraction of the line height)
+  // yAlign - 'top' or 'bottom' to have text positioned down from or up from baseY respectively (any other value or no value for alignment will center on baseY)
+  // xAlign - 'left' or 'right' to have text positioned right from or left from baseX respectively (any other value or no value for alignment will center on baseX)
   let context = globalData.context;
   //we need to be able to change the max width
   let maxWidthDyn = maxWidth;
@@ -358,11 +496,13 @@ function textHandler(text, font, style, maxSize, minSize, maxWidth, maxHeight, b
       }
       //push done here since the last word portion causes entire loop to terminate
       if (split == true) {
-        //console.log('SPLIT')
         indexes.push(i);
         splitWords.push(cutWord);
       }
     }
+    //if all the spillovers are only 1-fold (only need to be split once), shrink text size instead
+    let uniqueIndexes = indexes.filter((index, i, array) => array.indexOf(index) === i);
+    if (indexes.length > uniqueIndexes.length && n > minSize) { continue; }
     //goes through the split up words and their indexes, deleting the original word and putting these in their place
     if (indexes.length != 0) {
       for (var i = indexes.length - 1; i >= 0; i--) {
@@ -497,7 +637,12 @@ function textHandler(text, font, style, maxSize, minSize, maxWidth, maxHeight, b
   globalData.textY = yPos;
   globalData.textSize = size;
   globalData.textHeight = (height + space) * lineNum;
+  globalData.baselineTextHeight = heights[1];
+  console.log('textHandler - ' + getTime(start).toString() + 'ms');
+  return;
 }
+/* TIME
+-----------------------*/
 function getTime(startTime) {
   const time = new Date();
   if (startTime == undefined) {
@@ -513,9 +658,10 @@ async function wait(time) {
   const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
   await delay(time);
 }
-// DEBUG:
+/* DEBUG
+-----------------------*/
 async function infoScraper() {
-  //console.log('infoScraper');
+  let start = getTime();
   let message = globalData.message;
   var scraperINFO = message.channel.messages.fetch({ limit: 2 }).then(async messageList => {
     let messageListLastAttachment = messageList.last();
@@ -523,12 +669,14 @@ async function infoScraper() {
     console.log(messageListLastAttachment);
     let tenorURL = messageListLastAttachment.embeds[0].type;
     //console.log(tenorURL);
+    console.log('infoScraper - ' + getTime(start).toString() + 'ms');
     return messageListLastAttachment;
   })
   var information = await scraperINFO.then();
+  console.log('infoScraper - ' + getTime(start).toString() + 'ms');
   return;
 }
 
 module.exports = { fileScraper, download, canvasInitialize, canvasScaleFit, canvasScaleFill, imageToCanvas,
-                  textAddition, getTextWidth, getTextHeight, textHandler, getTime, wait, typeCheck, infoScraper,
-                  uploadLimitCheck, sendFile, linkScraper, imageScraper };
+                  textHandler, getTime, wait, typeCheck, infoScraper, uploadLimitCheck, sendFile, linkScraper,
+                  userData, textArgs, imageScraper};
