@@ -679,7 +679,21 @@ async function infoScraper() {
   console.log('infoScraper - ' + getTime(start).toString() + 'ms');
   return;
 }
+function createFolders() { //Creates an empty folder if it is not there, as Github doesn't allow commits of empty folders. Add a case for all future empty folders
+  if (!fs.existsSync('./files/buffer')) {
+    fs.mkdirSync('./files/buffer')
+  }
+  if (!fs.existsSync('./files/archive')) {
+    fs.mkdirSync('./files/archive')
+  }
+  if (!fs.existsSync('./files/buffer/conversionDownload')) {
+    fs.mkdirSync('./files/buffer/conversionDownload')
+  }
+  if (!fs.existsSync('./files/buffer/emojiDownload')) {
+    fs.mkdirSync('./files/buffer/emojiDownload')
+  }
+}
 
 module.exports = { fileScraper, download, canvasInitialize, canvasScaleFit, canvasScaleFill, imageToCanvas,
                   textHandler, getTime, wait, typeCheck, infoScraper, uploadLimitCheck, sendFile, linkScraper,
-                  userData, textArgs, imageScraper};
+                  userData, textArgs, imageScraper, createFolders };
