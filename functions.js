@@ -1,11 +1,12 @@
 const { Client, Intents, MessageAttachment, MessageActionRow, MessageButton } = require('discord.js');
 const fs = require('fs-extra')
-const sharp = require('sharp');
-const request = require(`request`);
-const stringify = require('json-stringify');
-const compress_images = require("compress-images");
+const request = require('request');
 const Canvas = require('canvas');
 const SizeOf = require('image-size');
+const sharp = require('sharp');
+const stringify = require('json-stringify');
+const compress_images = require("compress-images");
+
 
 import { globalData } from './main.js';
 /* FILE-SCRAPER

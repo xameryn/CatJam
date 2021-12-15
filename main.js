@@ -2,14 +2,14 @@ const { Client, Intents, MessageAttachment, MessageEmbed, MessageActionRow, Mess
 const fs = require('fs-extra')
 const archiver = require('archiver');
 const webp = require('webp-converter');
-const sharp = require('sharp');
-const request = require(`request`);
-const stringify = require('json-stringify');
-const compress_images = require("compress-images");
 const emojiRegex = require('emoji-regex');
 const glitch = require('glitch-canvas');
 const Canvas = require('canvas');
 const SizeOf = require('image-size');
+const sharp = require('sharp');
+const request = require('request');
+const stringify = require('json-stringify');
+const compress_images = require('compress-images');
 
 const func = require("./functions.js");
 
