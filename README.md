@@ -12,3 +12,5 @@ Run instructions:
 - If updating from branch Version-1.0 run:
   - npm update
   - npm install
+
+- Duplicate (not rename or delete) the file named 'CHECK_README.js' and name it "keys.js'. Then enter tokens in 'keys.js'.
