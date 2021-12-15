@@ -1,1 +1,1 @@
-node CatJamsUtilities.js
+npm start

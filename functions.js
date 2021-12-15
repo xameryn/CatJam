@@ -1,5 +1,5 @@
 const { Client, Intents, MessageAttachment, MessageActionRow, MessageButton } = require('discord.js');
-const fs = require(`fs`);
+const fs = require('fs-extra')
 const sharp = require('sharp');
 const request = require(`request`);
 const stringify = require('json-stringify');
@@ -7,7 +7,7 @@ const compress_images = require("compress-images");
 const Canvas = require('canvas');
 const SizeOf = require('image-size');
 
-import { globalData } from './CatJamsUtilities.js';
+import { globalData } from './main.js';
 /* FILE-SCRAPER
 -----------------------*/
 async function fileScraper() {
@@ -114,10 +114,13 @@ async function download(fileURL, fileDir){
     return;
   }
   else {
-    if (await fs.existsSync(fileDir) == true) {fs.unlinkSync(fileDir);} //Deletes the provided dir if it is already downloaded
+    /*if (await fs.existsSync(fileDir) == true) { //Deletes the provided dir if it is already downloaded
+      fs.unlinkSync(fileDir);
+      console.log("Deletes the provided dir");
+    }*/
     await request.get(fileURL).pipe(fs.createWriteStream(fileDir)); //Downloads URL in directory
-    await downloadCheck(fileDir);
     console.log('download - ' + getTime(start).toString() + 'ms');
+    await downloadCheck(fileDir);
     return;
   }
 }
