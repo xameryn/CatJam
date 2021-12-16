@@ -4,3 +4,7 @@ emojis.zip
 dist/
 node_modules/
 .vscode/
+files/buffer/
+files/buffer/conversionDownload
+files/buffer/emojiDownload
+files/archive/
