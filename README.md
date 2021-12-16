@@ -9,6 +9,7 @@ CatJam's Utilities is a Discord bot that aim's to be Kitchen Sink's spiritual su
 ### Run Instructions:
 
 - Download and install [``Node.js v16.10.0``](https://nodejs.org/download/release/v16.10.0/)
+- Download and install <a href="http://example.com/" target="_blank">``Node.js v16.10.0``</a>
 
 - Open a terminal inside the root directory of the bot and enter ``npm install``, this will install all the required node modules as specified in 'package.json'.
 
