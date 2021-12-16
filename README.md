@@ -14,7 +14,7 @@ CatJam's Utilities is a Discord bot that aim's to be Kitchen Sink's spiritual su
 
 - Duplicate the file named ``CHECK_README.js`` and rename it to ``keys.js``. Then enter the required tokens inside the file 'keys.js'
 
-- Run CatJamsUtilities with either the provided ``run.bat``, or using ``npm start`` in terminal
+- Run CatJam's Utilities with either the provided ``run.bat``, or using ``npm start`` in terminal
 
 ### Bot Usage:
 
