@@ -2,11 +2,12 @@ const { Client, Intents, MessageAttachment, MessageActionRow, MessageButton } = 
 const sharp = require('sharp');
 const stringify = require('json-stringify');
 const compress_images = require("compress-images");
+const emojiRegex = require('emoji-regex');
 const fs = require('fs-extra')
 const request = require('request');
 const Canvas = require('canvas');
 const SizeOf = require('image-size');
-
+const emojiDict = require("emoji-dictionary");
 
 import { globalData } from './main.js';
 /* FILE-SCRAPER
@@ -115,27 +116,20 @@ async function download(fileURL, fileDir){
     return;
   }
   else {
-    /*if (await fs.existsSync(fileDir) == true) { //Deletes the provided dir if it is already downloaded
-      fs.unlinkSync(fileDir);
-      console.log("Deletes the provided dir");
-    }*/
-    await request.get(fileURL).pipe(fs.createWriteStream(fileDir)); //Downloads URL in directory
+    //downloads URL in directory
+    let write = fs.createWriteStream(fileDir);
+    request.get(fileURL).pipe(write);
+    //waits until download is finished
+    let finished = false;
+    write.on('finish', () => {
+      finished = true
+    });
+    while (!finished) {
+      await wait(25);
+    }
     console.log('download - ' + getTime(start).toString() + 'ms');
-    await downloadCheck(fileDir);
     return;
   }
-}
-async function downloadCheck(fileDir){ //Checks if the download is complete before moving on
-  let start = getTime();
-  while (await fs.existsSync(fileDir) == false) { //Checks if the downloaded file exists
-    await wait(25);
-  }
-  while (await fs.statSync(fileDir).size == 0) { //Checks if the downloaded file is larger than 0 bytes
-    await wait(25);
-  }
-  await wait(400); // :3
-  console.log('downloadCheck - ' + getTime(start).toString() + 'ms');
-  return;
 }
 async function typeCheck(fileURL){ //Checks the file type of the URL
   let start = getTime();
@@ -229,11 +223,9 @@ async function canvasScaleFit(fileDir, boxWidth, boxHeight){
   return;
 }
 // SCALE-FILL
-async function canvasScaleFill(fileName, internalWidth, internalHeight, centerX, centerY){
+async function canvasScaleFill(fileDir, internalWidth, internalHeight, centerX, centerY){
   let start = getTime();
-  let canvas = globalData.canvas;
-  let context = globalData.context;
-  var memeSize = await SizeOf('./images/templates/buffer/' + fileName);
+  var memeSize = await SizeOf(fileDir);
   //wider than dimensions, fill to height
   if ((memeSize.width / memeSize.height) >= (internalWidth / internalHeight)) {
     var scalingRatio = memeSize.height / internalHeight;
@@ -303,6 +295,25 @@ async function imageToCanvas(imageDims, widestRatio, tallestRatio, wideDims, tal
   globalData.imgCanvasEval = imgEval;
   console.log('imageToCanvas - ' + getTime(start).toString() + 'ms');
   return;
+}
+// SCALE-DIMS
+async function scaleDims(imageDims, scaledDim) {
+  //scales the largest dimension down to scaledDim
+  let start = getTime();
+  let width = imageDims[0];
+  let height = imageDims[1];
+  let newWidth;
+  let newHeight;
+  if (height > width) {
+    newWidth = (scaledDim / height) * width;
+    newHeight = scaledDim;
+  }
+  else {
+    newHeight = (scaledDim / width) * height;
+    newWidth = scaledDim;
+  }
+  console.log('scaleDims - ' + getTime(start).toString() + 'ms');
+  return [newWidth, newHeight];
 }
 /* USER-DATA
 -----------------------*/
@@ -385,6 +396,163 @@ async function userData(action, tag, arg) {
   console.log('userData - ' + getTime(start).toString() + 'ms');
   return;
 }
+/* EMOJI
+-----------------------*/
+// FIND
+async function findEmoji(emojiString) {
+  let start = getTime();
+  let defaultRegex = emojiRegex();
+  let customRegex = /<:(\w+):(\d+)>/gmd;
+  let animRegex = /<a:(\w+):(\d+)>/gmd;
+  let matches = [];
+  //guide to match: [(unicode emoji/emoji id), (index within string), (name), (name used in discord), (is animated boolean)]
+  //default emoji
+  for (var match of emojiString.matchAll(defaultRegex)) {
+    matches.push([match[0], match.index, emojiDict.getName(match[0]), match[0], false]);
+  }
+  //custom (and animated) emoji
+  for (var match of emojiString.matchAll(customRegex)) {
+    matches.push([match[2], match.index, match[1], match[0], false]);
+  }
+  for (var match of emojiString.matchAll(animRegex)) {
+    matches.push([match[2], match.index, match[1], match[0], true]);
+  }
+  //matches sorted so first in the string come first
+  matches.sort((a,b) => {return a[1] - b[1];});
+  globalData.emojiMatch = matches;
+  console.log('findEmoji - ' + getTime(start).toString() + 'ms');
+  return;
+}
+// GET
+async function getEmoji(emoji) {
+  let start = getTime();
+  let defaultRegex = emojiRegex();
+  globalData.emojiStatus = 'invalid'
+  if (emoji != undefined) {
+    findEmoji(emoji);
+  }
+  let matches = globalData.emojiMatch;
+  if (matches == undefined) {
+    console.log('getEmoji - ' + getTime(start).toString() + 'ms');
+    return;
+  }
+  //-----------------------
+  // LOOP
+  //-----------------------
+  for (var i = 0; i < matches.length; i++) {
+    let ident = matches[i][0];
+    let fileName = encodeURI(matches[i][2]);
+    //-----------------------
+    // DEFAULT EMOJI
+    //-----------------------
+    if (ident.search(defaultRegex) != -1) {
+      let names = [ident.codePointAt(0).toString(16)];
+      let p = 1;
+      while (ident.codePointAt(p) != undefined) {
+        if (ident.codePointAt(p).toString(16)[0] != 'd') {
+          names.push(ident.codePointAt(p).toString(16));
+        }
+        p += 1;
+      }
+      //compiles points into file name
+      let name = names[0];
+      let nameTrunc = names[0]
+      for (var n = 1; n < names.length; n++) {
+        if (names[n] != 'fe0f') {
+          nameTrunc += '-' + names[n];
+        }
+        name += '-' + names[n];
+      }
+      //tries to find matching emoji in archive
+      let image;
+      if (fs.existsSync('./files/emoji/' + name + '.png')) {
+        image = fs.readFileSync('./files/emoji/' + name + '.png');
+      }
+      else if (fs.existsSync('./files/emoji/' + nameTrunc + '.png')) {
+        image = fs.readFileSync('./files/emoji/' + nameTrunc + '.png');
+      }
+      else {
+        console.log('Unicode error!')
+        console.log('getEmoji - ' + getTime(start).toString() + 'ms');
+        return;
+      }
+      fileName = await fileNameVerify(fileName, './files/buffer/emojiDownload/', '.png');
+      fs.writeFileSync('./files/buffer/emojiDownload/' + fileName + '.png', image);
+    }
+    //-----------------------
+    // CUSTOM EMOJI
+    //-----------------------
+    else {
+      //animated check
+      let ext;
+      if (matches[i][4]) {
+        ext = '.gif';
+      }
+      else {
+        ext = '.png';
+      }
+      fileName = await fileNameVerify(fileName, './files/buffer/emojiDownload/', ext);
+      await download('https://cdn.discordapp.com/emojis/' + ident + ext + '?size=1024', './files/buffer/emojiDownload/' + fileName + ext);
+    }
+  }
+  if (matches.length == 1) {
+    globalData.emojiStatus = 'single';
+  }
+  else {
+    globalData.emojiStatus = 'multiple';
+  }
+  console.log('getEmoji - ' + getTime(start).toString() + 'ms');
+  return;
+}
+// DRAW
+async function drawEmoji(useArgs = false, yPos, emojiX, emojiY, emojiLines, emojiArray, lineHeight, offX, offY) {
+  let start = getTime();
+  // arguments:
+  // emojiArray is globalData emojiMatch
+  // all others are args from textHandler
+  // last 2 are custom offsets for x and y pos
+  let context = globalData.context;
+  if (!useArgs) {
+    yPos = globalData.textY
+    emojiX = globalData.emojiX;
+    emojiY = globalData.emojiY;
+    emojiLines = globalData.emojiLines;
+    emojiArray = globalData.emojiMatch;
+    lineHeight = globalData.lineTextHeight;
+    offX = 0
+    offY = 0
+  }
+  else {
+    globalData.emojiMatch = emojiArray
+  }
+
+  if (emojiArray == undefined) {
+    return;
+  }
+  await getEmoji();
+  let emoji;
+  let nameArray = [];
+  for (var i = 0; i < emojiArray.length; i++) {
+    //accounts for duplicate names
+    let name = await fileNameVerify(encodeURI(emojiArray[i][2]));
+    if (!nameArray.includes(name)) {
+      nameArray.push(name);
+    }
+    else {
+      let repeat = 0;
+      while (nameArray.includes(name + repeat.toString())) {
+        repeat += 1;
+      }
+    } 
+    //actual emoji drawing
+    emoji = await Canvas.loadImage('./files/buffer/emojiDownload/' + name + '.png');
+    context.drawImage(emoji, emojiX[i] + offX, (yPos[emojiLines[i]] - emojiY + offY), lineHeight, lineHeight);
+  } 
+  fs.emptyDirSync('./files/buffer/emojiDownload/');
+  console.log('drawEmoji - ' + getTime(start).toString() + 'ms');
+  return;
+}
+
 /* TEXT-ARGS
 -----------------------*/
 async function textArgs() {
@@ -392,7 +560,6 @@ async function textArgs() {
   let message = globalData.message;
   let prefix = globalData.prefix;
   let content = message.content.slice(prefix.length).trim();
-  console.log(content)
   while (content.includes('“') || content.includes('”')) {
     content = content.replace('“','"');
     content = content.replace('”','"');
@@ -412,7 +579,6 @@ async function textArgs() {
       strings = content.split("'")
     }
   }
-  console.log(strings)
   let inputs = [];
   //odd indexes are the areas enclosed by strings, so they are what's retrieved
   for (var i = 0; i < strings.length; i++) {
@@ -441,6 +607,30 @@ async function textHandler(text, font, style, maxSize, minSize, maxWidth, maxHei
   // spacing - amount of extra space between lines (as a fraction of the line height)
   // yAlign - 'top' or 'bottom' to have text positioned down from or up from baseY respectively (any other value or no value for alignment will center on baseY)
   // xAlign - 'left' or 'right' to have text positioned right from or left from baseX respectively (any other value or no value for alignment will center on baseX)
+
+  //let text = input
+  //-----------------------
+  // EMOJI PART 1
+  //-----------------------
+  //replaces emojis with invisible character to be drawn over later
+  let defaultRegex = emojiRegex();
+  let customRegex = /<:\w+:(\d+)>/gmd;
+  let animRegex = /<a:\w+:(\d+)>/gmd;
+  let char = ' ';
+  text = text.replace(char, ' ');
+  if (text.search(defaultRegex) != -1 || customRegex.test(text) || animRegex.test(text)) {
+    await findEmoji(text);
+    var matches = globalData.emojiMatch;
+    for (var match of matches) {
+      if (match[0] != match[3]) {
+        text = text.replace(match[3], char);
+      }
+      else {
+        text = text.replace(match[0], char);
+      }
+    }
+  }
+  //-----------------------
   let context = globalData.context;
   //we need to be able to change the max width
   let maxWidthDyn = maxWidth;
@@ -452,6 +642,9 @@ async function textHandler(text, font, style, maxSize, minSize, maxWidth, maxHei
     context.font = style + `${n}px ` + font;
     //height below and above the baseline (0 and 1 respectively)
     var heights = [context.measureText(text).actualBoundingBoxDescent, context.measureText(text).actualBoundingBoxAscent];
+    if (((heights[0] + heights[1]) <= 1 && text != '') || matches != undefined) {
+      heights = [context.measureText('Qq').actualBoundingBoxDescent, context.measureText('Qq').actualBoundingBoxAscent];
+    }
     var height = heights[0] + heights[1];
     //-----------------------
     // CHECK IF VALID
@@ -468,8 +661,15 @@ async function textHandler(text, font, style, maxSize, minSize, maxWidth, maxHei
     } else {
       var maxLines = maxHeight;
     }
-
-    if (best > maxLines && maxLines != 0 && n > minSize) { continue; }
+    if (best > maxLines && maxLines != 0) {
+      //since this is the last check, if there is no smaller size to continue to, the max width itself is expanded until it theoretically fits
+      if (n > minSize) { continue; }
+      else {
+        while (((totalWidth - spaceWidth*(maxLines-1)) / maxLines) > maxWidthDyn) {
+          maxWidthDyn += n * 0.8;
+        }
+      }
+    }
     //-----------------------
     // WORD SPLITTING
     //-----------------------
@@ -505,8 +705,18 @@ async function textHandler(text, font, style, maxSize, minSize, maxWidth, maxHei
       }
     }
     //if all the spillovers are only 1-fold (only need to be split once), shrink text size instead
-    let uniqueIndexes = indexes.filter((index, i, array) => array.indexOf(index) === i);
-    if (indexes.length > uniqueIndexes.length && n > minSize) { continue; }
+    let counts = {};
+    indexes.forEach((x) => {
+      counts[x] = (counts[x] || 0) + 1;
+    });
+    let singleSplit = false;
+    indexes.forEach((x) => {
+      if (counts[x] == 2) {
+        singleSplit = true;
+      }
+    });
+    if (singleSplit && n > minSize) { continue; }
+
     //goes through the split up words and their indexes, deleting the original word and putting these in their place
     if (indexes.length != 0) {
       for (var i = indexes.length - 1; i >= 0; i--) {
@@ -517,25 +727,6 @@ async function textHandler(text, font, style, maxSize, minSize, maxWidth, maxHei
         }
         //the actual insertion part (no clue how this even works lol)
         words.splice.apply(words, [index,0].concat(splitWords[i]));
-      }
-    }
-    //-----------------------
-    // CHECK IF VALID 2
-    //-----------------------
-    //checking again since word splitting slightly changes the total width
-    //(checked before splitting to avoid wasted time on the lengthy split process)
-    best = 1;
-    totalWidth = context.measureText(words.join(' ')).width;
-    while (((totalWidth - (best-1)*spaceWidth) / best) >= maxWidthDyn) {
-      best += 1;
-    }
-    if (best > maxLines && maxLines != 0) {
-      //since this is the last check, if there is no smaller size to continue to, the max width itself is expanded until it theoretically fits
-      if (n > minSize) { continue; }
-      else {
-        while (((totalWidth - spaceWidth*(maxLines-1)) / maxLines) > maxWidthDyn) {
-          maxWidthDyn += n * 0.8;
-        }
       }
     }
     //setup for the inner loop
@@ -634,6 +825,23 @@ async function textHandler(text, font, style, maxSize, minSize, maxWidth, maxHei
     }
   }
   //-----------------------
+  // EMOJI PART 2
+  //-----------------------
+  let emojiX = [];
+  let emojiLine = [];
+  let charWidth = context.measureText(char).width
+  let offset = (charWidth - height) / 2;
+  for (var i = 0; i < lineNum; i++) {
+    let from = 0;
+    let index = lines[i].indexOf(char, from);
+    while (index != -1) {
+      emojiX.push(context.measureText(lines[i].slice(0,index)).width + xPos[i] + offset);
+      emojiLine.push(i);
+      from = index + 1;
+      index = lines[i].indexOf(char, from);
+    }
+  }
+  //-----------------------
   // FINAL VALUES
   //-----------------------
   globalData.textLines = lines;
@@ -641,7 +849,11 @@ async function textHandler(text, font, style, maxSize, minSize, maxWidth, maxHei
   globalData.textY = yPos;
   globalData.textSize = size;
   globalData.textHeight = (height + space) * lineNum;
+  globalData.lineTextHeight = height;
   globalData.baselineTextHeight = heights[1];
+  globalData.emojiX = emojiX;
+  globalData.emojiY = heights[1] + (heights[0] / 2);
+  globalData.emojiLines = emojiLine;
   console.log('textHandler - ' + getTime(start).toString() + 'ms');
   return;
 }
@@ -694,7 +906,22 @@ function createFolders() { //Creates an empty folder if it is not there, as Gith
     fs.mkdirSync('./files/buffer/emojiDownload')
   }
 }
+async function fileNameVerify(string, filePath, extension) {
+  let charRegex = /[\\/:\*\?"<>\|]+/g; // \ / : * ? " < > |
+  let nameRegex = /^(aux|nul|prn|con|lpt[1-9]|com[1-9])(\.|$)/i;
+  string = string.replaceAll(charRegex, '-');
+  if (nameRegex.test(string)) {
+    string = '-'
+  }
+  if (filePath != undefined && fs.existsSync(filePath + string + extension)) {
+    let repeat = 0
+    while (fs.existsSync(filePath + string + repeat.toString() + extension)) {
+      repeat += 1;
+    }
+  }
+  return string;
+}
 
 module.exports = { fileScraper, download, canvasInitialize, canvasScaleFit, canvasScaleFill, imageToCanvas,
                   textHandler, getTime, wait, typeCheck, infoScraper, uploadLimitCheck, sendFile, linkScraper,
-                  userData, textArgs, imageScraper, createFolders };
+                  userData, textArgs, imageScraper, createFolders, findEmoji, getEmoji, fileNameVerify, scaleDims, drawEmoji };

@@ -43,17 +43,22 @@ client.on("ready", () =>{
 client.on('message', async message => {
 	if (!message.content.startsWith(prefix) || message.author.bot) return;
   let start = func.getTime();
+  globalData = {}
 	const args = message.content.slice(prefix.length).trim().split(' ');
 	const command = args.shift().toLowerCase();
   const user = message.author.id;
   let input = args[0];
   let input2 = args[1];
+  let fullInput = message.content.slice(prefix.length + command.length).trim();
   globalData.message = message;
   globalData.prefix = prefix;
   globalData.args = args;
   globalData.authorID = message.author.id;
   await func.userData('get');
+  /* HELP
+  -----------------------*/
   if (command === 'help') {
+    let p = "\\" + prefix;
     switch(input) {
   case 'catjam':
     return message.channel.send("$catjam [BPM] for catjam to jam to the beat.");
@@ -61,12 +66,15 @@ client.on('message', async message => {
   default:
     return message.channel.send(
       "__**List of Commands:**__" + "\n\n" +
-      "__Media Commands:__" + "\n" + "$catjam" + "\n" + "$stellaris" + "\n" + "$dadon" + "\n" + "$1984" + "\n\n" +
-      "__Filter Commands:__" + "\n" + "$scatter" + "\n" + "$glitch" + "\n" + "$obra" + "\n\n" +
-      "__Media Editing Commands:__" + "\n" + "$poster" + "\n" + "$point" + "\n" + "$meme" + "\n" + "$mario" + "\n" + "$literally1984" + "\n\n" +
-      "__Utility Commands:__" + "\n" + "$archive" + "\n" + "$bpm (WIP)" + "\n" + "$twitter" + "\n" + "$flip" + "\n" + "$get" + "\n" + "$pref" + "\n" + "$help");
+      "__Media Commands:__\n" + p + "catjam\n" + p + "stellaris\n" + p + "dadon\n" + p + "1984\n\n" +
+      "__Filter Commands:__\n" + p + "scatter\n" + p + "glitch\n" + p + "obra\n\n" +
+      "__Media Editing Commands:__\n" + p + "poster\n" + p + "point\n" + p + "meme\n" + p + "mario\n" + p + "literally1984\n\n" +
+      "__Utility Commands:__\n" + p + "archive\n" + p + "bpm (WIP)\n" + p + "twitter\n" + p + "flip\n" + p + "get\n" + p + "starpic\n" + p + "convert\n\n" +
+      "__Meta Commands:__\n" + p + "help\n" + p + "pref");
     }
   }
+  /* CATJAM
+  -----------------------*/
   else if (command === 'catjam') {
     let output = (Math.round((input)/5))*5;
     if (!args.length) {
@@ -84,6 +92,8 @@ client.on('message', async message => {
       return message.channel.send(attachment);
     }
 	}
+  /* STELLARIS
+  -----------------------*/
   else if (command === 'stellaris') {
     //message.delete();
     if (!args.length) {
@@ -102,6 +112,8 @@ client.on('message', async message => {
       return message.channel.send(attachment);
     }
   }
+  /* DADON
+  -----------------------*/
   else if (command === 'dadon') {
     let dir = './files/dadon';
     let dadonArray = ['./files/dadon/', 'dadon (', 'num', ').png'];
@@ -116,6 +128,8 @@ client.on('message', async message => {
     console.log(command + ' - ' + func.getTime(start).toString() + 'ms');
     return message.channel.send(attachment);
   }
+  /* 1984
+  -----------------------*/
   else if (command === '1984') {
     if ((Math.floor(Math.random() * 11)) >= 5) {
         attachment = new MessageAttachment('https://i.imgur.com/59QZNLa.gif');
@@ -128,6 +142,16 @@ client.on('message', async message => {
         return message.channel.send(attachment);
     }
   }
+  /*
+    ______   _____    _____   _______
+   |  ____| |  __ \  |_   _| |__   __|
+   | |__    | |  | |   | |      | |
+   |  __|   | |  | |   | |      | |
+   | |____  | |__| |  _| |_     | |
+   |______| |_____/  |_____|    |_|
+  */
+  /* POSTER
+  -----------------------*/
   else if (command === 'poster' || command === 'canvas') {
     //-----------------------
     // GET IMAGE AND ITS SIZE
@@ -155,7 +179,7 @@ client.on('message', async message => {
     }
     if (inputs[1] === undefined) {
       inputs[1] = '';
-      if (globalData.posterTXT == 'small') {
+      if (globalData.posterTXT == 'small' || inputs[0].length > 50) {
         inputs[1] = inputs[0];
         inputs[0] = '';
       }
@@ -163,14 +187,23 @@ client.on('message', async message => {
     //dummy canvas so context works in textHandler
     await func.canvasInitialize(1400, 700, './files/templates/blackBox.jpg', []);
     //big text
-    await func.textHandler(inputs[0].toUpperCase(), 'Times New Roman', '', 150, 1, (canvasWidth + 100), 1, true, 0, centerX, 711, 'top');
+    await func.textHandler(inputs[0].toUpperCase(), 'Times New Roman', '', 150, 30, (canvasWidth + 100), 1, true, 0, centerX, 711, 'top');
     let lines1 = globalData.textLines;
     let xPos1 = globalData.textX;
     let yPos1 = globalData.textY;
     let size1 = globalData.textSize;
     let textHeight1 = globalData.textHeight;
+    let lineHeight1 = globalData.lineTextHeight;
+    //emoji
+    let emojiX1 = globalData.emojiX;
+    let emojiY1 = globalData.emojiY;
+    let emojiLines1 = globalData.emojiLines;
+    let emojiArray1 = globalData.emojiMatch;
     //spacing between the two texts, and each text and its upper and lower bounds
     let spacing = textHeight1 * 0.5;
+    if (spacing < 50 && spacing > 0) {
+      spacing = 50;
+    }
     //small text
     await func.textHandler(inputs[1], 'Arial', '', Math.floor(size1 / 3), 1, (canvasWidth + 100), 3, true, 0.2, centerX, (711 + textHeight1 + (2 * spacing)), 'top');
     let lines2 = globalData.textLines;
@@ -178,28 +211,49 @@ client.on('message', async message => {
     let yPos2 = globalData.textY;
     let size2 = globalData.textSize;
     let textHeight2 = globalData.textHeight;
+    let lineHeight2 = globalData.lineTextHeight;
+    //emoji
+    let emojiX2 = globalData.emojiX;
+    let emojiY2 = globalData.emojiY;
+    let emojiLines2 = globalData.emojiLines;
+    let emojiArray2 = globalData.emojiMatch;
     //-----------------------
-    // CANVAS THINGS
+    // PADDING
     //-----------------------
     //canvas is padded on all sides, lower padding is dependent on text heights
     //
     //if one of the inputs is empty, spacing is adjusted accordingly, if both are empty it becomes a symmetric square border
+    let padding = 89;
     if (inputs[0] != '' && inputs[1] == '') {
-      await func.canvasInitialize(canvasWidth + 200, (canvasHeight + 111  + (spacing * 2) + textHeight1), './files/templates/blackBox.jpg', []);
+      padding = (spacing * 2) + textHeight1;
     }
     else if (inputs[0] == '' && inputs[1] != '') {
-      spacing = textHeight2 * 0.75;
+      spacing = lineHeight2;
       for (i = 0; i < lines2.length; i++) {
         yPos2[i] += spacing;
       }
-      await func.canvasInitialize(canvasWidth + 200, (canvasHeight + 111  + (spacing * 2) + textHeight2), './files/templates/blackBox.jpg', []);
-    }
-    else if (inputs[0] == '' && inputs[1] == '') {
-      await func.canvasInitialize(canvasWidth + 200, (canvasHeight + 111  + 100), './files/templates/blackBox.jpg', []);
+      padding = (spacing * 2) + textHeight2;
     }
     else {
-      await func.canvasInitialize(canvasWidth + 200, (canvasHeight + 111  + (spacing * 3) + textHeight1 + textHeight2), './files/templates/blackBox.jpg', []);
+      padding = (spacing * 3) + textHeight1 + textHeight2;
     }
+    if (padding < 89) {
+      if (inputs[0] != '') {
+        for (i = 0; i < lines1.length; i++) {
+          yPos1[i] += (89 - padding) / 2;
+        }
+      }
+      if (inputs[1] != '') {
+        for (i = 0; i < lines2.length; i++) {
+          yPos2[i] += (89 - padding) / 2;
+        }
+      }
+      padding = 89
+    }
+    //-----------------------
+    // CANVAS THINGS
+    //-----------------------
+    await func.canvasInitialize(canvasWidth + 200, (canvasHeight + 111  + padding), './files/templates/blackBox.jpg', []);
     //rest of the boring canvas stuff
     let canvas = globalData.canvas;
     let context = globalData.context;
@@ -238,11 +292,15 @@ client.on('message', async message => {
     for (i = 0; i < lines2.length; i++) {
       context.fillText(lines2[i], xPos2[i], yPos2[i]);
     }
-
+    //emoji drawing
+    await func.drawEmoji(true, yPos1, emojiX1, emojiY1, emojiLines1, emojiArray1, lineHeight1, 0, spacing);
+    await func.drawEmoji(true, yPos2, emojiX2, emojiY2, emojiLines2, emojiArray2, lineHeight2, 0, 0);
     var attachment = await new MessageAttachment(canvas.toBuffer(), 'posterMeme.png');
     console.log(command + ' - ' + func.getTime(start).toString() + 'ms');
     return message.channel.send(attachment);
   }
+  /* MEME
+  -----------------------*/
   else if (command === 'meme') {
     //-----------------------
     // GET DA FILE AND DO DA THING
@@ -257,25 +315,15 @@ client.on('message', async message => {
     //-----------------------
     //discord still angy so image is shrink
     if (imageSize.height > 1500 || imageSize.width > 1500) {
-      if (imageSize.height > imageSize.width) {
-        imageSize.width = (1500 / imageSize.height) * imageSize.width;
-        imageSize.height = 1500;
-      }
-      else {
-        imageSize.height = (1500 / imageSize.width) * imageSize.height;
-        imageSize.width = 1500;
-      }
+      let dims = await func.scaleDims([imageSize.width, imageSize.height], 1500);
+      imageSize.width = dims[0];
+      imageSize.height = dims[1];
     }
     //dimensions scaled so they're at least 100
     if (imageSize.height < 100 || imageSize.width < 100) {
-      if (imageSize.height > imageSize.width) {
-        imageSize.height = (100 / imageSize.width) * imageSize.height;
-        imageSize.width = 100;
-      }
-      else {
-        imageSize.width = (100 / imageSize.height) * imageSize.width;
-        imageSize.height = 100;
-      }
+      let dims = await func.scaleDims([imageSize.width, imageSize.height], 100);
+      imageSize.width = dims[0];
+      imageSize.height = dims[1];
     }
     //-----------------------
     // FUNCTIONS AND CANVAS STUFF
@@ -333,6 +381,8 @@ client.on('message', async message => {
         context.strokeText(lines[i], xPos[i], yPos[i]);
         context.fillText(lines[i], xPos[i], yPos[i]);
       }
+
+      await func.drawEmoji();
     }
     //middle text
     if (memeInput[1] !== undefined) {
@@ -347,6 +397,7 @@ client.on('message', async message => {
         context.strokeText(lines[i], xPos[i], yPos[i]);
         context.fillText(lines[i], xPos[i], yPos[i]);
       }
+      await func.drawEmoji();
     }
     //bottom text
     if (memeInput[2] !== undefined) {
@@ -361,11 +412,14 @@ client.on('message', async message => {
         context.strokeText(lines[i], xPos[i], yPos[i]);
         context.fillText(lines[i], xPos[i], yPos[i]);
       }
+      await func.drawEmoji();
     }
     var attachment = await new MessageAttachment(canvas.toBuffer(), 'meme.png');
     console.log(command + ' - ' + func.getTime(start).toString() + 'ms');
     return message.channel.send(attachment);
   }
+  /* LITERALLY1984
+  -----------------------*/
   else if (command === 'literally1984' || command === 'l1984') {
     //-----------------------
     // CANVAS AND TEXT SETUP
@@ -389,6 +443,7 @@ client.on('message', async message => {
       for (i = 0; i < lines.length; i++) {
         context.fillText(lines[i], xPos[i], yPos[i]);
       }
+      await func.drawEmoji();
     }
     //-----------------------
     // IMAGE CASE
@@ -413,6 +468,8 @@ client.on('message', async message => {
     console.log(command + ' - ' + func.getTime(start).toString() + 'ms');
     return message.channel.send(attachment);
   }
+  /* POINT
+  -----------------------*/
   else if (command === 'point') {
     //-----------------------
     // GET IMAGE AND ITS SIZE
@@ -427,14 +484,9 @@ client.on('message', async message => {
     //-----------------------
     //if it is too big I make it less because discord angy
     if (imageSize.height > 1500 || imageSize.width > 1500) {
-      if (imageSize.height > imageSize.width) {
-        imageSize.width = (1500 / imageSize.height) * imageSize.width;
-        imageSize.height = 1500;
-      }
-      else {
-        imageSize.height = (1500 / imageSize.width) * imageSize.height;
-        imageSize.width = 1500;
-      }
+      let dims = await func.scaleDims([imageSize.width, imageSize.height], 1500);
+      imageSize.width = dims[0];
+      imageSize.height = dims[1];
     }
     //-----------------------
     // FIND CANVAS SIZE
@@ -444,9 +496,12 @@ client.on('message', async message => {
     let memeWidth = globalData.imgCanvasX;
     let memeHeight = globalData.imgCanvasY;
     let imgEval = globalData.imgCanvasEval;
-    //if the image is small, it's placed at its original size on a fixed canvas (3x smaller than native pointing.png)
+    //if the image is small, it's placed at 100 pixel scale on a fixed canvas (3x smaller than native pointing.png)
     let memeSmall = false;
     if (imageSize.height < 100 || imageSize.width < 100) {
+      let dims = await func.scaleDims([imageSize.width, imageSize.height], 100);
+      imageSize.width = dims[0];
+      imageSize.height = dims[1];
       memeWidth = 640;
       memeHeight = 506;
       memeSmall = true;
@@ -541,6 +596,8 @@ client.on('message', async message => {
     console.log(command + ' - ' + func.getTime(start).toString() + 'ms');
     return message.channel.send(attachment);
   }
+  /* MARIO
+  -----------------------*/
   else if (command === 'mario') {
     //-----------------------
     // CANVAS AND BASICS
@@ -553,12 +610,11 @@ client.on('message', async message => {
     let fileURL = await func.imageScraper();
     if (fileURL == undefined) {return message.channel.send("No File Found :(");}
     await func.download(fileURL, fileDir);
-    let imageSize = await SizeOf(fileDir);
     //-----------------------
     // IMAGE
     //-----------------------
     //scale to fill entire canvas
-    await func.canvasScaleFill('memeMarioBuffer.png', 730, 973, 960, 539.5);
+    await func.canvasScaleFill(fileDir, 730, 973, 960, 539.5);
     let scaledWidth = globalData.scaledWidth;
     let scaledHeight = globalData.scaledHeight;
     let xAxis = globalData.xAxis;
@@ -574,22 +630,40 @@ client.on('message', async message => {
     //get text string
     await func.textArgs();
     let inputs = globalData.textInputs;
-    if (inputs[0] === undefined) {
+    if (inputs[0] == undefined) {
       inputs[0] = '';
     }
     //text string left aligned in its place on template
-    func.textHandler(inputs[0].toUpperCase(), 'Trebuchet MS', 'bold ', 75, 1, 526, 1, true, 0, 275, 897, 'center', 'left');
+    await func.textHandler(inputs[0].toUpperCase(), 'Trebuchet MS', 'bold ', 75, 1, 526, 1, true, 0, 275, 897, 'center', 'left');
     let lines = globalData.textLines;
     let xPos = globalData.textX;
     let yPos = globalData.textY;
     context.fillStyle = '#ffffff';
-    context.fillText(lines[0], xPos[0], yPos[0]);
+    //-----------------------
+    // DRAWING
+    //-----------------------
+    //subtracts below baseline space if emoji is present since this font makes it look quirky
+    if (globalData.emojiMatch != undefined) {
+      yPos[0] += 0.1 * globalData.baselineTextHeight
+    }
+    if (lines != undefined) {
+      context.fillText(lines[0], xPos[0], yPos[0]);
+    }
+    await func.drawEmoji();
 
     var attachment = await new MessageAttachment(canvas.toBuffer(), 'marioMeme.png');
     console.log(command + ' - ' + func.getTime(start).toString() + 'ms');
     return message.channel.send(attachment);
   }
-  else if (command === 'scatter' || command === 'obra' || command === 'dinn' || command === 'glitch' || command === 'corrupt') {
+  /*
+    ______   _____   _        _______   ______   _____
+   |  ____| |_   _| | |      |__   __| |  ____| |  __ \
+   | |__      | |   | |         | |    | |__    | |__) |
+   |  __|     | |   | |         | |    |  __|   |  _  /
+   | |       _| |_  | |____     | |    | |____  | | \ \
+   |_|      |_____| |______|    |_|    |______| |_|  \_\
+  */
+  else if (command === 'scatter' || command === 'obra' || command === 'dinn' || command === 'obradinn' || command === 'glitch' || command === 'corrupt') {
     //-----------------------
     // UNIVERSAL STUFF
     //-----------------------
@@ -601,8 +675,12 @@ client.on('message', async message => {
     await func.download(fileURL, fileDir);
     let imageSize = await SizeOf(fileDir);
     //obra dinn shrinks image to 250 pixels tall
-    if (filter == 'obra' || filter == 'dinn') {
+    if (filter == 'obra' || filter == 'dinn' || filter == 'obradinn') {
       await func.canvasInitialize(250 * imageSize.width / imageSize.height, 250, fileDir);
+    }
+    else if (filter == 'scatter' && (imageSize.width > 400 || imageSize.height > 400)) {
+      let dims = await func.scaleDims([imageSize.width, imageSize.height], 400)
+      await func.canvasInitialize(dims[0], dims[1], fileDir);
     }
     else {
       await func.canvasInitialize(imageSize.width, imageSize.height, fileDir);
@@ -627,7 +705,6 @@ client.on('message', async message => {
       //goes through each pixel, and checks if its colour has already been logged in colours (final result is array of all unique colours)
       let colours = [[pixelData.data[0], pixelData.data[1], pixelData.data[2]]];
       for (var i = 0; i < pixelDataLength; i += 4) {
-
         let rgb = [pixelData.data[i], pixelData.data[i+1], pixelData.data[i+2]];
         //if all RGB values match, move on, if not keep going until last colour
         for (var n = 0; n < colours.length; n++) {
@@ -666,7 +743,7 @@ client.on('message', async message => {
     //-----------------------
     // OBRA DINN
     //-----------------------
-    else if (filter == 'obra' || filter == 'dinn') {
+    else if (filter == 'obra' || filter == 'dinn' || filter == 'obradinn') {
       //same pixelData stuff as scatter (see there for details)
       let pixelData = context.getImageData(0, 0, canvasWidth, canvasHeight);
       let pixelDataLength = pixelData.data.length;
@@ -722,7 +799,7 @@ client.on('message', async message => {
     else if (filter == 'glitch' || filter == 'corrupt') {
       //glitch-canvas module using buffer
       let buffer = canvas.toBuffer();
-      glitch({ amount: 0, seed: Math.floor(Math.random()* 101), iterations: Math.floor(Math.random() * 91 + 10), quality: 60}).fromBuffer(buffer).toBuffer().then((glitched) => {
+      glitch({ amount: 0, seed: Math.floor(Math.random()* 101), iterations: Math.floor(Math.random() * 16 + 10), quality: 60}).fromBuffer(buffer).toBuffer().then((glitched) => {
         var attachment = new MessageAttachment(glitched, 'glitch.png');
         console.log(command + ' - ' + func.getTime(start).toString() + 'ms');
         return message.channel.send(attachment);
@@ -730,6 +807,16 @@ client.on('message', async message => {
       //sometimes throws errors, but seems out of our control
     }
   }
+  /*
+    _    _   _______   _____   _        _____   _______  __     __
+   | |  | | |__   __| |_   _| | |      |_   _| |__   __| \ \   / /
+   | |  | |    | |      | |   | |        | |      | |     \ \_/ /
+   | |  | |    | |      | |   | |        | |      | |      \   /
+   | |__| |    | |     _| |_  | |____   _| |_     | |       | |
+    \____/     |_|    |_____| |______| |_____|    |_|       |_|
+  */
+ /* ARCHIVE
+  -----------------------*/
   else if (command === 'arc' || command === 'a' || command === 'archive') {
     globalData.fileType = 'fileType';
     let nameBypass = false;
@@ -787,6 +874,8 @@ client.on('message', async message => {
     func.download(fileURL, fileDir);
     return message.channel.send(`File Archived as ` + input + '.');
   }
+  /* PREFERENCES
+  -----------------------*/
   else if (command === 'pref') {
     if (input !== undefined) {
       if (input2 === undefined) {
@@ -800,132 +889,145 @@ client.on('message', async message => {
     //if input undefined sends your preferences
     else {
       console.log(command + ' - ' + func.getTime(start).toString() + 'ms');
-      return message.channel.send('**__Your preferences:__**\n`point` background - ' + `**${globalData.pointBG}**` + '\n`poster` background - ' + `**${globalData.posterBG}**` + '\n`poster` text priority - ' + `**${globalData.posterTXT}**`);
+      return message.channel.send('**__Your Preferences:__**\n`point` background - ' + `**${globalData.pointBG}**` +
+                                  '\n`poster` background - ' + `**${globalData.posterBG}**` +
+                                  '\n`poster` text priority - ' + `**${globalData.posterTXT}**`);
     }
   }
+  /* GET
+  -----------------------*/
   else if (command === 'get') {
-    if (input == 'ava' || input == 'av' || input == 'avatar' || input == 'pfp') {
-      let link
-      //avatar of author
-      if (input2 === undefined) {
-        link = message.author.avatarURL();
-      }
-      //avatar from mention
-      else if (message.mentions.users.first() !== undefined) {
-        link = message.mentions.users.first().avatarURL();
-      }
-      //server avatar
-      else if ((input2 == 'server' || input2 == 's') && message.guild.iconURL() != null) {
-        link = message.guild.iconURL();
-      }
-      //avatar from id
-      else {
-        //special case since promises are cringe
-        client.users.fetch(input2).then((targetUser) => {
-          let index = targetUser.avatarURL().indexOf('.webp');
-          console.log(command + ' - ' + func.getTime(start).toString() + 'ms');
-          message.channel.send(targetUser.avatarURL().slice(0,index) + '.png?size=1024');
-        }).catch(console.error);
-        return;
-      }
-      //changed .webp to .png, and sets large size to make it display native res
-      let index = link.indexOf('.webp');
-      console.log(command + ' - ' + func.getTime(start).toString() + 'ms');
-      return message.channel.send(link.slice(0,index) + '.png?size=1024');
+    let errorMsg = "**Bad Input!**\n(Couldn't find an avatar or emoji from that input)";
+    let fileDir = './files/buffer/getBuffer.png';
+    let defaultRegex = emojiRegex();
+    let customRegex = /<:\w+:(\d+)>/gmd;
+    let animRegex = /<a:\w+:(\d+)>/gmd;
+    let foundEmoji = false;
+    let link;
+    //-----------------------
+    // AVATAR FROM AUTHOR
+    //-----------------------
+    if (input === undefined) {
+      link = message.author.displayAvatarURL({ format: 'png', size: 1024, dynamic: true});
     }
-    else if (input == 'em' || input == 'emoji') {
-      let cSplit = message.content.slice(prefix.length).trim().split(':');
-      let regex = emojiRegex(); //Emoji database
-      for (var i = 0; i < cSplit.length; i++) {
-        cSplit[i] = cSplit[i].toString().replace('<', '').replace('>', '').replace('get em', '').replace('_', '').replace(' ', ''); //Removes all incompadible characters
-        if (cSplit[i] == undefined || cSplit[i] === '') {
-          cSplit.splice(i,1)
-        }
-      }
-
-      var letters = /^[A-Za-z]+$/; //All letters
-      var numbers = /^[0-9]+$/; //All numbers
-      let emojiDirBase = await './files/buffer/emojiDownload/'
-      let truthCounter = 0;
-
-      for (i = 0; i < cSplit.length; i++) {
-        if (i%2 == 0) { //Even
-          if (cSplit[i].match(letters)) {
-            truthCounter++
-          }
-        }
-        else { //Odd
-          if (cSplit[i].match(numbers)) {
-            truthCounter++
-          }
-        }
-      }
-
-      if (truthCounter == cSplit.length) { //No unicode emoji's present
-        console.log("Custom Emoji...");
-        if (cSplit.length == 2) {
-          console.log("Single Emoji Sent");
-          console.log(command + ' - ' + func.getTime(start).toString() + 'ms');
-          console.log('https://cdn.discordapp.com/emojis/' + cSplit[1] + '.png?size=1024');
-          return message.channel.send('https://cdn.discordapp.com/emojis/' + cSplit[1] + '.png?size=1024');
+    //-----------------------
+    // AVATAR FROM MENTION
+    //-----------------------
+    else if (message.mentions.users.first() !== undefined) {
+      link = message.mentions.users.first().displayAvatarURL({ format: 'png', size: 1024, dynamic: true});
+    }
+    //-----------------------
+    // SERVER AVATAR
+    //-----------------------
+    else if ((input == 'server' || input == 's') && message.guild.iconURL() != null) {
+      link = message.guild.iconURL({ format: 'png', size: 1024, dynamic: true});
+    }
+    //-----------------------
+    // SERVER EMOJIS
+    //-----------------------
+    else if (input == 'emojis' || input == 'emoji') {
+      let serverEmoji = message.guild.emojis.cache;
+      let emoji = '';
+      serverEmoji.forEach(e => {
+        let idtf = e.identifier
+        if (e.animated) {
+          emoji += '<' + idtf + '>';
         }
         else {
-          console.log("Multiple Emojis Sent");
-          let archive = await archiver('zip');
-          let output = await fs.createWriteStream('emojis.zip');
-          await archive.pipe(output);
-          await fs.emptyDirSync(emojiDirBase)
-          for (i = 0; i < cSplit.length; i++) {
-            await console.log('For loop iteration ' + i + ': ' + cSplit[i]);
-            if (i%2 == 0) {
-          		await console.log(cSplit[i] + " is even, skipping download.");
-            }
-          	else {
-          		await console.log(cSplit[i] + " is odd, downloading...");
-              let emojiURL = await 'https://cdn.discordapp.com/emojis/' + cSplit[i] + '.png'
-              let emojiDir = await emojiDirBase + cSplit[i] + '.png'
-              await func.download(emojiURL, emojiDir)
-              await fs.renameSync(emojiDir, emojiDirBase + cSplit[i-1] + '.png')
-            }
-          }
-          console.log('Archiving Emojis...');
-          await archive.directory(emojiDirBase, false).finalize();
-          while (await fs.existsSync('./emojis.zip') == false) {
-            await func.wait(25);
-          }
-          attachment = new MessageAttachment('./emojis.zip');
-          await message.channel.send(attachment);
-          await fs.emptyDirSync(emojiDirBase)
-          await fs.unlinkSync('./emojis.zip')
-          return;
+          emoji += '<:' + idtf + '>';
         }
+      });
+      if (emoji == '') {
+        return message.channel.send(errorMsg);
+      }
+      await func.getEmoji(emoji);
+      foundEmoji = true
+    }
+    //-----------------------
+    // EMOJI
+    //-----------------------
+    else if (defaultRegex.test(fullInput) || customRegex.test(fullInput) || animRegex.test(fullInput)) {
+      await func.getEmoji(fullInput);
+      foundEmoji = true
+    }
+    //-----------------------
+    // AVATAR FROM ID
+    //-----------------------
+    else if (!isNaN(input) && input.length == 18) {
+      let user = await client.users.fetch(input).catch(console.error);
+      if (user != undefined) {
+        link = user.displayAvatarURL({ format: 'png', size: 1024, dynamic: true});
       }
       else {
-        console.log("Unicode Emoji...");
-        input2 = input2.replace(/<.*>/, ''); //Deletes all custom emojis
-        let names = [input2.codePointAt(0).toString(16)];
-        let i = 1;
-        while (input2.codePointAt(i) != undefined) {
-          if (input2.codePointAt(i).toString(16)[0] != 'd') {
-            names.push(input2.codePointAt(i).toString(16));
-          }
-          i += 1;
-        }
-        //gets character code and converts it to hexadecimal
-        let name = names[0];
-        for (i = 1; i < names.length; i++) {
-          name += '-' + names[i];
-        }
-        //grabs png and puts on canvas
-        await func.canvasInitialize(1024, 1024, './files/emoji/' + name + '.png', []);
-        let canvas = globalData.canvas;
-
-        var attachment = await new MessageAttachment(canvas.toBuffer(), 'emoji.png');
-        console.log(command + ' - ' + func.getTime(start).toString() + 'ms');
-        return message.channel.send(attachment);
+        await func.getEmoji(+input);
+        return message.channel.send(errorMsg);
       }
     }
+    //-----------------------
+    // AVATAR FROM USERNAME
+    //-----------------------
+    else {
+      let index = message.content.indexOf('#');
+      //trims command and leaves all content up until user tag (e.g. username#1234) if present
+      let nameInput = fullInput;
+      if (index != -1) {
+        nameInput = fullInput.slice(0, index).trim();
+      }
+      //gets guild member
+      let member = await message.guild.members.fetch({ query: nameInput, limit: 1 }).catch(console.error);
+      //user from guild member
+      if (member.first() != undefined) {
+        link = member.first().user.displayAvatarURL({ format: 'png', size: 1024, dynamic: true});
+      }
+      else {
+        return message.channel.send(errorMsg);
+      }
+    }
+    //-----------------------
+    // EMOJI DOWNLOAD
+    //-----------------------
+    if (foundEmoji) {
+      //invalid emoji
+      if (globalData.emojiStatus == 'invalid') { return message.channel.send(errorMsg); }
+      //single emoji
+      else if (globalData.emojiStatus == 'single') {
+        let files = [];
+        fs.readdirSync('./files/buffer/emojiDownload').forEach(file => {files.push(file);});
+        fileDir = './files/buffer/emojiDownload/' + files[0];
+      }
+      //multiple emoji
+      else {
+        let archive = archiver('zip');
+        let output = fs.createWriteStream('./files/buffer/emojis.zip');
+        archive.pipe(output);
+        await archive.directory('./files/buffer/emojiDownload/', false).finalize();
+        while (fs.existsSync('./files/buffer/emojis.zip') == false) {
+          await func.wait(25);
+        }
+        fileDir = './files/buffer/emojis.zip';
+      }
+    }
+    //-----------------------
+    // AVATAR DOWNLOAD
+    //-----------------------
+    else if (link != undefined) {
+      if (link.indexOf('.gif') != -1) {
+        fileDir = './files/buffer/getBuffer.gif';
+      }
+     await func.download(link, fileDir)
+    }
+
+    var attachment = await new MessageAttachment(fileDir);
+    console.log(command + ' - ' + func.getTime(start).toString() + 'ms');
+    await message.channel.send(attachment);
+    fs.emptyDirSync('./files/buffer/emojiDownload/');
+    if (fs.existsSync('./files/buffer/emojis.zip') == true) {
+      fs.unlinkSync('./files/buffer/emojis.zip');
+    }
+    return;
   }
+  /* CONVERT
+  -----------------------*/
   else if (command === 'convert' || command === 'conv') {
     let fileURL = await func.fileScraper();
 
@@ -955,6 +1057,8 @@ client.on('message', async message => {
     attachment = await new MessageAttachment(fileDirOutput);
     return message.channel.send(attachment);
   }
+  /* BPM
+  -----------------------*/
   else if (command === 'bpm') {
     const msg = await message.channel.send(`Press 🏁 to begin, count 10 beats (starting on 1) then press the 🛑.`); //Sends initial message
     let iterator = await 0;
@@ -992,6 +1096,8 @@ client.on('message', async message => {
 
     return msg.edit('The BPM is: ' + Math.round(bpm));
   }
+  /* FLIP
+  -----------------------*/
   else if (command === 'flip' || command === 'toss' || command === 'coin') {
     if (!args.length) {
       var odds = 0.5;
@@ -1013,6 +1119,8 @@ client.on('message', async message => {
       return message.channel.send(`Failure!`);
     }
   }
+  /* TWITTER
+  -----------------------*/
   else if (command === 'twt' || command === 'twitter') {
     let lastMessage = await func.linkScraper();
     if (lastMessage == undefined) { return message.channel.send("No Link Found :(");}
@@ -1032,6 +1140,8 @@ client.on('message', async message => {
       return message.channel.send("This is not a twitter link.");
     }
   }
+  /* REPOST
+  -----------------------*/
   else if (command === 'repost' || command === 'rp') {
     let fileURL = await func.fileScraper();
 
@@ -1047,6 +1157,8 @@ client.on('message', async message => {
     return func.sendFile(fileURL, fileDir);
 
   }
+  /* STARPIC
+  -----------------------*/
   else if (command === 'starpic' || command === 'sp') {
     let fileURL = await func.imageScraper();
 
@@ -1064,16 +1176,28 @@ client.on('message', async message => {
     return starMessage.react("⭐");
 
   }
+  /* PROBE
+  -----------------------*/
   else if (command === 'probe' || command === 'prb') {
     await func.infoScraper();
     console.log(link);
     console.log(command + ' - ' + func.getTime(start).toString() + 'ms');
     return;
   }
+  /* KILL
+  -----------------------*/
   else if (command === 'kill') {
     log();
   }
+  /* TEST
+  -----------------------*/
   else if (command === 'test' || command === 't') {
+    func.findEmoji(fullInput.toUpperCase());
+    func.findEmoji(fullInput.toUpperCase());
+    func.findEmoji(fullInput.toUpperCase());
+    func.findEmoji(fullInput.toUpperCase());
+    func.findEmoji(fullInput.toUpperCase());
+    func.findEmoji(fullInput.toUpperCase());
     console.log(command + ' - ' + func.getTime(start).toString() + 'ms');
   }
 });
