@@ -3,6 +3,7 @@ const sharp = require('sharp');
 const request = require(`request`);
 const stringify = require('json-stringify');
 const compress_images = require("compress-images");
+const systeminfo = require('systeminformation');
 const fs = require('fs-extra')
 const archiver = require('archiver');
 const webp = require('webp-converter');
@@ -14,7 +15,7 @@ const SizeOf = require('image-size');
 const func = require("./functions.js");
 
 import { discordKey, guildKey, prefixKey } from './keys.js';
-import { catJamArrayStorage, stellarisArrayStorage } from './links.js';
+import { catJamArrayStorage, stellarisArrayStorage, imageTypes, videoTypes, audioTypes, textTypes } from './arrays.js';
 
 const client = new Client({ intents: [Intents.FLAGS.GUILDS, Intents.FLAGS.GUILD_MESSAGES] });
 const DISCORDTOKEN = discordKey;
@@ -24,6 +25,7 @@ const catJamArray = catJamArrayStorage;
 const stellarisArray = stellarisArrayStorage;
 
 var globalData = {};
+var archiveList = []
 var downloadingBoolean = false;
 
 var output = fs.createWriteStream('emojis.zip');
@@ -38,6 +40,9 @@ client.on("ready", () =>{
     console.log(`Logged in as ${client.user.tag}`);
     client.user.setActivity('In Development');
     func.createFolders();
+    setInterval(function(){ 
+      //console.log('looping now :3'); 
+    }, 2500);
  });
 
 client.on('message', async message => {
@@ -55,8 +60,6 @@ client.on('message', async message => {
   globalData.args = args;
   globalData.authorID = message.author.id;
   await func.userData('get');
-  /* HELP
-  -----------------------*/
   if (command === 'help') {
     let p = "\\" + prefix;
     switch(input) {
@@ -73,8 +76,6 @@ client.on('message', async message => {
       "__Meta Commands:__\n" + p + "help\n" + p + "pref");
     }
   }
-  /* CATJAM
-  -----------------------*/
   else if (command === 'catjam') {
     let output = (Math.round((input)/5))*5;
     if (!args.length) {
@@ -92,8 +93,6 @@ client.on('message', async message => {
       return message.channel.send(attachment);
     }
 	}
-  /* STELLARIS
-  -----------------------*/
   else if (command === 'stellaris') {
     //message.delete();
     if (!args.length) {
@@ -112,8 +111,6 @@ client.on('message', async message => {
       return message.channel.send(attachment);
     }
   }
-  /* DADON
-  -----------------------*/
   else if (command === 'dadon') {
     let dir = './files/dadon';
     let dadonArray = ['./files/dadon/', 'dadon (', 'num', ').png'];
@@ -128,8 +125,6 @@ client.on('message', async message => {
     console.log(command + ' - ' + func.getTime(start).toString() + 'ms');
     return message.channel.send(attachment);
   }
-  /* 1984
-  -----------------------*/
   else if (command === '1984') {
     if ((Math.floor(Math.random() * 11)) >= 5) {
         attachment = new MessageAttachment('https://i.imgur.com/59QZNLa.gif');
@@ -142,16 +137,6 @@ client.on('message', async message => {
         return message.channel.send(attachment);
     }
   }
-  /*
-    ______   _____    _____   _______
-   |  ____| |  __ \  |_   _| |__   __|
-   | |__    | |  | |   | |      | |
-   |  __|   | |  | |   | |      | |
-   | |____  | |__| |  _| |_     | |
-   |______| |_____/  |_____|    |_|
-  */
-  /* POSTER
-  -----------------------*/
   else if (command === 'poster' || command === 'canvas') {
     //-----------------------
     // GET IMAGE AND ITS SIZE
@@ -299,8 +284,6 @@ client.on('message', async message => {
     console.log(command + ' - ' + func.getTime(start).toString() + 'ms');
     return message.channel.send(attachment);
   }
-  /* MEME
-  -----------------------*/
   else if (command === 'meme') {
     //-----------------------
     // GET DA FILE AND DO DA THING
@@ -418,8 +401,6 @@ client.on('message', async message => {
     console.log(command + ' - ' + func.getTime(start).toString() + 'ms');
     return message.channel.send(attachment);
   }
-  /* LITERALLY1984
-  -----------------------*/
   else if (command === 'literally1984' || command === 'l1984') {
     //-----------------------
     // CANVAS AND TEXT SETUP
@@ -468,8 +449,6 @@ client.on('message', async message => {
     console.log(command + ' - ' + func.getTime(start).toString() + 'ms');
     return message.channel.send(attachment);
   }
-  /* POINT
-  -----------------------*/
   else if (command === 'point') {
     //-----------------------
     // GET IMAGE AND ITS SIZE
@@ -596,8 +575,6 @@ client.on('message', async message => {
     console.log(command + ' - ' + func.getTime(start).toString() + 'ms');
     return message.channel.send(attachment);
   }
-  /* MARIO
-  -----------------------*/
   else if (command === 'mario') {
     //-----------------------
     // CANVAS AND BASICS
@@ -655,14 +632,6 @@ client.on('message', async message => {
     console.log(command + ' - ' + func.getTime(start).toString() + 'ms');
     return message.channel.send(attachment);
   }
-  /*
-    ______   _____   _        _______   ______   _____
-   |  ____| |_   _| | |      |__   __| |  ____| |  __ \
-   | |__      | |   | |         | |    | |__    | |__) |
-   |  __|     | |   | |         | |    |  __|   |  _  /
-   | |       _| |_  | |____     | |    | |____  | | \ \
-   |_|      |_____| |______|    |_|    |______| |_|  \_\
-  */
   else if (command === 'scatter' || command === 'obra' || command === 'dinn' || command === 'obradinn' || command === 'glitch' || command === 'corrupt') {
     //-----------------------
     // UNIVERSAL STUFF
@@ -807,75 +776,149 @@ client.on('message', async message => {
       //sometimes throws errors, but seems out of our control
     }
   }
-  /*
-    _    _   _______   _____   _        _____   _______  __     __
-   | |  | | |__   __| |_   _| | |      |_   _| |__   __| \ \   / /
-   | |  | |    | |      | |   | |        | |      | |     \ \_/ /
-   | |  | |    | |      | |   | |        | |      | |      \   /
-   | |__| |    | |     _| |_  | |____   _| |_     | |       | |
-    \____/     |_|    |_____| |______| |_____|    |_|       |_|
-  */
- /* ARCHIVE
-  -----------------------*/
   else if (command === 'arc' || command === 'a' || command === 'archive') {
-    globalData.fileType = 'fileType';
-    let nameBypass = false;
-    let dir = './files/archive';
-    let fileDir = ['./files/archive/', 'fileName', '.', 'fileType'];
-    fileDir [1] = input;
+    let fileExists = false;
+    let typeLink = false;
+    let arrayPosition = undefined;
+    let archiveList = []
+    let imageList = [], videoList = [], audioList = [], textList = [], otherList = [];
+    input = encodeURI(await func.fileNameVerify(input));
+    input2 = encodeURI(await func.fileNameVerify(input));
 
-    let fileList = fs.readdirSync('./files/archive/');
-    let fileListJoin = await fileList.join().replaceAll(',', '.').split('.');
+    if (!fs.existsSync(`./files/archive/${message.author.id}.json`)) {
+      fs.writeFileSync(`./files/archive/${message.author.id}.json`, '[]');
+    }
 
-    for (var i = 0; i < (fileListJoin.length); i = i + 2) { //Find file type of input name
-      if (fileListJoin[i] == input) {
-        fileDir[3] = fileListJoin[i + 1];
-        globalData.fileType = fileListJoin[i + 1].toString();
+    let importJSON = fs.readFileSync(`./files/archive/${message.author.id}.json`, 'utf8');
+    archiveList = await JSON.parse(importJSON);
+
+    var filteredArchiveList = await archiveList.filter(function (el) {
+      return el != null;
+    });
+
+    archiveList = filteredArchiveList;
+
+    if (input === 'delete' || input === 'd') { //Delete a given file
+
+      for (let i = 0; i < archiveList.length; i++) { //Check if the given name exists in the JSON
+        if (archiveList[i].name === input2) {
+          fileExists = true;
+          arrayPosition = i;
+          break;
+        }
       }
-    }
-    fileDir = fileDir.join('').toString();
-    // INPUTS
-    if (input === undefined) { //No file name in message
-      return message.channel.send(`No File Name.`);
-    }
-    if (input == 'list' || input == 'l') { //Search for file list
-      for (var i = 0; i < fileList.length; i++) {
-        fileList[i] = fileList[i].split('.').shift();
+
+      if (fileExists === true) {
+        delete archiveList[arrayPosition];
+        var archiveJSON = JSON.stringify(archiveList);
+        fs.writeFileSync(`./files/archive/${message.author.id}.json`, archiveJSON);
+        return message.channel.send(input2 + ' Deleted')
       }
-      fileList = fileList.join(', ');
-      return message.channel.send(`File List: ` + fileList);
-    }
-    if (input == 'help' || input == 'h') { //Search for help
-      return message.channel.send(`Save Image: $arc [Name]` +  "\n" + `Post Image: $arc [Name]` +  "\n" + `See File List: $arc list` +  "\n" + `Delete File: $arc [Name] delete` +  "\n" + `Replace File: $arc [Name] replace`);
-    }
-    if (input2 == 'replace' || input2 == 'r') { //Replace file
-      nameBypass = true;
-      fs.unlinkSync(fileDir);
-    }
-    if (input2 == 'delete' || input2 == 'd') { //Delete file
-      if (fs.existsSync(fileDir)) {
-        await fs.unlinkSync(fileDir);
-        return message.channel.send(`Deleted File ` + input);
-      }
+
       else {
-        return message.channel.send('File Name ' + '"' + input + '"' + ' does not exist.');
+        return message.channel.send('Filename not found')
+      }
+
+      
+    }
+    else if (input === 'list' || input === 'l') {
+
+      for (let i = 0; i < archiveList.length; i++) {
+        if (archiveList[i].type === 'image') { //File is an image
+          imageList.push(' ' + archiveList[i].name)
+        }
+        else if (archiveList[i].type === 'video') { //File is a video
+          videoList.push(' ' + archiveList[i].name)
+        }
+        else if (archiveList[i].type === 'audio') { //File is audio
+          audioList.push(' ' + archiveList[i].name)
+        }
+        else if (archiveList[i].type === 'text') { //File is text
+          textList.push(' ' + archiveList[i].name)
+        }
+        else if (archiveList[i].type === 'link') { //File is other
+          otherList.push(' ' + archiveList[i].name)
+        }
+      }
+
+      let embedDescription = {}
+      embedDescription.image = '';
+      embedDescription.video = '';
+      embedDescription.audio = '';
+      embedDescription.text = '';
+      embedDescription.other = '';
+
+      if (imageList.length > 0) {embedDescription.image = '**Images:** ' + '\n' + imageList + '\n\n';}
+      if (videoList.length > 0) {embedDescription.video = '**Videos:** ' + '\n' + videoList + '\n\n';}
+      if (audioList.length > 0) {embedDescription.audio = '**Audio:** ' + '\n' + audioList + '\n\n';}
+      if (textList.length > 0) {embedDescription.text   = '**Text:** ' + '\n' + textList + '\n\n';}
+      if (otherList.length > 0) {embedDescription.other = '**Other:** ' + '\n' + otherList + '\n\n';}
+
+      const embed = new MessageEmbed()
+      .setTitle("Archived File List")
+      .setColor(0x00AE86)
+      .setDescription(embedDescription.image + embedDescription.video + embedDescription.audio + embedDescription.text + embedDescription.other)
+      return message.channel.send({embed})
+
+    }
+    else if (input === undefined) {
+      return message.channel.send('Please include a file name.')
+    }
+    else { //Adding or sending a file
+      for (let i = 0; i < archiveList.length; i++) { //Check if the given name exists in the JSON
+        if (archiveList[i].name === input) {
+          if (archiveList[i].type === 'link') {
+            typeLink = true;
+          }
+          fileExists = true;
+          arrayPosition = i;
+          break;
+        }
+      }
+
+      if (fileExists === true && typeLink === false) { //File name already exists in JSON - File is a file - Send given file
+        let downloadURL = archiveList[arrayPosition].link;
+        let archiveBuffer = './files/buffer/' + archiveList[arrayPosition].name + '.' + archiveList[arrayPosition].extension;
+        await func.download(downloadURL, archiveBuffer);
+        if (func.uploadLimitCheck(archiveBuffer) === true) {
+          await message.channel.send(downloadURL);
+        }
+        else {
+          let attachment = new MessageAttachment(archiveBuffer);
+          await message.channel.send(attachment)
+        }
+        console.log(command + ' - ' + func.getTime(start).toString() + 'ms');
+        return fs.unlinkSync(archiveBuffer);
+      }
+      else if (fileExists === true && typeLink === true) { //File name already exists in JSON - File is a link - Send given link
+        let linkURL = archiveList[arrayPosition].link;
+        return message.channel.send(linkURL)
+      }
+      else if (fileExists === false) { //File name does not exists in JSON - Add file to JSON
+        let link = await func.fileLinkScraper();
+        if (link === null || link === undefined) {
+          return message.channel.send('Not a valid embed')
+        }
+        let extension = await func.fileExtension(link);
+        let fileType = await func.fileType(extension);
+
+        var archive = {}
+        archive.name = input
+        archive.link = link
+        archive.extension = extension
+        archive.type = fileType
+
+        archiveList.push(archive)
+
+        var archiveJSON = JSON.stringify(archiveList);
+
+        fs.writeFileSync(`./files/archive/${message.author.id}.json`, archiveJSON);
+
+        console.log(command + ' - ' + func.getTime(start).toString() + 'ms');
+        return message.channel.send('File saved as ' + input)
       }
     }
-    // SEND/ARCHIVE
-    if (fs.existsSync(fileDir)) { //Send file
-      if (nameBypass == false) {
-        var attachment = await new MessageAttachment(fileDir);
-        return message.channel.send(attachment);
-      }
-    }
-    var fileURL = await func.fileScraper(); //Archive most recent file
-    var fileType =  fileURL.split('.').pop();
-    fileDir = dir + '/' + input + '.' + fileType;
-    func.download(fileURL, fileDir);
-    return message.channel.send(`File Archived as ` + input + '.');
   }
-  /* PREFERENCES
-  -----------------------*/
   else if (command === 'pref') {
     if (input !== undefined) {
       if (input2 === undefined) {
@@ -894,8 +937,17 @@ client.on('message', async message => {
                                   '\n`poster` text priority - ' + `**${globalData.posterTXT}**`);
     }
   }
-  /* GET
-  -----------------------*/
+  else if (command === 'server' || command === 'srv') {
+    let cpuSpeed = await systeminfo.cpuCurrentSpeed().then();
+    let memInfo = await systeminfo.mem().then();
+    
+    const embed = new MessageEmbed()
+      .setTitle("Server PC Status")
+      .setColor(0x00AE86)
+      .setDescription("CPU Speed: " + cpuSpeed.avg + "GHz\nMemory Used: " + (Math.round((memInfo.used/1073741824) * 10) / 10) + "GB / " + (Math.round((memInfo.total/1073741824) * 10) / 10) + "GB")
+      .setTimestamp()
+      return message.channel.send({embed})
+  }
   else if (command === 'get') {
     let errorMsg = "**Bad Input!**\n(Couldn't find an avatar or emoji from that input)";
     let fileDir = './files/buffer/getBuffer.png';
@@ -1026,8 +1078,6 @@ client.on('message', async message => {
     }
     return;
   }
-  /* CONVERT
-  -----------------------*/
   else if (command === 'convert' || command === 'conv') {
     let fileURL = await func.fileScraper();
 
@@ -1057,8 +1107,6 @@ client.on('message', async message => {
     attachment = await new MessageAttachment(fileDirOutput);
     return message.channel.send(attachment);
   }
-  /* BPM
-  -----------------------*/
   else if (command === 'bpm') {
     const msg = await message.channel.send(`Press 🏁 to begin, count 10 beats (starting on 1) then press the 🛑.`); //Sends initial message
     let iterator = await 0;
@@ -1096,8 +1144,6 @@ client.on('message', async message => {
 
     return msg.edit('The BPM is: ' + Math.round(bpm));
   }
-  /* FLIP
-  -----------------------*/
   else if (command === 'flip' || command === 'toss' || command === 'coin') {
     if (!args.length) {
       var odds = 0.5;
@@ -1119,8 +1165,6 @@ client.on('message', async message => {
       return message.channel.send(`Failure!`);
     }
   }
-  /* TWITTER
-  -----------------------*/
   else if (command === 'twt' || command === 'twitter') {
     let lastMessage = await func.linkScraper();
     if (lastMessage == undefined) { return message.channel.send("No Link Found :(");}
@@ -1140,8 +1184,6 @@ client.on('message', async message => {
       return message.channel.send("This is not a twitter link.");
     }
   }
-  /* REPOST
-  -----------------------*/
   else if (command === 'repost' || command === 'rp') {
     let fileURL = await func.fileScraper();
 
@@ -1157,8 +1199,6 @@ client.on('message', async message => {
     return func.sendFile(fileURL, fileDir);
 
   }
-  /* STARPIC
-  -----------------------*/
   else if (command === 'starpic' || command === 'sp') {
     let fileURL = await func.imageScraper();
 
@@ -1176,28 +1216,44 @@ client.on('message', async message => {
     return starMessage.react("⭐");
 
   }
-  /* PROBE
-  -----------------------*/
   else if (command === 'probe' || command === 'prb') {
     await func.infoScraper();
-    console.log(link);
+    //console.log(link);
     console.log(command + ' - ' + func.getTime(start).toString() + 'ms');
     return;
   }
-  /* KILL
-  -----------------------*/
+  else if (command === 'link' || command === 'lk') {
+    let link = await func.fileLinkScraper();
+
+    console.log(command + ' - ' + func.getTime(start).toString() + 'ms');
+    //message.channel.send(link)
+
+    
+    var archive = {}
+    archive.name = 'bruh'
+    archive.link = link
+    archive.type = 'image'
+
+    archiveList.push(archive)
+    
+    //console.log(archiveList);
+
+    console.log(archiveList[0]);
+
+
+    return;
+  }
   else if (command === 'kill') {
     log();
   }
-  /* TEST
-  -----------------------*/
   else if (command === 'test' || command === 't') {
-    func.findEmoji(fullInput.toUpperCase());
-    func.findEmoji(fullInput.toUpperCase());
-    func.findEmoji(fullInput.toUpperCase());
-    func.findEmoji(fullInput.toUpperCase());
-    func.findEmoji(fullInput.toUpperCase());
-    func.findEmoji(fullInput.toUpperCase());
+    //console.log(archiveList);
+    var archiveJSON = JSON.stringify(archiveList);
+
+    if (!fs.existsSync(`./files/archive/${message.author.id}.json`)) {
+      fs.writeFile(`./files/archive/${message.author.id}.json`, archiveJSON);
+    }
+
     console.log(command + ' - ' + func.getTime(start).toString() + 'ms');
   }
 });
