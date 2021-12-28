@@ -10,8 +10,8 @@ const SizeOf = require('image-size');
 const emojiDict = require("emoji-dictionary");
 
 import { globalData } from './main.js';
-/* FILE-SCRAPER
------------------------*/
+import { catJamArrayStorage, stellarisArrayStorage, imageTypes, videoTypes, audioTypes, textTypes } from './arrays.js';
+
 async function fileScraper() {
   let start = getTime();
   let message = globalData.message;
@@ -93,7 +93,40 @@ async function linkScraper() {
 console.log('linkScraper - ' + getTime(start).toString() + 'ms');
 return websiteMessage;
 }
-async function uploadLimitCheck(fileDir) {
+async function fileLinkScraper() {
+  let start = getTime();
+  let message = globalData.message;
+  var scraperURL = message.channel.messages.fetch().then(async messageList => {
+  let lastMessage = await messageList.sort((a, b) => b.createdTimestamp - a.createdTimestamp).filter((m) =>
+  (m.attachments.size > 0) || (m.embeds.length > 0)).first();
+
+  if (message.reference != undefined) {
+    let replyMessage =  await message.channel.messages.fetch(message.reference.messageID);
+    if ((replyMessage.attachments.size > 0) || (replyMessage.embeds.length > 0)) {
+      lastMessage = replyMessage;
+    }
+  }
+
+  if (lastMessage == undefined) {
+    return undefined;
+  }
+
+  if (lastMessage.attachments.size > 0) {
+    let url = await lastMessage.attachments.first().url;
+    return url;
+  }
+
+  else if (lastMessage.embeds.length > 0) {
+    let url = await lastMessage.embeds[0].url;
+    return url;
+  }
+  });
+  var attachedFileURL = await scraperURL.then();
+  let outputURL = attachedFileURL;
+  console.log('fileLinkScraper - ' + getTime(start).toString() + 'ms');
+  return outputURL;
+}
+function uploadLimitCheck(fileDir) {
   let start = getTime();
   const statz = fs.statSync(fileDir);
   const fileSizeInBytes = statz.size;
@@ -107,8 +140,6 @@ async function uploadLimitCheck(fileDir) {
     return false;
   }
 }
-/* DOWNLOAD
------------------------*/
 async function download(fileURL, fileDir){
   let start = getTime();
   if (await fileURL == undefined || fileDir == undefined) { //Prevents a download if the provided URL or directory is undefined
@@ -163,8 +194,6 @@ async function sendFile(fileURL, fileDir){
   console.log('sendFile - ' + getTime(start).toString() + 'ms')
   return message.channel.send(attachment);
 }
-/* CANVAS
------------------------*/
 async function canvasInitialize(canvasWidth, canvasHeight, backgroundImage, pngArgs){
   let start = getTime();
   //can be given specific arguments, otherwise uses global ones
@@ -188,7 +217,6 @@ async function canvasInitialize(canvasWidth, canvasHeight, backgroundImage, pngA
     return;
   }
 }
-// SCALE-FIT
 async function canvasScaleFit(fileDir, boxWidth, boxHeight){
   let start = getTime();
   let canvas = globalData.canvas;
@@ -222,7 +250,6 @@ async function canvasScaleFit(fileDir, boxWidth, boxHeight){
   console.log('canvasScaleFit - ' + getTime(start).toString() + 'ms');
   return;
 }
-// SCALE-FILL
 async function canvasScaleFill(fileDir, internalWidth, internalHeight, centerX, centerY){
   let start = getTime();
   var memeSize = await SizeOf(fileDir);
@@ -255,7 +282,6 @@ async function canvasScaleFill(fileDir, internalWidth, internalHeight, centerX, 
   console.log('canvasScaleFill - ' + getTime(start).toString() + 'ms');
   return;
 }
-// IMAGE-CANVAS
 async function imageToCanvas(imageDims, widestRatio, tallestRatio, wideDims, tallDims, scaleLength, scaleAxis) {
   let start = getTime();
   // widestRatio, tallestRatio - the maximum allowed (width / height) or (height / width) respectively
@@ -296,7 +322,6 @@ async function imageToCanvas(imageDims, widestRatio, tallestRatio, wideDims, tal
   console.log('imageToCanvas - ' + getTime(start).toString() + 'ms');
   return;
 }
-// SCALE-DIMS
 async function scaleDims(imageDims, scaledDim) {
   //scales the largest dimension down to scaledDim
   let start = getTime();
@@ -315,8 +340,6 @@ async function scaleDims(imageDims, scaledDim) {
   console.log('scaleDims - ' + getTime(start).toString() + 'ms');
   return [newWidth, newHeight];
 }
-/* USER-DATA
------------------------*/
 async function userData(action, tag, arg) {
   let start = getTime();
   //action - 'get' to get preferences and store them in globalData, 'set' to change a preference
@@ -396,9 +419,6 @@ async function userData(action, tag, arg) {
   console.log('userData - ' + getTime(start).toString() + 'ms');
   return;
 }
-/* EMOJI
------------------------*/
-// FIND
 async function findEmoji(emojiString) {
   let start = getTime();
   let defaultRegex = emojiRegex();
@@ -423,7 +443,6 @@ async function findEmoji(emojiString) {
   console.log('findEmoji - ' + getTime(start).toString() + 'ms');
   return;
 }
-// GET
 async function getEmoji(emoji) {
   let start = getTime();
   let defaultRegex = emojiRegex();
@@ -504,7 +523,6 @@ async function getEmoji(emoji) {
   console.log('getEmoji - ' + getTime(start).toString() + 'ms');
   return;
 }
-// DRAW
 async function drawEmoji(useArgs = false, yPos, emojiX, emojiY, emojiLines, emojiArray, lineHeight, offX, offY) {
   let start = getTime();
   // arguments:
@@ -552,9 +570,6 @@ async function drawEmoji(useArgs = false, yPos, emojiX, emojiY, emojiLines, emoj
   console.log('drawEmoji - ' + getTime(start).toString() + 'ms');
   return;
 }
-
-/* TEXT-ARGS
------------------------*/
 async function textArgs() {
   let start = getTime();
   let message = globalData.message;
@@ -597,8 +612,6 @@ async function textArgs() {
   console.log('textArgs - ' + getTime(start).toString() + 'ms');
   return;
 }
-/* TEXT-HANDLER
------------------------*/
 async function textHandler(text, font, style, maxSize, minSize, maxWidth, maxHeight, byLine, spacing, baseX, baseY, yAlign, xAlign) {
   let start = getTime();
   // style - bold, italic, etc., must be in form 'bold ' with the space since I am lazy
@@ -857,8 +870,6 @@ async function textHandler(text, font, style, maxSize, minSize, maxWidth, maxHei
   console.log('textHandler - ' + getTime(start).toString() + 'ms');
   return;
 }
-/* TIME
------------------------*/
 function getTime(startTime) {
   const time = new Date();
   if (startTime == undefined) {
@@ -874,17 +885,32 @@ async function wait(time) {
   const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
   await delay(time);
 }
-/* DEBUG
------------------------*/
 async function infoScraper() {
   let start = getTime();
   let message = globalData.message;
   var scraperINFO = message.channel.messages.fetch({ limit: 2 }).then(async messageList => {
-    let messageListLastAttachment = messageList.last();
-    //console.log(messageListLastAttachment);
-    console.log(messageListLastAttachment);
-    let tenorURL = messageListLastAttachment.embeds[0].type;
-    //console.log(tenorURL);
+
+    message.delete();
+
+    let messageListLastAttachment = await messageList.last();
+
+    //let test = messageListLastAttachment.attachments.first();
+    //console.log(test);
+
+    //let url = await messageListLastAttachment.attachments.first().url;
+    //let link = await messageListLastAttachment.embeds[0].url;
+
+    let url = undefined;
+    
+    if (messageListLastAttachment.attachments.first() != undefined) {
+      url = await messageListLastAttachment.attachments.first().url;
+    }
+    else if (messageListLastAttachment.embeds[0] != undefined) {
+      url = await messageListLastAttachment.embeds[0].url;
+    }
+
+    console.log(url);
+
     console.log('infoScraper - ' + getTime(start).toString() + 'ms');
     return messageListLastAttachment;
   })
@@ -892,12 +918,25 @@ async function infoScraper() {
   console.log('infoScraper - ' + getTime(start).toString() + 'ms');
   return;
 }
+function fileExtension(url) {
+  return url.split(/[#?]/)[0].split('.').pop().trim().toLowerCase();
+}
+function fileType(extension) {
+  if (imageTypes.includes(extension)) {return 'image';}
+  else if (videoTypes.includes(extension)) {return 'video';}
+  else if (audioTypes.includes(extension)) {return 'audio';}
+  else if (textTypes.includes(extension)) {return 'text';}
+  else {return 'link';}
+}
 function createFolders() { //Creates an empty folder if it is not there, as Github doesn't allow commits of empty folders. Add a case for all future empty folders
   if (!fs.existsSync('./files/buffer')) {
     fs.mkdirSync('./files/buffer')
   }
   if (!fs.existsSync('./files/archive')) {
     fs.mkdirSync('./files/archive')
+  }
+  if (!fs.existsSync('./files/reminders')) {
+    fs.mkdirSync('./files/reminders')
   }
   if (!fs.existsSync('./files/buffer/conversionDownload')) {
     fs.mkdirSync('./files/buffer/conversionDownload')
@@ -924,4 +963,5 @@ async function fileNameVerify(string, filePath, extension) {
 
 module.exports = { fileScraper, download, canvasInitialize, canvasScaleFit, canvasScaleFill, imageToCanvas,
                   textHandler, getTime, wait, typeCheck, infoScraper, uploadLimitCheck, sendFile, linkScraper,
-                  userData, textArgs, imageScraper, createFolders, findEmoji, getEmoji, fileNameVerify, scaleDims, drawEmoji };
+                  userData, textArgs, imageScraper, createFolders, findEmoji, getEmoji, fileNameVerify, scaleDims, 
+                  drawEmoji, fileLinkScraper, fileExtension, fileType };
