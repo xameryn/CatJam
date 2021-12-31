@@ -782,8 +782,13 @@ client.on('message', async message => {
     let arrayPosition = undefined;
     let archiveList = []
     let imageList = [], videoList = [], audioList = [], textList = [], otherList = [];
-    input = encodeURI(await func.fileNameVerify(input));
-    input2 = encodeURI(await func.fileNameVerify(input2));
+
+    if (input != undefined) {
+      input = encodeURI(await func.fileNameVerify(input));
+    }
+    else if (input2 != undefined) {
+      input2 = encodeURI(await func.fileNameVerify(input2));
+    }
 
     if (!fs.existsSync(`./files/archive/${message.author.id}.json`)) {
       fs.writeFileSync(`./files/archive/${message.author.id}.json`, '[]');
