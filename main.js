@@ -142,7 +142,7 @@ client.on('message', async message => {
     // GET IMAGE AND ITS SIZE
     //-----------------------
     let fileDir = './files/buffer/memePosterBuffer.png';
-    let fileURL = await func.imageScraper();
+    let fileURL = await func.generalScraper('image');
     if (fileURL == undefined) {return message.channel.send("No File Found :(");}
     await func.download(fileURL, fileDir);
     let imageSize = await SizeOf(fileDir);
@@ -289,7 +289,7 @@ client.on('message', async message => {
     // GET DA FILE AND DO DA THING
     //-----------------------
     let fileDir = './files/buffer/memeBuffer.png';
-    let fileURL = await func.imageScraper();
+    let fileURL = await func.generalScraper('image');
     if (fileURL == undefined) {return message.channel.send("No File Found :(");}
     await func.download(fileURL, fileDir);
     let imageSize = await SizeOf(fileDir);
@@ -432,7 +432,7 @@ client.on('message', async message => {
     //if no text inputs, scrapes image
     else {
       let fileDir = './files/buffer/meme1984Buffer.png';
-      let fileURL = await func.imageScraper();
+      let fileURL = await func.generalScraper('image');
       if (fileURL == undefined) {return message.channel.send("No File Found :(");}
       await func.download(fileURL, fileDir);
       let imageSize = await SizeOf(fileDir);
@@ -454,7 +454,7 @@ client.on('message', async message => {
     // GET IMAGE AND ITS SIZE
     //-----------------------
     let fileDir = './files/buffer/memePointingBuffer.png';
-    let fileURL = await func.imageScraper();
+    let fileURL = await func.generalScraper('image');
     if (fileURL == undefined) {return message.channel.send("No File Found :(");}
     await func.download(fileURL, fileDir);
     let imageSize = await SizeOf(fileDir);
@@ -584,7 +584,7 @@ client.on('message', async message => {
     let context = globalData.context;
 
     let fileDir = './files/buffer/memeMarioBuffer.png';
-    let fileURL = await func.imageScraper();
+    let fileURL = await func.generalScraper('image');
     if (fileURL == undefined) {return message.channel.send("No File Found :(");}
     await func.download(fileURL, fileDir);
     //-----------------------
@@ -639,7 +639,7 @@ client.on('message', async message => {
     let filter = command;
     //basic get image make canvas from that image
     let fileDir = './files/buffer/filterBuffer.png';
-    let fileURL = await func.imageScraper();
+    let fileURL = await func.generalScraper('image');
     if (fileURL == undefined) {return message.channel.send("No File Found :(");}
     await func.download(fileURL, fileDir);
     let imageSize = await SizeOf(fileDir);
@@ -783,7 +783,7 @@ client.on('message', async message => {
     let archiveList = []
     let imageList = [], videoList = [], audioList = [], textList = [], otherList = [];
     input = encodeURI(await func.fileNameVerify(input));
-    input2 = encodeURI(await func.fileNameVerify(input));
+    input2 = encodeURI(await func.fileNameVerify(input2));
 
     if (!fs.existsSync(`./files/archive/${message.author.id}.json`)) {
       fs.writeFileSync(`./files/archive/${message.author.id}.json`, '[]');
@@ -895,7 +895,7 @@ client.on('message', async message => {
         return message.channel.send(linkURL)
       }
       else if (fileExists === false) { //File name does not exists in JSON - Add file to JSON
-        let link = await func.fileLinkScraper();
+        let link = await func.generalScraper('link');
         if (link === null || link === undefined) {
           return message.channel.send('Not a valid embed')
         }
@@ -1079,7 +1079,7 @@ client.on('message', async message => {
     return;
   }
   else if (command === 'convert' || command === 'conv') {
-    let fileURL = await func.fileScraper();
+    let fileURL = await func.generalScraper('file');
 
     console.log(input);
     console.log(input2);
@@ -1166,10 +1166,13 @@ client.on('message', async message => {
     }
   }
   else if (command === 'twt' || command === 'twitter') {
-    let lastMessage = await func.linkScraper();
-    if (lastMessage == undefined) { return message.channel.send("No Link Found :(");}
+
+    let originalURL = await func.generalScraper('twitter');
+
+    let lastMessage = await globalData.targetMessage;
+
+    if (lastMessage == undefined) { return message.channel.send("No Twitter Link Found :(");}
     let nickName = lastMessage.member.displayName;
-    let originalURL = lastMessage.content;
     let splitURL = originalURL.split('/');
     if (splitURL[2] == 'twitter.com') {
       splitURL[2] = 'fxtwitter.com';
@@ -1184,8 +1187,8 @@ client.on('message', async message => {
       return message.channel.send("This is not a twitter link.");
     }
   }
-  else if (command === 'repost' || command === 'rp') {
-    let fileURL = await func.fileScraper();
+  else if (command === 'repost' || command === 'rp') {s
+    let fileURL = await func.generalScraper('file');
 
     if (fileURL == undefined) {return message.channel.send("No File Found :(");}
 
@@ -1200,7 +1203,7 @@ client.on('message', async message => {
 
   }
   else if (command === 'starpic' || command === 'sp') {
-    let fileURL = await func.imageScraper();
+    let fileURL = await func.generalScraper('image');
 
     if (fileURL == undefined) {return message.channel.send("No File Found :(");}
 
@@ -1223,7 +1226,7 @@ client.on('message', async message => {
     return;
   }
   else if (command === 'link' || command === 'lk') {
-    let link = await func.fileLinkScraper();
+    let link = await func.generalScraper('link');
 
     console.log(command + ' - ' + func.getTime(start).toString() + 'ms');
     //message.channel.send(link)
@@ -1247,12 +1250,10 @@ client.on('message', async message => {
     log();
   }
   else if (command === 'test' || command === 't') {
-    //console.log(archiveList);
-    var archiveJSON = JSON.stringify(archiveList);
+    
+    let url = await func.generalScraper('image')
 
-    if (!fs.existsSync(`./files/archive/${message.author.id}.json`)) {
-      fs.writeFile(`./files/archive/${message.author.id}.json`, archiveJSON);
-    }
+    console.log(url);
 
     console.log(command + ' - ' + func.getTime(start).toString() + 'ms');
   }

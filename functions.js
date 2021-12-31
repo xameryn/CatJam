@@ -12,100 +12,39 @@ const emojiDict = require("emoji-dictionary");
 import { globalData } from './main.js';
 import { catJamArrayStorage, stellarisArrayStorage, imageTypes, videoTypes, audioTypes, textTypes } from './arrays.js';
 
-async function fileScraper() {
+async function generalScraper(scrapeType) {
   let start = getTime();
   let message = globalData.message;
-  var scraperURL = message.channel.messages.fetch().then(async messageList => {
-  let lastMessage = await messageList.sort((a, b) => b.createdTimestamp - a.createdTimestamp).filter((m) => ((m.embeds.length > 0 && (m.embeds[0].type == 'image' || m.embeds[0].type == 'video' || m.embeds[0].type == 'gifv')) || m.attachments.size > 0)).first();
+  let searchParams = undefined
 
-  if (lastMessage == undefined) {
-    return undefined;
+  if (scrapeType === undefined) {scrapeType = 'link';}
+
+  if (scrapeType === 'link') { //Used for $archive
+    searchParams = (m) => (m.attachments.size > 0) || (m.embeds.length > 0);
+  }
+  else if (scrapeType === 'image') { //Misc Use
+    let atc = null;
+    let emb = null;
+    searchParams = (m) => (atc = m.attachments.first(), emb = m.embeds, ((m.attachments.size > 0) && (atc != undefined) && ((atc.url.includes('.png')) || (atc.url.includes('.jpg')) || (atc.url.includes('.bmp')) || (atc.url.includes('.jpeg')) || (atc.url.includes('.jfif')) || (atc.url.includes('.tiff')) || (atc.url.includes('.webp')))) || (emb.length > 0 && (emb[0].type == 'image')));
+  }
+  else if (scrapeType === 'file') { //Misc Use
+    searchParams = (m) => ((m.embeds.length > 0 && (m.embeds[0].type == 'image' || m.embeds[0].type == 'video' || m.embeds[0].type == 'gifv')) || m.attachments.size > 0);
+  }
+  else if (scrapeType === 'twitter') { //Used for $twitter
+    searchParams = (m) => ((m.embeds.length > 0) && (m.embeds[0].type === 'rich') && (m.embeds[0].url != null) && (m.embeds[0].url.includes('twitter.com')));
   }
 
-  if (message.reference != undefined) {
+  var scraperURL = message.channel.messages.fetch().then(async messageList => { //Message search
+  let lastMessage = await messageList.sort((a, b) => b.createdTimestamp - a.createdTimestamp).filter(searchParams).first();
+
+  if (message.reference != undefined) { //If a message is replied to it takes priority
     let replyMessage =  await message.channel.messages.fetch(message.reference.messageID);
-    if ((replyMessage.embeds.length > 0 && (replyMessage.embeds[0].type == 'image' || replyMessage.embeds[0].type == 'video' || replyMessage.embeds[0].type == 'gifv')) || replyMessage.attachments.size > 0) {
-      lastMessage = replyMessage
-    }
-  }
-
-  if (lastMessage.attachments.size > 0) {
-    let url = lastMessage.attachments.first().url;
-    return url;
-  }
-
-  if (lastMessage.embeds.length > 0) {
-    let url = lastMessage.embeds[0].url;
-    if (await url.includes('tenor.com/view')) { //If a Tenor link
-      url = url + ".gif"; //Add .gif file type
-    }
-    return url;
-  }
-  });
-  var attachedFileURL = await scraperURL.then();
-  let outputURL = attachedFileURL;
-  console.log('fileScraper - ' + getTime(start).toString() + 'ms');
-  return outputURL;
-}
-async function imageScraper() {
-  let start = getTime();
-  let message = globalData.message;
-  let atc = null;
-  let emb = null;
-  var scraperURL = message.channel.messages.fetch().then(async messageList => {
-  let lastMessage = await messageList.sort((a, b) => b.createdTimestamp - a.createdTimestamp).filter((m) =>
-  (atc = m.attachments.first(), emb = m.embeds, ((m.attachments.size > 0) && (atc != undefined) && ((atc.url.includes('.png')) || (atc.url.includes('.jpg')) || (atc.url.includes('.bmp')) || (atc.url.includes('.jpeg')) || (atc.url.includes('.jfif')) || (atc.url.includes('.tiff')) || (atc.url.includes('.webp')))) || (emb.length > 0 && (emb[0].type == 'image')))).first();
-
-  if (lastMessage == undefined) {
-    return undefined;
-  }
-
-  if (message.reference != undefined) {
-    let replyMessage =  await message.channel.messages.fetch(message.reference.messageID);
-    let replyATC = replyMessage.attachments.first()
-    if (((replyMessage.attachments.size > 0) && (replyATC != undefined) && ((replyATC.url.includes('.png')) || (replyATC.url.includes('.jpg')) || (replyATC.url.includes('.bmp')) || (replyATC.url.includes('.jpeg')) || (replyATC.url.includes('.jfif')) || (replyATC.url.includes('.tiff')) || (replyATC.url.includes('.webp')))) || (replyMessage.embeds.length > 0 && (replyMessage.embeds[0].type == 'image'))) {
-      lastMessage = replyMessage
-    }
-  }
-
-  if (lastMessage.attachments.size > 0) {
-    let url = lastMessage.attachments.first().url;
-    return url;
-  }
-
-  if (lastMessage.embeds.length > 0) {
-    let url = lastMessage.embeds[0].url;
-    return url;
-  }
-  });
-  var attachedFileURL = await scraperURL.then();
-  let outputURL = attachedFileURL;
-  console.log('imageScraper - ' + getTime(start).toString() + 'ms');
-  return outputURL;
-}
-async function linkScraper() {
-  let start = getTime();
-  let message = globalData.message;
-  var websiteMessage = message.channel.messages.fetch().then(async messageList => {
-  let lastMessage = await messageList.sort((a, b) => b.createdTimestamp - a.createdTimestamp).filter((m) => ((m.embeds.length > 0 && (m.embeds[0].type == 'rich') && (m.embeds[0].url.includes('twitter.com'))))).first();
-  return lastMessage;
-});
-console.log('linkScraper - ' + getTime(start).toString() + 'ms');
-return websiteMessage;
-}
-async function fileLinkScraper() {
-  let start = getTime();
-  let message = globalData.message;
-  var scraperURL = message.channel.messages.fetch().then(async messageList => {
-  let lastMessage = await messageList.sort((a, b) => b.createdTimestamp - a.createdTimestamp).filter((m) =>
-  (m.attachments.size > 0) || (m.embeds.length > 0)).first();
-
-  if (message.reference != undefined) {
-    let replyMessage =  await message.channel.messages.fetch(message.reference.messageID);
-    if ((replyMessage.attachments.size > 0) || (replyMessage.embeds.length > 0)) {
+    if (searchParams) {
       lastMessage = replyMessage;
     }
   }
+
+  globalData.targetMessage = await lastMessage; //Saves the message it locates
 
   if (lastMessage == undefined) {
     return undefined;
@@ -961,7 +900,7 @@ async function fileNameVerify(string, filePath, extension) {
   return string;
 }
 
-module.exports = { fileScraper, download, canvasInitialize, canvasScaleFit, canvasScaleFill, imageToCanvas,
-                  textHandler, getTime, wait, typeCheck, infoScraper, uploadLimitCheck, sendFile, linkScraper,
-                  userData, textArgs, imageScraper, createFolders, findEmoji, getEmoji, fileNameVerify, scaleDims, 
-                  drawEmoji, fileLinkScraper, fileExtension, fileType };
+module.exports = { generalScraper, download, canvasInitialize, canvasScaleFit, canvasScaleFill, imageToCanvas,
+                  textHandler, getTime, wait, typeCheck, infoScraper, uploadLimitCheck, sendFile,
+                  userData, textArgs, createFolders, findEmoji, getEmoji, fileNameVerify, scaleDims, 
+                  drawEmoji, fileExtension, fileType };
