@@ -8,6 +8,8 @@ const request = require('request');
 const Canvas = require('canvas');
 const SizeOf = require('image-size');
 const emojiDict = require("emoji-dictionary");
+const exifr = require('exifr');
+const PNG = require("pngjs").PNG;
 
 import { globalData } from './main.js';
 import { catJamArrayStorage, stellarisArrayStorage, imageTypes, videoTypes, audioTypes, textTypes } from './arrays.js';
@@ -96,6 +98,20 @@ async function download(fileURL, fileDir){
     });
     while (!finished) {
       await wait(25);
+    }
+    //checks for cringe colour space pngs
+    let dirArray = fileDir.split('.');
+    if (dirArray[dirArray.length - 1] == 'png') {
+      let profile = await exifr.parse(fileDir, {chunked: false}).then(output => {
+        return output.ProfileName;
+      });
+      if (profile == 'kCGColorSpaceDisplayP3') {
+        //basically just rewrites the file with generic colour space and metadata
+        let data = fs.readFileSync(fileDir);
+        let png = PNG.sync.read(data);
+        let buffer = PNG.sync.write(png);
+        fs.writeFileSync(fileDir, buffer);
+      }
     }
     console.log('download - ' + getTime(start).toString() + 'ms');
     return;
@@ -261,14 +277,20 @@ async function imageToCanvas(imageDims, widestRatio, tallestRatio, wideDims, tal
   console.log('imageToCanvas - ' + getTime(start).toString() + 'ms');
   return;
 }
-async function scaleDims(imageDims, scaledDim) {
-  //scales the largest dimension down to scaledDim
+async function scaleDims(imageDims, scaledDim, scaleType) {
+  //scales largest dimension down to scaledDim by default (Same concept as canvasScaleFit)
+  //if scaleType is up, scales smallest dimension up to scaledDim (Same concept as canvasScaleFill)
   let start = getTime();
   let width = imageDims[0];
   let height = imageDims[1];
   let newWidth;
   let newHeight;
-  if (height > width) {
+
+  let scaleBool = height > width;
+  if (scaleType == 'up') {
+    scaleBool = !scaleBool;
+  }
+  if (scaleBool) {
     newWidth = (scaledDim / height) * width;
     newHeight = scaledDim;
   }
@@ -299,7 +321,7 @@ async function userData(action, tag, arg) {
         globalData.posterBG = line.posterBG;
         globalData.posterTXT = line.posterTXT;
         globalData.authorIndex = i;
-        console.log('userData - ' + getTime(start).toString() + 'ms');
+        //console.log('userData - ' + getTime(start).toString() + 'ms');
         return;
       }
     }

@@ -61,25 +61,171 @@ client.on('message', async message => {
   globalData.authorID = message.author.id;
   await func.userData('get');
   if (command === 'help') {
+    let embed = new MessageEmbed();
     let p = "\\" + prefix;
     switch(input) {
-  case 'catjam':
-    return message.channel.send("$catjam [BPM] for catjam to jam to the beat.");
-    break;
-  default:
-    return message.channel.send(
-      "__**List of Commands:**__" + "\n\n" +
-      "__Media Commands:__\n" + p + "catjam\n" + p + "stellaris\n" + p + "dadon\n" + p + "1984\n\n" +
-      "__Filter Commands:__\n" + p + "scatter\n" + p + "glitch\n" + p + "obra\n\n" +
-      "__Media Editing Commands:__\n" + p + "poster\n" + p + "point\n" + p + "meme\n" + p + "mario\n" + p + "literally1984\n\n" +
-      "__Utility Commands:__\n" + p + "archive\n" + p + "bpm (WIP)\n" + p + "twitter\n" + p + "flip\n" + p + "get\n" + p + "starpic\n" + p + "convert\n\n" +
-      "__Meta Commands:__\n" + p + "help\n" + p + "pref");
+      case 'catjam':
+        embed
+          .setTitle(p + "catjam [bpm]")
+          .setColor(0xFBF2F0)
+          .setDescription("A catjam that jams to the beat.");
+        break;
+      case 'stellaris':
+        embed
+          .setTitle(p + "stellaris [1-12]")
+          .setColor(0xFBF2F0)
+          .setDescription("It's time to play Stellaris.");
+        break;
+      case 'dadon':
+        embed
+          .setTitle(p + "dadon")
+          .setColor(0xFBF2F0)
+          .setDescription("Sends one of over 200 images of Don-chan.");
+        break;
+      case '1984':
+        embed
+          .setTitle(p + "1984")
+          .setColor(0xFBF2F0)
+          .setDescription("Two possible GIFs depicting 1984.");
+        break;
+      case 'scatter':
+        embed
+          .setTitle(p + "scatter")
+          .setColor(0xFBF2F0)
+          .setDescription("Randomizes the colours in an image.");
+        break;
+      case 'glitch':
+      case 'corrupt':
+        embed
+          .setTitle(p + "glitch")
+          .setColor(0xFBF2F0)
+          .setDescription("Glitches your image.");
+        break;
+      case 'obradinn':
+      case 'obra':
+      case 'dinn':
+        embed
+          .setTitle(p + "obradinn")
+          .setColor(0xFBF2F0)
+          .setDescription("Who was this? How did they die?");
+        break;
+      case 'poster':
+      case 'canvas':
+        embed
+          .setTitle(p + "poster [up to 2 text inputs]")
+          .setColor(0xFBF2F0)
+          .setDescription("Framed like an early 2000s motivational poster.");
+        break;
+      case 'point':
+        embed
+          .setTitle(p + "point")
+          .setColor(0xFBF2F0)
+          .setDescription("Two respectable gentlemen pointing at something of interest.");
+        break;
+      case 'meme':
+        embed
+          .setTitle(p + "meme [up to 3 text inputs]")
+          .setColor(0xFBF2F0)
+          .setDescription("Including classic top text, bottom text, and middle text");
+        break;
+      case 'mario':
+        embed
+          .setTitle(p + "mario [text input]")
+          .setColor(0xFBF2F0)
+          .setDescription("I can't believe they cast them as Mario.");
+        break;
+      case 'literally1984':
+      case 'l1984':
+        embed
+          .setTitle(p + "literally1984 [optional text input]")
+          .setColor(0xFBF2F0)
+          .setDescription("For when it is literally 1984.");
+        break;
+      case 'archive':
+      case 'arc':
+      case 'a':
+        embed
+          .setTitle(p + "archive [file name] / delete [file name] / list")
+          .setColor(0xFBF2F0)
+          .setDescription("Save any file, then call upon it when you need it most.");
+        break;
+      case 'bpm':
+        embed
+          .setTitle(p + "bpm")
+          .setColor(0xFBF2F0)
+          .setDescription("Determine the bpm by counting the beats\n(Make sure to start counting as soon as you click the flag).");
+        break;
+      case 'twitter':
+      case 'twt':
+        embed
+          .setTitle(p + "twitter")
+          .setColor(0xFBF2F0)
+          .setDescription("Convert a Twitter video link into a more consistent embed.");
+        break;
+      case 'flip':
+      case 'toss':
+      case 'coin':
+        embed
+          .setTitle(p + "flip [probability]")
+          .setColor(0xFBF2F0)
+          .setDescription("Flip a coin of any weight!");
+        break;
+      case 'get':
+        embed
+          .setTitle(p + "get [user] / [emoji]")
+          .setColor(0xFBF2F0)
+          .setDescription("Get avatars (Using mentions, ID, or name)\nor emoji (Custom or default) in picture format.");
+        break;
+      case 'starpic':
+      case 'sp':
+        embed
+          .setTitle(p + "starpic")
+          .setColor(0xFBF2F0)
+          .setDescription("Reposts an image with a star reaction, a neutral mediator for starboards.");
+        break;
+      case 'help':
+        embed
+          .setTitle(p + "help")
+          .setColor(0xFBF2F0)
+          .setDescription("You are beyond help.");
+        break;
+      case 'pref':
+        embed
+          .setTitle(p + "pref")
+          .setColor(0xFBF2F0)
+          .setDescription("Alter the default behaviour of various commands.");
+        break;
+      case 'server':
+      case 'srv':
+        embed
+          .setTitle(p + "server")
+          .setColor(0xFBF2F0)
+          .setDescription("In case you were wondering how the server was doing.");
+        break;
+      default:
+        embed
+          .setTitle("List of Commands")
+          .setColor(0xFBF2F0)
+          .addFields(
+            { name: '\u200B', value:
+            "**__Media:__**\n" + p + "catjam\n" + p + "stellaris\n" + p + "dadon\n" + p + "1984\n\n" +
+            "**__Filter:__**\n" + p + "scatter\n" + p + "glitch\n" + p + "obradinn\n\n" +
+            "**__Media Editing:__** \n" + p + "poster\n" + p + "point\n" + p + "meme\n" + p + "mario\n" + p + "literally1984\n⠀",
+            inline: true},
+            { name: '\u200B', value:
+            "**__Utility:__**\n" + p + "archive\n" + p + "bpm (WIP)\n" + p + "twitter\n" + p + "flip\n" + p + "get\n" + p + "starpic\n\n" +
+            "**__Meta:__**\n" + p + "help\n" + p + "pref\n" + p + "server",
+            inline: true}
+          )
+          .setFooter('DISCLAIMER: Not all command names and arguments are disclosed.')
     }
+    return message.channel.send({embed})
   }
   else if (command === 'catjam') {
     let output = (Math.round((input)/5))*5;
     if (!args.length) {
       attachment = new MessageAttachment(catJamArray[12]);
+      console.log(command + ' - ' + func.getTime(start).toString() + 'ms');
       return message.channel.send(attachment);
 		}
     else if (output < 60 || output > 180) {
@@ -304,7 +450,7 @@ client.on('message', async message => {
     }
     //dimensions scaled so they're at least 100
     if (imageSize.height < 100 || imageSize.width < 100) {
-      let dims = await func.scaleDims([imageSize.width, imageSize.height], 100);
+      let dims = await func.scaleDims([imageSize.width, imageSize.height], 100, 'up');
       imageSize.width = dims[0];
       imageSize.height = dims[1];
     }
@@ -312,7 +458,7 @@ client.on('message', async message => {
     // FUNCTIONS AND CANVAS STUFF
     //-----------------------
     //image is the canvas (fairly generous scale parameters here)
-    func.imageToCanvas([imageSize.width, imageSize.height], 3, 3, [imageSize.width,(imageSize.width / 3)], [(imageSize.height / 3),imageSize.height]);
+    await func.imageToCanvas([imageSize.width, imageSize.height], 3, 3, [imageSize.width,(imageSize.width / 3)], [(imageSize.height / 3),imageSize.height]);
     let width = globalData.imgCanvasX;
     let height = globalData.imgCanvasY;
     //handling text input
@@ -951,7 +1097,8 @@ client.on('message', async message => {
       .setColor(0x00AE86)
       .setDescription("CPU Speed: " + cpuSpeed.avg + "GHz\nMemory Used: " + (Math.round((memInfo.used/1073741824) * 10) / 10) + "GB / " + (Math.round((memInfo.total/1073741824) * 10) / 10) + "GB")
       .setTimestamp()
-      return message.channel.send({embed})
+    console.log(command + ' - ' + func.getTime(start).toString() + 'ms');
+    return message.channel.send({embed})
   }
   else if (command === 'get') {
     let errorMsg = "**Bad Input!**\n(Couldn't find an avatar or emoji from that input)";
@@ -1084,6 +1231,7 @@ client.on('message', async message => {
     return;
   }
   else if (command === 'convert' || command === 'conv') {
+    /*
     let fileURL = await func.generalScraper('file');
 
     console.log(input);
@@ -1111,6 +1259,8 @@ client.on('message', async message => {
 
     attachment = await new MessageAttachment(fileDirOutput);
     return message.channel.send(attachment);
+    */
+   return;
   }
   else if (command === 'bpm') {
     const msg = await message.channel.send(`Press 🏁 to begin, count 10 beats (starting on 1) then press the 🛑.`); //Sends initial message
@@ -1192,7 +1342,7 @@ client.on('message', async message => {
       return message.channel.send("This is not a twitter link.");
     }
   }
-  else if (command === 'repost' || command === 'rp') {s
+  else if (command === 'repost' || command === 'rp') {
     let fileURL = await func.generalScraper('file');
 
     if (fileURL == undefined) {return message.channel.send("No File Found :(");}
@@ -1205,7 +1355,6 @@ client.on('message', async message => {
     await func.download(fileURL, fileDir);
     console.log(command + ' - ' + func.getTime(start).toString() + 'ms');
     return func.sendFile(fileURL, fileDir);
-
   }
   else if (command === 'starpic' || command === 'sp') {
     let fileURL = await func.generalScraper('image');
@@ -1218,11 +1367,10 @@ client.on('message', async message => {
     let fileDir = await './files/buffer/starBuffer.' + fileType;
 
     await func.download(fileURL, fileDir);
-    console.log(command + ' - ' + func.getTime(start).toString() + 'ms');
     message.delete();
     const starMessage = await func.sendFile(fileURL, fileDir);
+    console.log(command + ' - ' + func.getTime(start).toString() + 'ms');
     return starMessage.react("⭐");
-
   }
   else if (command === 'probe' || command === 'prb') {
     await func.infoScraper();
@@ -1232,11 +1380,8 @@ client.on('message', async message => {
   }
   else if (command === 'link' || command === 'lk') {
     let link = await func.generalScraper('link');
-
-    console.log(command + ' - ' + func.getTime(start).toString() + 'ms');
     //message.channel.send(link)
 
-    
     var archive = {}
     archive.name = 'bruh'
     archive.link = link
@@ -1248,18 +1393,14 @@ client.on('message', async message => {
 
     console.log(archiveList[0]);
 
-
+    console.log(command + ' - ' + func.getTime(start).toString() + 'ms');
     return;
   }
   else if (command === 'kill') {
-    log();
+    //log();
+    return;
   }
   else if (command === 'test' || command === 't') {
-    
-    let url = await func.generalScraper('image')
-
-    console.log(url);
-
     console.log(command + ' - ' + func.getTime(start).toString() + 'ms');
   }
 });
