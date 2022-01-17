@@ -82,6 +82,12 @@ client.on('message', async message => {
           .setColor(0xFBF2F0)
           .setDescription("Sends one of over 200 images of Don-chan.");
         break;
+      case 'neco':
+        embed
+          .setTitle(p + "neco")
+          .setColor(0xFBF2F0)
+          .setDescription("Sends one of over 100 images of Neco Arc.");
+        break;
       case '1984':
         embed
           .setTitle(p + "1984")
@@ -208,13 +214,13 @@ client.on('message', async message => {
           .setColor(0xFBF2F0)
           .addFields(
             { name: '\u200B', value:
-            "**__Media:__**\n" + p + "catjam\n" + p + "stellaris\n" + p + "dadon\n" + p + "1984\n\n" +
+            "**__Media:__**\n" + p + "catjam\n" + p + "stellaris\n" + p + "dadon\n" + p + "neco\n" + p + "1984\n\n" +
             "**__Filter:__**\n" + p + "scatter\n" + p + "glitch\n" + p + "obradinn\n\n" +
             "**__Media Editing:__** \n" + p + "poster\n" + p + "point\n" + p + "meme\n" + p + "mario\n" + p + "literally1984\n⠀",
             inline: true},
             { name: '\u200B', value:
             "**__Utility:__**\n" + p + "archive\n" + p + "bpm (WIP)\n" + p + "twitter\n" + p + "flip\n" + p + "get\n" + p + "starpic\n\n" +
-            "**__Meta:__**\n" + p + "help\n" + p + "pref\n" + p + "server",
+            "**__Meta:__**\n" + p + "help\n" + p + "pref\n" + p + "server\n⠀",
             inline: true}
           )
           .setFooter('DISCLAIMER: Not all command names and arguments are disclosed.')
@@ -257,16 +263,16 @@ client.on('message', async message => {
       return message.channel.send(attachment);
     }
   }
-  else if (command === 'dadon') {
-    let dir = './files/dadon';
-    let dadonArray = ['./files/dadon/', 'dadon (', 'num', ').png'];
+  else if (command === 'dadon' || command === 'neco') {
+    let dir = './files/' + command;
+    let imageArray = ['./files/' + command + '/', command + ' (', 'num', ').png'];
     let fileNumber = fs.readdirSync(dir).length;
     let imageNum = Math.floor(Math.random() * fileNumber) + 1;
-    dadonArray[2] = imageNum;
+    imageArray[2] = imageNum;
     if (!isNaN(input) && input <= fileNumber && input > 0) {
-      dadonArray[2] = input;
+      imageArray[2] = input;
     }
-    let joinedArray = dadonArray.join('');
+    let joinedArray = imageArray.join('');
     var attachment = await new MessageAttachment(joinedArray);
     console.log(command + ' - ' + func.getTime(start).toString() + 'ms');
     return message.channel.send(attachment);
