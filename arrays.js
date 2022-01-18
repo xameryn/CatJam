@@ -13,7 +13,7 @@ var stellarisArrayStorage = ["https://i.imgur.com/ys7BoS4.gif", "https://i.imgur
 
 var imageTypes = ['png', 'jpg', 'raw', 'tiff', 'ico', 'bmp', 'jpeg', 'webp', 'svg', 'jfif'];
 
-var videoTypes = ['mp4', 'mov', 'avi', 'webm', 'mkv', '3gp', 'wmv', 'gif', '3g2', 'flv', 'h264', 'm4v', 'mpg', 'mpeg'];
+var videoTypes = ['mp4', 'mov', 'avi', 'webm', 'mkv', '3gp', 'wmv', '3g2', 'flv', 'h264', 'm4v', 'mpg', 'mpeg'];
 
 var audioTypes = ['mp3', 'wav', 'ogg', 'aif', 'mid', 'wma', 'mpa', 'midi', 'cda'];
 

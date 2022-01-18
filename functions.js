@@ -885,6 +885,7 @@ function fileExtension(url) {
 function fileType(extension) {
   if (imageTypes.includes(extension)) {return 'image';}
   else if (videoTypes.includes(extension)) {return 'video';}
+  else if (extension.includes('gif')) {return 'gif';}
   else if (audioTypes.includes(extension)) {return 'audio';}
   else if (textTypes.includes(extension)) {return 'text';}
   else {return 'link';}
@@ -921,8 +922,11 @@ async function fileNameVerify(string, filePath, extension) {
   }
   return string;
 }
+function canManageMessages(msg) {
+  return msg.member.permissionsIn(msg.channel).has('MANAGE_MESSAGES')
+}
 
 module.exports = { generalScraper, download, canvasInitialize, canvasScaleFit, canvasScaleFill, imageToCanvas,
                   textHandler, getTime, wait, typeCheck, infoScraper, uploadLimitCheck, sendFile,
                   userData, textArgs, createFolders, findEmoji, getEmoji, fileNameVerify, scaleDims, 
-                  drawEmoji, fileExtension, fileType };
+                  drawEmoji, fileExtension, fileType, canManageMessages };

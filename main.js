@@ -1,4 +1,4 @@
-const { Client, Intents, MessageAttachment, MessageEmbed, MessageActionRow, MessageButton } = require('discord.js');
+const { Client, Intents, MessageAttachment, MessageEmbed, Permissions, MessageActionRow, MessageButton } = require('discord.js');
 const sharp = require('sharp');
 const request = require(`request`);
 const stringify = require('json-stringify');
@@ -14,19 +14,17 @@ const SizeOf = require('image-size');
 
 const func = require("./functions.js");
 
-import { discordKey, guildKey, prefixKey } from './keys.js';
-import { catJamArrayStorage, stellarisArrayStorage, imageTypes, videoTypes, audioTypes, textTypes } from './arrays.js';
+import { discordKey, prefixKey } from './keys.js';
+import { catJamArrayStorage, stellarisArrayStorage } from './arrays.js';
 
 const client = new Client({ intents: [Intents.FLAGS.GUILDS, Intents.FLAGS.GUILD_MESSAGES] });
 const DISCORDTOKEN = discordKey;
-const GuildID = guildKey;
 const prefix = prefixKey;
 const catJamArray = catJamArrayStorage;
 const stellarisArray = stellarisArrayStorage;
 
 var globalData = {};
 var archiveList = []
-var downloadingBoolean = false;
 
 var output = fs.createWriteStream('emojis.zip');
 var archive = archiver('zip');
@@ -54,6 +52,7 @@ client.on('message', async message => {
   const user = message.author.id;
   let input = args[0];
   let input2 = args[1];
+  let input3 = args[2];
   let fullInput = message.content.slice(prefix.length + command.length).trim();
   globalData.message = message;
   globalData.prefix = prefix;
@@ -933,7 +932,7 @@ client.on('message', async message => {
     let typeLink = false;
     let arrayPosition = undefined;
     let archiveList = []
-    let imageList = [], videoList = [], audioList = [], textList = [], otherList = [];
+    let imageList = [], videoList = [], gifList = [], audioList = [], textList = [], otherList = [];
 
     if (input != undefined) {
       input = encodeURI(await func.fileNameVerify(input));
@@ -953,7 +952,7 @@ client.on('message', async message => {
       return el != null;
     });
 
-    archiveList = filteredArchiveList;
+    archiveList = await filteredArchiveList;
 
     if (input === 'delete' || input === 'd') { //Delete a given file
 
@@ -987,6 +986,9 @@ client.on('message', async message => {
         else if (archiveList[i].type === 'video') { //File is a video
           videoList.push(' ' + archiveList[i].name)
         }
+        else if (archiveList[i].type === 'gif') { //File is a gif
+          gifList.push(' ' + archiveList[i].name)
+        }
         else if (archiveList[i].type === 'audio') { //File is audio
           audioList.push(' ' + archiveList[i].name)
         }
@@ -1001,30 +1003,35 @@ client.on('message', async message => {
       let embedDescription = {}
       embedDescription.image = '';
       embedDescription.video = '';
+      embedDescription.gif = '';
       embedDescription.audio = '';
       embedDescription.text = '';
       embedDescription.other = '';
 
       if (imageList.length > 0) {embedDescription.image = '**Images:** ' + '\n' + imageList + '\n\n';}
       if (videoList.length > 0) {embedDescription.video = '**Videos:** ' + '\n' + videoList + '\n\n';}
+      if (gifList.length > 0) {embedDescription.gif = '**GIFs:** ' + '\n' + gifList + '\n\n';}
       if (audioList.length > 0) {embedDescription.audio = '**Audio:** ' + '\n' + audioList + '\n\n';}
       if (textList.length > 0) {embedDescription.text   = '**Text:** ' + '\n' + textList + '\n\n';}
       if (otherList.length > 0) {embedDescription.other = '**Other:** ' + '\n' + otherList + '\n\n';}
 
       const embed = new MessageEmbed()
-      .setTitle("Archived File List")
+      .setTitle("User Archived File List")
       .setColor(0x00AE86)
-      .setDescription(embedDescription.image + embedDescription.video + embedDescription.audio + embedDescription.text + embedDescription.other)
+      .setDescription(embedDescription.image + embedDescription.video + embedDescription.gif + embedDescription.audio + embedDescription.text + embedDescription.other)
       return message.channel.send({embed})
 
     }
     else if (input === undefined) {
       return message.channel.send('Please include a file name.')
     }
+    else if (input === 'command') {
+      
+    }
     else { //Adding or sending a file
       for (let i = 0; i < archiveList.length; i++) { //Check if the given name exists in the JSON
         if (archiveList[i].name === input) {
-          if (archiveList[i].type === 'link') {
+          if (archiveList[i].type === 'link' || archiveList[i].type === 'gif') {
             typeLink = true;
           }
           fileExists = true;
@@ -1057,7 +1064,9 @@ client.on('message', async message => {
           return message.channel.send('Not a valid embed')
         }
         let extension = await func.fileExtension(link);
+        console.log('extension:' + extension);
         let fileType = await func.fileType(extension);
+        console.log('fileType:' + fileType);
 
         var archive = {}
         archive.name = input
@@ -1070,6 +1079,174 @@ client.on('message', async message => {
         var archiveJSON = JSON.stringify(archiveList);
 
         fs.writeFileSync(`./files/archive/${message.author.id}.json`, archiveJSON);
+
+        console.log(command + ' - ' + func.getTime(start).toString() + 'ms');
+        return message.channel.send('File saved as ' + input)
+      }
+    }
+  }
+  else if (command === 'sarc' || command === 'serverarc' || command === 'sa' || command === 'serverarchive') {
+    let fileExists = false;
+    let typeLink = false;
+    let arrayPosition = undefined;
+    let canManageMessages = false;
+    let archiveListServer = []
+    let serverPerms = []
+    let guildID = message.guild.id;
+    let imageList = [], videoList = [], gifList = [], audioList = [], textList = [], otherList = [];
+
+    if (input != undefined) {
+      input = encodeURI(await func.fileNameVerify(input));
+    }
+    else if (input2 != undefined) {
+      input2 = encodeURI(await func.fileNameVerify(input2));
+    }
+
+    if (!fs.existsSync(`./files/archive/${guildID}.json`)) {
+      fs.writeFileSync(`./files/archive/${guildID}.json`, '[]');
+    }
+
+    if (!fs.existsSync(`./files/archive/${'serverPerms'}.json`)) {
+      fs.writeFileSync(`./files/archive/${'serverPerms'}.json`, '[]');
+    }
+
+    canManageMessages = func.canManageMessages(message);
+
+    let importServerJSON = fs.readFileSync(`./files/archive/${guildID}.json`, 'utf8');
+    archiveListServer = await JSON.parse(importServerJSON);
+    let importServerPerms = fs.readFileSync(`./files/archive/${'serverPerms'}.json`, 'utf8');
+    serverPerms = await JSON.parse(importServerPerms);
+
+    var filteredArchiveListServer = await archiveListServer.filter(function (el) {
+      return el != null;
+    });
+    var filteredserverPerms = await serverPerms.filter(function (el) {
+      return el != null;
+    });
+
+    archiveListServer = await filteredArchiveListServer;
+    serverPerms = await filteredserverPerms;
+
+    if ((input === 'delete' || input === 'd') && canManageMessages) { //Delete a given file
+
+      for (let i = 0; i < archiveListServer.length; i++) { //Check if the given name exists in the JSON
+        if (archiveListServer[i].name === input2) {
+          fileExists = true;
+          arrayPosition = i;
+          break;
+        }
+      }
+
+      if (fileExists === true) {
+        delete archiveListServer[arrayPosition];
+        var archiveJSON = JSON.stringify(archiveListServer);
+        fs.writeFileSync(`./files/archive/${message.guild.id}.json`, archiveJSON);
+        return message.channel.send(input2 + ' Deleted')
+      }
+
+      else {
+        return message.channel.send('Filename not found')
+      }
+
+      
+    }
+    else if (input === 'list' || input === 'l') {
+
+      for (let i = 0; i < archiveListServer.length; i++) {
+        if (archiveListServer[i].type === 'image') { //File is an image
+          imageList.push(' ' + archiveListServer[i].name)
+        }
+        else if (archiveListServer[i].type === 'video') { //File is a video
+          videoList.push(' ' + archiveListServer[i].name)
+        }
+        else if (archiveListServer[i].type === 'gif') { //File is a gif
+          gifList.push(' ' + archiveListServer[i].name)
+        }
+        else if (archiveListServer[i].type === 'audio') { //File is audio
+          audioList.push(' ' + archiveListServer[i].name)
+        }
+        else if (archiveListServer[i].type === 'text') { //File is text
+          textList.push(' ' + archiveListServer[i].name)
+        }
+        else if (archiveListServer[i].type === 'link') { //File is other
+          otherList.push(' ' + archiveListServer[i].name)
+        }
+      }
+
+      let embedDescription = {}
+      embedDescription.image = '';
+      embedDescription.video = '';
+      embedDescription.gif = '';
+      embedDescription.audio = '';
+      embedDescription.text = '';
+      embedDescription.other = '';
+
+      if (imageList.length > 0) {embedDescription.image = '**Images:** ' + '\n' + imageList + '\n\n';}
+      if (videoList.length > 0) {embedDescription.video = '**Videos:** ' + '\n' + videoList + '\n\n';}
+      if (gifList.length > 0) {embedDescription.gif = '**GIFs:** ' + '\n' + gifList + '\n\n';}
+      if (audioList.length > 0) {embedDescription.audio = '**Audio:** ' + '\n' + audioList + '\n\n';}
+      if (textList.length > 0) {embedDescription.text   = '**Text:** ' + '\n' + textList + '\n\n';}
+      if (otherList.length > 0) {embedDescription.other = '**Other:** ' + '\n' + otherList + '\n\n';}
+
+      const embed = new MessageEmbed()
+      .setTitle("Server Archived File List")
+      .setColor(0x00AE86)
+      .setDescription(embedDescription.image + embedDescription.video + embedDescription.gif + embedDescription.audio + embedDescription.text + embedDescription.other)
+      return message.channel.send({embed})
+
+    }
+    else if (input === undefined) {
+      return message.channel.send('Please include a file name.')
+    }
+    else { //Adding or sending a file
+      for (let i = 0; i < archiveListServer.length; i++) { //Check if the given name exists in the JSON
+        if (archiveListServer[i].name === input) {
+          if (archiveListServer[i].type === 'link' || archiveListServer[i].type === 'gif') {
+            typeLink = true;
+          }
+          fileExists = true;
+          arrayPosition = i;
+          break;
+        }
+      }
+
+      if (fileExists === true && typeLink === false) { //File name already exists in JSON - File is a file - Send given file
+        let downloadURL = archiveListServer[arrayPosition].link;
+        let archiveBuffer = './files/buffer/' + archiveListServer[arrayPosition].name + '.' + archiveListServer[arrayPosition].extension;
+        await func.download(downloadURL, archiveBuffer);
+        if (func.uploadLimitCheck(archiveBuffer) === true) {
+          await message.channel.send(downloadURL);
+        }
+        else {
+          let attachment = new MessageAttachment(archiveBuffer);
+          await message.channel.send(attachment)
+        }
+        console.log(command + ' - ' + func.getTime(start).toString() + 'ms');
+        return fs.unlinkSync(archiveBuffer);
+      }
+      else if (fileExists === true && typeLink === true) { //File name already exists in JSON - File is a link - Send given link
+        let linkURL = archiveListServer[arrayPosition].link;
+        return message.channel.send(linkURL)
+      }
+      else if (fileExists === false && canManageMessages) { //File name does not exists in JSON - Add file to JSON
+        let link = await func.generalScraper('link');
+        if (link === null || link === undefined) {
+          return message.channel.send('Not a valid embed')
+        }
+        let extension = await func.fileExtension(link);
+        let fileType = await func.fileType(extension);
+
+        var archive = {}
+        archive.name = input
+        archive.link = link
+        archive.extension = extension
+        archive.type = fileType
+
+        archiveListServer.push(archive)
+
+        var archiveJSON = JSON.stringify(archiveListServer);
+
+        fs.writeFileSync(`./files/archive/${guildID}.json`, archiveJSON);
 
         console.log(command + ' - ' + func.getTime(start).toString() + 'ms');
         return message.channel.send('File saved as ' + input)
