@@ -59,7 +59,7 @@ client.on('message', async message => {
   globalData.args = args;
   globalData.authorID = message.author.id;
   await func.userData('get');
-  if (command === 'help') {
+  if (command === 'help' || command === 'h') {
     let embed = new MessageEmbed();
     let p = "\\" + prefix;
     switch(input) {
@@ -152,7 +152,15 @@ client.on('message', async message => {
         embed
           .setTitle(p + "archive [file name] / delete [file name] / list")
           .setColor(0xFBF2F0)
-          .setDescription("Save any file, then call upon it when you need it most.");
+          .setDescription("Save any file, then call upon it when you need it most in any server.");
+        break;
+      case 'serverarchive':
+      case 'sarc':
+      case 'sa':
+        embed
+          .setTitle(p + "serverarchive [file name] / delete [file name] / list")
+          .setColor(0xFBF2F0)
+          .setDescription("Save any file to the server collection, then let yourself or others call upon it when you need it most.");
         break;
       case 'bpm':
         embed
@@ -218,11 +226,11 @@ client.on('message', async message => {
             "**__Media Editing:__** \n" + p + "poster\n" + p + "point\n" + p + "meme\n" + p + "mario\n" + p + "literally1984\n⠀",
             inline: true},
             { name: '\u200B', value:
-            "**__Utility:__**\n" + p + "archive\n" + p + "bpm (WIP)\n" + p + "twitter\n" + p + "flip\n" + p + "get\n" + p + "starpic\n\n" +
+            "**__Utility:__**\n" + p + "archive\n" + p + "serverarchive\n" + p + "bpm\n" + p + "twitter\n" + p + "flip\n" + p + "get\n" + p + "starpic\n\n" +
             "**__Meta:__**\n" + p + "help\n" + p + "pref\n" + p + "server\n⠀",
             inline: true}
           )
-          .setFooter('DISCLAIMER: Not all command names and arguments are disclosed.')
+          .setFooter('DISCLAIMER: Not all command names and arguments are disclosed. Moderator permissions may be required.')
     }
     return message.channel.send({embed})
   }
