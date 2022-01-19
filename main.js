@@ -25,6 +25,14 @@ const stellarisArray = stellarisArrayStorage;
 
 var globalData = {};
 var archiveList = []
+var crashLog = ''
+var currentdate = new Date(); 
+var startTime =    currentdate.getDate() + "-"
+                + (currentdate.getMonth()+1)  + "-" 
+                + currentdate.getFullYear() + "_"  
+                + currentdate.getHours() + "."  
+                + currentdate.getMinutes() + "." 
+                + currentdate.getSeconds();
 
 var output = fs.createWriteStream('emojis.zip');
 var archive = archiver('zip');
@@ -32,6 +40,20 @@ var archive = archiver('zip');
 output.on('close', function () {
     console.log(archive.pointer() + ' total bytes');
     console.log('archiver has been finalized and the output file descriptor has closed.');
+});
+
+process.on('uncaughtException', function (err) {
+  let crashMessage = 'Caught exception: ' + err;
+  console.log(crashMessage);
+
+  if (!fs.existsSync('./files/crashlogs/crash-' + startTime + '.json')) {
+    fs.writeFileSync('./files/crashlogs/crash-' + startTime + '.json', '[]');
+  }
+
+  crashLog = crashLog + '\n' + startTime + ': ' + crashMessage;
+
+  fs.writeFileSync('./files/crashlogs/crash-' + startTime + '.json', crashLog);
+
 });
 
 client.on("ready", () =>{
