@@ -1520,7 +1520,6 @@ client.on('message', async message => {
     if (lastMessage == undefined) { return message.channel.send("No Twitter Link Found :(");}
     let nickName = lastMessage.member.displayName;
     let messageContent = lastMessage.content.split('https')
-    console.log(messageContent[0]);
     let splitURL = originalURL.split('/');
     if (splitURL[2] == 'twitter.com') {
       splitURL[2] = 'fxtwitter.com';
