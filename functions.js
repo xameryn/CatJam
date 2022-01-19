@@ -103,7 +103,9 @@ async function download(fileURL, fileDir){
     let dirArray = fileDir.split('.');
     if (dirArray[dirArray.length - 1] == 'png') {
       let profile = await exifr.parse(fileDir, {chunked: false}).then(output => {
-        return output.ProfileName;
+        if (output != undefined) {
+          return output.ProfileName;
+        }
       });
       if (profile == 'kCGColorSpaceDisplayP3') {
         //basically just rewrites the file with generic colour space and metadata
