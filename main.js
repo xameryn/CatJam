@@ -1519,6 +1519,8 @@ client.on('message', async message => {
 
     if (lastMessage == undefined) { return message.channel.send("No Twitter Link Found :(");}
     let nickName = lastMessage.member.displayName;
+    let messageContent = lastMessage.content.split('https')
+    console.log(messageContent[0]);
     let splitURL = originalURL.split('/');
     if (splitURL[2] == 'twitter.com') {
       splitURL[2] = 'fxtwitter.com';
@@ -1526,7 +1528,7 @@ client.on('message', async message => {
       message.delete();
       lastMessage.delete();
       console.log(command + ' - ' + func.getTime(start).toString() + 'ms');
-      return message.channel.send("Tweet was sent by: **" + nickName + "\n**" + joinedURL);
+      return message.channel.send("Tweet was sent by: **" + nickName + "\n**" + messageContent[0] + "\n" + joinedURL);
     }
     else {
       console.log(command + ' - ' + func.getTime(start).toString() + 'ms');
