@@ -309,6 +309,10 @@ async function userData(action, tag, arg) {
   //tag - preference to change
   //arg - thing to set preference to
   let user = globalData.authorID;
+  if (!fs.existsSync('user-data.json')) {
+    fs.writeFileSync('user-data.json', `{"id":"${user}","customCMD":true,"pointBG":"black","posterBG":"white","posterTXT":"big"}`);
+    return;
+  }
   let doc = fs.readFileSync('user-data.json', 'utf8');
   let lines = doc.split('\r\n');
   //-----------------------
@@ -319,6 +323,7 @@ async function userData(action, tag, arg) {
     for (var i = 0; i < lines.length; i++) {
       let line = JSON.parse(lines[i]);
       if (line.id == user) {
+        globalData.customCMD = line.customCMD;
         globalData.pointBG = line.pointBG;
         globalData.posterBG = line.posterBG;
         globalData.posterTXT = line.posterTXT;
@@ -328,11 +333,12 @@ async function userData(action, tag, arg) {
       }
     }
     //will only be run if no id found (since if it was found function returns), sets values to defaults and adds new line
+    globalData.customCMD = true;
     globalData.pointBG = 'black';
     globalData.posterBG = 'white';
     globalData.posterTXT = 'big';
     globalData.authorIndex = lines.length - 1;
-    lines.push(`{"id":"${user}","pointBG":"black","posterBG":"white","posterTXT":"big"}`);
+    lines.push(`{"id":"${user}","customCMD":true,"pointBG":"black","posterBG":"white","posterTXT":"big"}`);
   }
   //-----------------------
   // SET
@@ -350,17 +356,21 @@ async function userData(action, tag, arg) {
         data.posterBG = arg;
       }
       if (tag == 'point' || tag == 'poster') {
-        globalData.toggledMSG = 'Preferences for `' + `${tag}` + '` background set to ' + `**${arg}**` + '! :3';
+        globalData.toggledMSG = 'Preferences for ' + `${tag}` + ' background set to `' + `${arg}` + '`! :3';
       }
     }
     //poster text change
     else if (tag == 'poster' && (arg == 'big' || arg == 'small')) {
       data.posterTXT = arg;
-      globalData.toggledMSG = 'Preferences for `' + `${tag}` + '` text priority set to ' + `**${arg}**` + '! :3';
+      globalData.toggledMSG = 'Preferences for ' + `${tag}` + ' text priority set to `' + `${arg}` + '`! :3';
+    }
+    else if ((tag == 'archive' || tag == 'arc' || tag == 'a') && (arg == 'customcmd' || arg == 'custom' || arg == 'cmd')) {
+      data.customCMD = !data.customCMD;
+      globalData.toggledMSG = 'Preferences for archive customCMD set to `' + `${data.customCMD}` + '`! :3';
     }
     //reset to default
     else if (tag == 'reset') {
-      data = JSON.parse(`{"id":"${user}","pointBG":"black","posterBG":"white","posterTXT":"big"}`);
+      data = JSON.parse(`{"id":"${user}","customCMD":true,"pointBG":"black","posterBG":"white","posterTXT":"big"}`);
       globalData.toggledMSG = `Preferences reset! :3`;
     }
     lines[globalData.authorIndex] = JSON.stringify(data);
@@ -887,7 +897,7 @@ function fileExtension(url) {
 function fileType(extension) {
   if (imageTypes.includes(extension)) {return 'image';}
   else if (videoTypes.includes(extension)) {return 'video';}
-  else if (extension.includes('gif')) {return 'gif';}
+  else if (extension == 'gif') {return 'gif';}
   else if (audioTypes.includes(extension)) {return 'audio';}
   else if (textTypes.includes(extension)) {return 'text';}
   else {return 'link';}
