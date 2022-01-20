@@ -174,7 +174,8 @@ client.on('message', async message => {
         embed
           .setTitle(p + "archive [file name] / delete [file name] / list")
           .setColor(0x686868)
-          .setDescription("Save any file, then call upon it when you need it most (In any server).");
+          .setDescription("Save any file, then call upon it when you need it most (In any server).")
+          .setFooter("Unused commands send archived files of the same name by default! See " + prefix + "pref for details.");
         break;
       case 'serverarchive':
       case 'sarc':
@@ -182,7 +183,8 @@ client.on('message', async message => {
         embed
           .setTitle(p + "serverarchive [file name] / delete [file name] / list")
           .setColor(0x686868)
-          .setDescription("Save any file to the server collection, then let anyone call upon it when they need it most.");
+          .setDescription("Save any file to the server collection, then let anyone in the server call upon it when they need it most.")
+          .setFooter("Unused commands send archived files of the same name by default! See " + prefix + "pref for details.");
         break;
       case 'bpm':
         embed
@@ -985,7 +987,7 @@ client.on('message', async message => {
         .addFields(
           { name: 'point', value: "background : `" + `${globalData.pointBG}` + '`'},
           { name: 'poster', value: "background : `" + `${globalData.posterBG}` + "`\ntext priority : `" + `${globalData.posterTXT}` + '`'},
-          { name: 'archive', value: "customCMD : `" + `${globalData.customCMD}` + "`\n(Unknown commands treated as files to call)\n⠀"}
+          { name: 'archive', value: "customCMD : `" + `${globalData.customCMD}` + "`\n(Unused commands send\narchived files of the same name)\n⠀"}
         )
         .setFooter('Usage: ' + prefix + 'pref [command] [setting/parameter]\ne.g. ' + prefix + 'pref point png, ' + prefix + 'pref archive customcmd')
         .setThumbnail(thumb);
