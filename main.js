@@ -851,7 +851,7 @@ client.on('message', async message => { //All commands stored here
     //-----------------------
     // SCATTER
     //-----------------------
-    if (filter == 'scatter') {
+    if (filter == 'scatter') {//loop 2 takes most time, loop 4 2nd most
       //the pixelData is just an array of all the rgb (and alpha) values of the pixels of the canvas, as in [r1, g1, b1, a1, r2, g2, b2, a2...]
       //this is why stuff like i += 4 appears later, since these values aren't separated by anything
       let pixelData = context.getImageData(0, 0, canvasWidth, canvasHeight);
@@ -860,38 +860,36 @@ client.on('message', async message => { //All commands stored here
       for (var i = 0; i < pixelDataLength; i++) {
         pixelData.data[i] = Math.round(pixelData.data[i] / 5) * 5;
       }
+      //console.log('loop 1 done')
       //goes through each pixel, and checks if its colour has already been logged in colours (final result is array of all unique colours)
-      let colours = [[pixelData.data[0], pixelData.data[1], pixelData.data[2]]];
+      let colours = [`${pixelData.data[0]} ${pixelData.data[1]} ${pixelData.data[2]}`];
       for (var i = 0; i < pixelDataLength; i += 4) {
-        let rgb = [pixelData.data[i], pixelData.data[i+1], pixelData.data[i+2]];
+        let rgb = `${pixelData.data[i]} ${pixelData.data[i+1]} ${pixelData.data[i+2]}`;
         //if all RGB values match, move on, if not keep going until last colour
-        for (var n = 0; n < colours.length; n++) {
-          if (rgb[0] == colours[n][0] && rgb[1] == colours[n][1] && rgb[2] == colours[n][2]) { break; }
-          if (n == colours.length - 1) {
-            colours.push(rgb);
-          }
-        }
+        if (colours.includes(rgb)) { continue; }
+        colours.push(rgb);
       }
+      //console.log('loop 2 done')
+      //console.log(colours.length)
       //creates an array with the same dimensions as colours, but filling the RGB values with random ones
       let newColours = [];
       for (var i = 0; i < colours.length; i++) {
         let randRGB = [Math.floor(Math.random()*256), Math.floor(Math.random()*256), Math.floor(Math.random()*256)];
         newColours.push(randRGB);
       }
+      //console.log('loop 3 done')
       //similar to loop 2, except when a colour matches it replaces it with the counterpart in newColours
       for (var i = 0; i < pixelDataLength; i += 4) {
-        let rgb = [pixelData.data[i], pixelData.data[i+1], pixelData.data[i+2]];
-        for (var n = 0; n < colours.length; n++) {
-          let colour = colours[n];
-          if (rgb[0] == colour[0] && rgb[1] == colour[1] && rgb[2] == colour[2]) {
-            let newColour = newColours[n];
-            pixelData.data[i] = newColour[0];
-            pixelData.data[i+1] = newColour[1];
-            pixelData.data[i+2] = newColour[2];
-            break;
-          }
+        let rgb = `${pixelData.data[i]} ${pixelData.data[i+1]} ${pixelData.data[i+2]}`;
+        let index = colours.indexOf(rgb);
+        if (index != -1) {
+          let newColour = newColours[index];
+          pixelData.data[i] = newColour[0];
+          pixelData.data[i+1] = newColour[1];
+          pixelData.data[i+2] = newColour[2];
         }
       }
+      //console.log('loop 4 done')
       context.putImageData(pixelData,0,0);
 
       var attachment = await new MessageAttachment(canvas.toBuffer(), 'scatter.png');
@@ -1698,6 +1696,5 @@ client.on('message', async message => { //All commands stored here
     }
   }
 });
-
 export { globalData };
 client.login(DISCORDTOKEN);

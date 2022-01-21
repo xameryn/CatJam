@@ -13,7 +13,6 @@
     "@babel/preset-env": "^7.16.5",
     "archiver": "^5.3.0",
     "canvas": "^2.8.0",
-    "canvg": "^3.0.9",
     "compress-images": "^1.9.9",
     "convert-svg-to-png": "^0.5.0",
     "discord": "^0.8.2",
