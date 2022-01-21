@@ -65,7 +65,7 @@ client.on("ready", () =>{
     }, 2500);
  });
 
-client.on('message', async message => {
+client.on('message', async message => { //All commands stored here
 	if (!message.content.startsWith(prefix) || message.author.bot) return;
   let start = func.getTime();
   globalData = {}
@@ -172,7 +172,7 @@ client.on('message', async message => {
       case 'arc':
       case 'a':
         embed
-          .setTitle(p + "archive [file name] / delete [file name] / list")
+          .setTitle(p + "archive [file name] / delete [file name] / rename [file name] [new name] / list")
           .setColor(0x686868)
           .setDescription("Save any file, then call upon it when you need it most (In any server).")
           .setFooter("Unused commands send archived files of the same name by default! See " + prefix + "pref for details.");
@@ -181,7 +181,7 @@ client.on('message', async message => {
       case 'sarc':
       case 'sa':
         embed
-          .setTitle(p + "serverarchive [file name] / delete [file name] / list")
+          .setTitle(p + "serverarchive [file name] / delete [file name] / rename [file name] [new name] / list / permissions")
           .setColor(0x686868)
           .setDescription("Save any file to the server collection, then let anyone in the server call upon it when they need it most.")
           .setFooter("Unused commands send archived files of the same name by default! See " + prefix + "pref for details.");
@@ -262,7 +262,7 @@ client.on('message', async message => {
           )
           .setFooter('DISCLAIMER: Not all command names and arguments are disclosed.\nModerator permissions may be required.')
     }
-    return message.channel.send({embed})
+    return message.channel.send({embed});
   }
   else if (command === 'catjam') {
     let output = (Math.round((input)/5))*5;
@@ -1291,19 +1291,12 @@ client.on('message', async message => {
     return;
   }
   else if (command === 'link' || command === 'lk') {
-    let link = await func.generalScraper('link');
-    //message.channel.send(link)
+    let link = await func.generalScraper('file');
+    console.log(message.reference);
 
-    var archive = {}
-    archive.name = 'bruh'
-    archive.link = link
-    archive.type = 'image'
+    console.log('$link link: ' + link);    
 
-    archiveList.push(archive)
-    
-    //console.log(archiveList);
-
-    console.log(archiveList[0]);
+    //console.log(archiveList[0]);
 
     console.log(command + ' - ' + func.getTime(start).toString() + 'ms');
     return;
@@ -1315,8 +1308,7 @@ client.on('message', async message => {
   else if (command === 'test' || command === 't') {
     console.log(command + ' - ' + func.getTime(start).toString() + 'ms');
   }
-  //archive stuff
-  else {
+  else { //archive stuff
     //arc, serverarc, and custom command checks
     let customCMD = false
     if (!(command === 'arc' || command === 'a' || command === 'archive' || command === 'sarc' || command === 'serverarc' || command === 'sa' || command === 'serverarchive')) {
@@ -1332,71 +1324,90 @@ client.on('message', async message => {
     }
     //wow that's a lot of variables
     let fileExists = false;
+    let newNameExists = false;
     let typeLink = false;
-    let arrayPosition = undefined;
-    let canManageMessages = true;
+    var arrayPosition = undefined;
+    var canManageMessages = true;
+    var serverStored = false;
+    var peepingTom = false;
     let archiveList = [];
     let serverPerms = [];
     let id = message.author.id;
     let imageList = [], videoList = [], gifList = [], audioList = [], textList = [], otherList = [];
     let title = 'User Archived File List';
+    var currentPerm;
     let listThumb = '';
-    //sanitize input
-    if (input != undefined) {
+    let argsString = '';
+    
+    if (input != undefined) { //sanitize input
       input = encodeURI(await func.fileNameVerify(input));
     }
-    else if (input2 != undefined) {
+    else if (input2 != undefined) { //sanitize input
       input2 = encodeURI(await func.fileNameVerify(input2));
     }
-
-    
-    if (!fs.existsSync(`./files/archive/${'serverPerms'}.json`)) {
-      fs.writeFileSync(`./files/archive/${'serverPerms'}.json`, '[]');
-    }
-    //-----------------------
-    // ARC/SERVER ARC SPECIFIC
-    //-----------------------
-    if (serverArc) {
+    if (serverArc) { // ARC/SERVER ARC SPECIFIC
       id = message.guild.id;
       canManageMessages = func.canManageMessages(message);
 
       if (!fs.existsSync(`./files/archive/${id}.json`)) {
         fs.writeFileSync(`./files/archive/${id}.json`, '[]');
       }
+      if (!fs.existsSync(`./files/archive/serverPerms.json`)) {
+        fs.writeFileSync(`./files/archive/serverPerms.json`, '[]');
+      }
+
       let importServerJSON = fs.readFileSync(`./files/archive/${id}.json`, 'utf8');
       archiveList = await JSON.parse(importServerJSON);
-      let importServerPerms = fs.readFileSync(`./files/archive/${'serverPerms'}.json`, 'utf8');
+      let importServerPerms = fs.readFileSync(`./files/archive/serverPerms.json`, 'utf8');
       serverPerms = await JSON.parse(importServerPerms);
 
+      var filteredArchiveList = await archiveList.filter(function (el) {
+        return el != null;
+      });
       var filteredServerPerms = await serverPerms.filter(function (el) {
         return el != null;
       });
+
+      archiveList = await filteredArchiveList;
       serverPerms = await filteredServerPerms;
 
       title = 'Server Archived File List';
       if (message.guild.iconURL() != null) {
         listThumb = message.guild.iconURL({ format: 'png', size: 1024, dynamic: true});
       }
-      
+
+      for (let i = 0; i < serverPerms.length; i++) { //Check if the server ID exists in the JSON
+        if (serverPerms[i].server === id) {
+          currentPerm = serverPerms[i].status;
+          serverStored = true;
+          arrayPosition = i;
+          break;
+        }
+      }
+
+      if (serverStored) {
+        if (currentPerm === 'global') {
+          canManageMessages = true;
+        }
+      }
     }
-    //arc specific
-    else {
+    else { //ARC SPECIFIC
+
+      listThumb = message.author.displayAvatarURL({ format: 'png', size: 1024, dynamic: true});
+
+      if (message.mentions.users.first() && func.canManageMessages(message) && message.reference === null) { // Checks if message is mentions a user, is not a reply, and if the sender is a moderator
+        id = message.mentions.users.first().id;
+        listThumb = message.mentions.users.first().displayAvatarURL({ format: 'png', size: 1024, dynamic: true});
+        peepingTom = true;
+      }
+
       if (!fs.existsSync(`./files/archive/${id}.json`)) {
         fs.writeFileSync(`./files/archive/${id}.json`, '[]');
       }
       let importJSON = fs.readFileSync(`./files/archive/${id}.json`, 'utf8');
       archiveList = await JSON.parse(importJSON);
-      listThumb = message.author.displayAvatarURL({ format: 'png', size: 1024, dynamic: true});
     }
-
-    var filteredArchiveList = await archiveList.filter(function (el) {
-      return el != null;
-    });
-    archiveList = await filteredArchiveList;
-    //-----------------------
-    // DELETE
-    //-----------------------
-    if ((input === 'delete' || input === 'd') && canManageMessages && !customCMD) {
+    if ((input === 'delete' || input === 'd') && canManageMessages && !peepingTom && !customCMD) { // Delete from JSON
       for (let i = 0; i < archiveList.length; i++) { //Check if the given name exists in the JSON
         if (archiveList[i].name === input2) {
           fileExists = true;
@@ -1405,12 +1416,18 @@ client.on('message', async message => {
         }
       }
       if (fileExists === true) {
-        delete archiveList[arrayPosition];
+        let thumb = '';
+        if (archiveList[arrayPosition].type === 'image' || archiveList[arrayPosition].type === 'gif') {
+          thumb = archiveList[arrayPosition].link;
+        }
+        archiveList.splice(arrayPosition, 1)
         var archiveJSON = JSON.stringify(archiveList);
         fs.writeFileSync(`./files/archive/${id}.json`, archiveJSON);
+        
         let embed = new MessageEmbed()
           .setTitle('"' + input2 + '" deleted.')
-          .setColor(0x686868);
+          .setColor(0x686868)
+          .setThumbnail(thumb);
         return message.channel.send(embed);
       }
       else {
@@ -1420,10 +1437,49 @@ client.on('message', async message => {
         return message.channel.send(embed);
       }
     }
-    //-----------------------
-    // LIST
-    //-----------------------
-    else if ((input === 'list' || input === 'l') && !customCMD) {
+    if ((input === 'rename' || input === 'r') && canManageMessages && !peepingTom && !customCMD) { // Ranme file in JSON
+      for (let i = 0; i < archiveList.length; i++) { //Check if the original name exists in the JSON
+        if (archiveList[i].name === input2) {
+          fileExists = true;
+          arrayPosition = i;
+          break;
+        }
+      }
+      for (let i = 0; i < archiveList.length; i++) { //Check if the new name exists in the JSON
+        if (archiveList[i].name === input3) {
+          newNameExists = true;
+          break;
+        }
+      }
+      if (newNameExists === true) {
+        let embed = new MessageEmbed()
+          .setTitle('The name ' + '"' + input3 + '"' + ' is already taken.')
+          .setColor(0x686868)
+        return message.channel.send(embed);
+      }
+      if (fileExists === true) {
+        let thumb = '';
+        if (archiveList[arrayPosition].type === 'image' || archiveList[arrayPosition].type === 'gif') {
+          thumb = archiveList[arrayPosition].link;
+        }
+        archiveList[arrayPosition].name = input3;
+        var archiveJSON = JSON.stringify(archiveList);
+        fs.writeFileSync(`./files/archive/${id}.json`, archiveJSON);
+        
+        let embed = new MessageEmbed()
+          .setTitle('"' + input2 + '"' + ' has been renamed to ' + '"' + input3 + '"')
+          .setColor(0x686868)
+          .setThumbnail(thumb);
+        return message.channel.send(embed);
+      }
+      else {
+        let embed = new MessageEmbed()
+          .setTitle('Please include a file name.')
+          .setColor(0x686868);
+        return message.channel.send(embed);
+      }
+    }
+    else if ((input === 'list' || input === 'l') && !customCMD) { // List files from JSON
       for (let i = 0; i < archiveList.length; i++) {
         if (archiveList[i].type === 'image') { //File is an image
           imageList.push(' ' + archiveList[i].name)
@@ -1472,10 +1528,78 @@ client.on('message', async message => {
           .setColor(0x686868);
       return message.channel.send(embed);
     }
-    //-----------------------
-    // SEND FILE
-    //-----------------------
-    else {
+    else if ((input === 'perms' || input === 'permissions') && func.canManageMessages(message) && serverArc && !customCMD) { // Server permissions
+      id = message.guild.id;
+
+      if (!fs.existsSync(`./files/archive/serverPerms.json`)) {
+        fs.writeFileSync(`./files/archive/serverPerms.json`, '[]');
+      }
+
+      let importServerPerms = fs.readFileSync(`./files/archive/serverPerms.json`, 'utf8');
+      serverPerms = await JSON.parse(importServerPerms);
+
+      var filteredServerPerms = await serverPerms.filter(function (el) {
+        return el != null;
+      });
+      serverPerms = await filteredServerPerms;
+
+      if (input2 === 'global' || input2 === 'moderator') {
+        if (serverStored) {
+          var permissions = {}
+          permissions.server = id
+          permissions.status = input2
+  
+          serverPerms[arrayPosition] = permissions
+          var serverPermsJSON = JSON.stringify(serverPerms);
+          fs.writeFileSync(`./files/archive/serverPerms.json`, serverPermsJSON);
+
+          let embed = new MessageEmbed()
+            .setTitle('Server Archive Permissions')
+            .setColor(0x686868)
+            .setDescription('Permissions have been set to ' + '``' + input2 + '``')
+          return message.channel.send({embed});
+        }
+  
+        else {
+          var permissions = {}
+          permissions.server = id
+          permissions.status = input2
+  
+          serverPerms.push(permissions)
+          var serverPermsJSON = JSON.stringify(serverPerms);
+          fs.writeFileSync(`./files/archive/serverPerms.json`, serverPermsJSON);
+          let embed = new MessageEmbed()
+            .setTitle('Server Archive Permissions')
+            .setColor(0x686868)
+            .setDescription('Permissions have been set to ' + '``' + input2 + '``')
+          return message.channel.send({embed});
+        }
+      }
+
+      else if (input2 === undefined && serverStored) {
+        let embed = new MessageEmbed()
+            .setTitle('Server Archive Permissions')
+            .setColor(0x686868)
+            .setDescription('Permissions are set to ' + '``' + serverPerms[arrayPosition].status + '``')
+        return message.channel.send({embed});
+      }
+
+      else if (input2 === undefined && !serverStored) {
+        let embed = new MessageEmbed()
+            .setTitle('Server Archive Permissions')
+            .setColor(0x686868)
+            .setDescription('Permissions have not been set.')
+        return message.channel.send({embed});
+      }
+      else {
+        let embed = new MessageEmbed()
+            .setTitle('Server Archive Permissions')
+            .setColor(0x686868)
+            .setDescription('Please enter a valid argument.')
+        return message.channel.send({embed});
+      }
+    }
+    else { // SEND or ADD File
       for (let i = 0; i < archiveList.length; i++) { //Check if the given name exists in the JSON
         if (archiveList[i].name === input) {
           if (archiveList[i].type === 'link') {
@@ -1486,8 +1610,7 @@ client.on('message', async message => {
           break;
         }
       }
-      //special case for custom cmd
-      if (fileExists === false && customCMD) {
+      if (fileExists === false && customCMD) { //special case for custom cmd
         //earlier code redone
         id = message.author.id;
         if (!fs.existsSync(`./files/archive/${id}.json`)) {
@@ -1526,23 +1649,20 @@ client.on('message', async message => {
         console.log(command + ' - ' + func.getTime(start).toString() + 'ms');
         return fs.unlinkSync(archiveBuffer);
       }
-
       else if (fileExists === true && typeLink === true) { //File name already exists in JSON - File is a link - Send given link
         let linkURL = archiveList[arrayPosition].link;
         return message.channel.send(linkURL)
       }
-      //-----------------------
-      // ADD FILE
-      //-----------------------
-      else if (fileExists === false && canManageMessages && !customCMD) { //File name does not exists in JSON - Add file to JSON
-        let link = await func.generalScraper('link');
-        if (link === null || link === undefined) {
+      else if (fileExists === false && canManageMessages && !peepingTom && !customCMD) { //File name does not exists in JSON - Add file to JSON
+        let link = await func.generalScraper('link'); //Searches for any embed
+        if (link === null) {
+          link = await func.generalScraper('file'); //If embed is invalid (ie. Discord Rich Embed), searches for a file (ie. image or video)
+        }
+        else if (link === undefined) {
           return message.channel.send('Not a valid embed');
         }
         let extension = await func.fileExtension(link);
-        //console.log('extension:' + extension);
         let fileType = await func.fileType(extension);
-        //console.log('fileType:' + fileType);
 
         var archive = {}
         archive.name = input
@@ -1559,11 +1679,20 @@ client.on('message', async message => {
         if (fileType == 'image' || fileType == 'gif') {
           thumb = link;
         }
+        /*else if (link.includes('https://tenor.com/') && link.includes('-gif-')) { // If link is Tenor, do special embed (because Tenor is aids.)
+          thumb = 'https://cdn.discordapp.com/attachments/813337498029391873/933875660202602546/unknown.png';
+        }*/
         let embed = new MessageEmbed()
           .setTitle('File saved as "' + input + '"')
           .setColor(0x686868)
           .setThumbnail(thumb);
         console.log(command + ' - ' + func.getTime(start).toString() + 'ms');
+        return message.channel.send(embed);
+      }
+      else if (peepingTom) {
+        let embed = new MessageEmbed()
+          .setTitle('You may not edit another users files.')
+          .setColor(0x686868);
         return message.channel.send(embed);
       }
     }
