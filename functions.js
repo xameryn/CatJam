@@ -1,4 +1,4 @@
-const { Client, Intents, MessageAttachment, MessageActionRow, MessageButton } = require('discord.js');
+const { Client, Intents, MessageAttachment, MessageEmbed, MessageActionRow, MessageButton } = require('discord.js');
 const sharp = require('sharp');
 const stringify = require('json-stringify');
 const compress_images = require("compress-images");
@@ -64,20 +64,17 @@ async function generalScraper(scrapeType) {
   });
   var attachedFileURL = await scraperURL.then();
   let outputURL = attachedFileURL;
-  console.log('fileLinkScraper - ' + getTime(start).toString() + 'ms');
+  console.log('generalScraper - ' + getTime(start).toString() + 'ms');
   return outputURL;
 }
 function uploadLimitCheck(fileDir) {
-  let start = getTime();
   const statz = fs.statSync(fileDir);
   const fileSizeInBytes = statz.size;
   if (fileSizeInBytes > 8000000) {
-    console.log(fileSizeInBytes);
-    console.log('uploadLimitCheck - ' + getTime(start).toString() + 'ms');
+    //console.log(fileSizeInBytes);
     return true;
   }
   else {
-    console.log('uploadLimitCheck - ' + getTime(start).toString() + 'ms');
     return false;
   }
 }
@@ -120,7 +117,6 @@ async function download(fileURL, fileDir){
   }
 }
 async function typeCheck(fileURL){ //Checks the file type of the URL
-  let start = getTime();
   let fileTypeArray = await fileURL.split('.'); //Splits URL at every '.'
   let suffix = await fileTypeArray.pop(); //Takes the last split part (the file type)
   if (await suffix.includes('?')) {
@@ -130,7 +126,6 @@ async function typeCheck(fileURL){ //Checks the file type of the URL
   if (suffix.length > 5) {
     return undefined;
   }
-  console.log('typeCheck - ' + getTime(start).toString() + 'ms');
   return suffix;
 }
 async function sendFile(fileURL, fileDir){
@@ -175,7 +170,6 @@ async function canvasInitialize(canvasWidth, canvasHeight, backgroundImage, pngA
   }
 }
 async function canvasScaleFit(fileDir, boxWidth, boxHeight){
-  let start = getTime();
   let canvas = globalData.canvas;
   let context = globalData.context;
   let memeSize = await SizeOf(fileDir);
@@ -204,11 +198,9 @@ async function canvasScaleFit(fileDir, boxWidth, boxHeight){
   globalData.scaledHeight = scaledHeight;
   globalData.xAxis = xAxis;
   globalData.yAxis = yAxis;
-  console.log('canvasScaleFit - ' + getTime(start).toString() + 'ms');
   return;
 }
 async function canvasScaleFill(fileDir, internalWidth, internalHeight, centerX, centerY){
-  let start = getTime();
   var memeSize = await SizeOf(fileDir);
   //wider than dimensions, fill to height
   if ((memeSize.width / memeSize.height) >= (internalWidth / internalHeight)) {
@@ -236,11 +228,9 @@ async function canvasScaleFill(fileDir, internalWidth, internalHeight, centerX, 
   globalData.scaledHeight = scaledHeight;
   globalData.xAxis = xAxis;
   globalData.yAxis = yAxis;
-  console.log('canvasScaleFill - ' + getTime(start).toString() + 'ms');
   return;
 }
 async function imageToCanvas(imageDims, widestRatio, tallestRatio, wideDims, tallDims, scaleLength, scaleAxis) {
-  let start = getTime();
   // widestRatio, tallestRatio - the maximum allowed (width / height) or (height / width) respectively
   // wideDims, tallDims - if the image is too wide (wideDims) or too tall (tallDims), these dimensions are used instead
   // scaleLength - what size the final image should be scaled to (height or width)
@@ -276,13 +266,11 @@ async function imageToCanvas(imageDims, widestRatio, tallestRatio, wideDims, tal
   globalData.imgCanvasX = width * scaleFactor;
   globalData.imgCanvasY = height * scaleFactor;
   globalData.imgCanvasEval = imgEval;
-  console.log('imageToCanvas - ' + getTime(start).toString() + 'ms');
   return;
 }
 async function scaleDims(imageDims, scaledDim, scaleType) {
   //scales largest dimension down to scaledDim by default (Same concept as canvasScaleFit)
   //if scaleType is up, scales smallest dimension up to scaledDim (Same concept as canvasScaleFill)
-  let start = getTime();
   let width = imageDims[0];
   let height = imageDims[1];
   let newWidth;
@@ -311,6 +299,11 @@ async function userData(action, tag, arg) {
   let user = globalData.authorID;
   if (!fs.existsSync('user-data.json')) {
     fs.writeFileSync('user-data.json', `{"id":"${user}","customCMD":true,"pointBG":"black","posterBG":"white","posterTXT":"big"}`);
+    globalData.customCMD = true;
+    globalData.pointBG = 'black';
+    globalData.posterBG = 'white';
+    globalData.posterTXT = 'big';
+    globalData.authorIndex = 0;
     return;
   }
   let doc = fs.readFileSync('user-data.json', 'utf8');
@@ -937,8 +930,54 @@ async function fileNameVerify(string, filePath, extension) {
 function canManageMessages(msg) {
   return msg.member.permissionsIn(msg.channel).has('MANAGE_MESSAGES')
 }
+async function messageReturn(input, title, textEmbed = true, isAttach = false, sendRaw = false, thumbnail = '') {
+  let start = getTime();
+  //note title can either be title of embed, or name of file for message attachment
+  let message = globalData.message;
+  let content;
+  if (typeof input == 'string') {
+    if (input.indexOf('./') == 0) {
+      isAttach = true;
+    }
+  }
+  if (typeof input == 'string' && textEmbed && !isAttach) {
+    //embed stuff
+      if (title != undefined && title != '') {
+        content = new MessageEmbed()
+          .setTitle(title)
+          .setDescription(input)
+          .setColor(0x686868)
+          .setThumbnail(thumbnail);
+      }
+      else {
+        content = new MessageEmbed()
+          .setTitle(input)
+          .setColor(0x686868)
+          .setThumbnail(thumbnail);
+      }
+  }
+  //attachment case
+  else if (!sendRaw) {
+    if (title != undefined){
+      content = new MessageAttachment(input, title);
+    }
+    else {
+      content = new MessageAttachment(input);
+    }
+  }
+  //encompasses raw text being sent, or an already prepared embed
+  else {
+    content = input;
+  }
+  await message.channel.send(content);
+  fs.emptyDirSync('./files/buffer/emojiDownload/');
+  if (fs.existsSync('./files/buffer/emojis.zip') == true) {
+    fs.unlinkSync('./files/buffer/emojis.zip');
+  }
+  return getTime(start);
+}
 
 module.exports = { generalScraper, download, canvasInitialize, canvasScaleFit, canvasScaleFill, imageToCanvas,
                   textHandler, getTime, wait, typeCheck, infoScraper, uploadLimitCheck, sendFile,
                   userData, textArgs, createFolders, findEmoji, getEmoji, fileNameVerify, scaleDims, 
-                  drawEmoji, fileExtension, fileType, canManageMessages };
+                  drawEmoji, fileExtension, fileType, canManageMessages, messageReturn };
