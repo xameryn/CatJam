@@ -287,12 +287,13 @@ async function scaleDims(imageDims, scaledDim, scaleType) {
   }
   return [newWidth, newHeight];
 }
-async function userData(action, tag, arg) {
+async function userData(action, command, option, value) {
   let start = getTime();
   //action - 'get' to get preferences and store them in globalData, 'set' to change a preference
   //tag - preference to change
   //arg - thing to set preference to
   let user = globalData.authorID;
+  let prefix = globalData.prefix;
   if (!fs.existsSync('user-data.json')) {
     fs.writeFileSync('user-data.json', `{"id":"${user}","customCMD":true,"pointBG":"black","posterBG":"white","posterTXT":"big"}`);
     globalData.customCMD = true;
@@ -336,31 +337,105 @@ async function userData(action, tag, arg) {
   else if (action == 'set') {
     let data = JSON.parse(lines[globalData.authorIndex]);
     globalData.toggledMSG = `Couldn't set that preference... :Ɛ`;
-    //background changes
-    if (arg == 'white' || arg == 'black' || arg == 'png') {
-      if (tag == 'point') {
-        data.pointBG = arg;
+    //inputs standardized
+    if (value == 'true') {
+      value = true;
+    }
+    else if (value == 'false') {
+      value = false;
+    }
+    if (option == 'bg') {
+      option = 'background';
+    }
+    else if (option == 'custom' || option == 'cmd') {
+      option = 'customcmd';
+    }
+    if (command == 'canvas') {
+      command = 'poster';
+    }
+    if (command == 'a' || command == 'arc') {
+      command = 'archive';
+    }
+    let valuesBG = ['black','white','png']
+    let valuesTXT = ['big','small']
+    let valuesBool = [true,false]
+    let values;
+    let valueDefault;
+    let currentValue;
+    //point prefs
+    if (command == 'point') {
+      if (option == 'background') {
+        values = valuesBG;
+        valueDefault = 'black';
+        currentValue = data.pointBG;
       }
-      else if (tag == 'poster') {
-        data.posterBG = arg;
-      }
-      if (tag == 'point' || tag == 'poster') {
-        globalData.toggledMSG = 'Preferences for ' + `${tag}` + ' background set to `' + `${arg}` + '`! :3';
+      else {
+        return;
       }
     }
-    //poster text change
-    else if (tag == 'poster' && (arg == 'big' || arg == 'small')) {
-      data.posterTXT = arg;
-      globalData.toggledMSG = 'Preferences for ' + `${tag}` + ' text priority set to `' + `${arg}` + '`! :3';
+    //poster prefs
+    else if (command == 'poster') {
+      if (option == 'background') {
+        values = valuesBG;
+        valueDefault = 'white';
+        currentValue = data.posterBG;
+      }
+      else if (option == 'text') {
+        values = valuesTXT;
+        valueDefault = 'big';
+        currentValue = data.posterTXT;
+      }
+      else {
+        return;
+      }
     }
-    else if ((tag == 'archive' || tag == 'arc' || tag == 'a') && (arg == 'customcmd' || arg == 'custom' || arg == 'cmd')) {
-      data.customCMD = !data.customCMD;
-      globalData.toggledMSG = 'Preferences for archive customCMD set to `' + `${data.customCMD}` + '`! :3';
+    //archive prefs
+    else if (command == 'archive') {
+      if (option == 'customcmd') {
+        values = valuesBool;
+        valueDefault = true;
+        currentValue = data.customCMD;
+      }
+      else {
+        return;
+      }
     }
-    //reset to default
-    else if (tag == 'reset') {
+    //pref reset
+    else if (command == 'reset') {
       data = JSON.parse(`{"id":"${user}","customCMD":true,"pointBG":"black","posterBG":"white","posterTXT":"big"}`);
       globalData.toggledMSG = `Preferences reset! :3`;
+    }
+    else {
+      return;
+    }
+    if (command != 'reset' && (values.includes(value) || value == 'reset' || value == '')) {//determining/setting value, then creating message
+      if (value == '') {
+        if (values.length == 2) {//sets it to the other value in the array
+          value = values[(values.indexOf(currentValue) + 1) % 2]
+        }
+        else {
+          return;
+        }
+      }
+      else if (value == 'reset') {
+        value = valueDefault;
+      }
+      if (command == 'point' && option == 'background') {
+        data.pointBG = value;
+      }
+      else if (command == 'poster' && option == 'background') {
+        data.posterBG = value;
+      }
+      else if (command == 'poster' && option == 'text') {
+        data.posterTXT = value;
+      }
+      else if (command == 'archive' && option == 'customcmd') {
+        data.customCMD = value;
+      }
+      else {
+        return;
+      }
+      globalData.toggledMSG = 'Preferences for \\' + prefix + `${command} ${option}` + ' set to `' + `${value}` + '`! :3';
     }
     lines[globalData.authorIndex] = JSON.stringify(data);
   }

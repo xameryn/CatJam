@@ -173,19 +173,19 @@ async function commandLoop(message) { //All commands stored here
       case 'arc':
       case 'a':
         embed
-          .setTitle(p + "archive [file name] / delete [file name] / rename [file name] [new name] / list")
+          .setTitle(p + "archive [file name] / delete [file name]\n/ rename [file name] [new name] / list")
           .setColor(0x686868)
           .setDescription("Save any file, then call upon it when you need it most (In any server).")
-          .setFooter("Unknown commands send archived files of the same name by default! See " + prefix + "pref for details.");
+          .setFooter("Unknown commands send archived files of the same name by default!\n(Controlled by " + prefix + "pref)");
         break;
       case 'serverarchive':
       case 'sarc':
       case 'sa':
         embed
-          .setTitle(p + "serverarchive [file name] / delete [file name] / rename [file name] [new name] / list / permissions")
+          .setTitle(p + "serverarchive [file name] / delete [file name]\n/ rename [file name] [new name] / list / permissions")
           .setColor(0x686868)
           .setDescription("Save any file to the server collection, then let anyone in the server call upon it when they need it most.")
-          .setFooter("Unknown commands send archived files of the same name by default! See " + prefix + "pref for details.");
+          .setFooter("Unknown commands send archived files of the same name by default!\n(Controlled by " + prefix + "pref)");
         break;
       case 'bpm':
         embed
@@ -235,9 +235,10 @@ async function commandLoop(message) { //All commands stored here
       case 'prefs':
       case 'preferences':
         embed
-          .setTitle(p + "pref [preference] [option]")
+          .setTitle(p + "pref [command] [setting] [value]")
           .setColor(0x686868)
-          .setDescription("Alter the default behaviour of various commands.");
+          .setDescription("Alter the default behaviour of various commands.")
+          .setFooter('"reset" can be used as a command or value to restore defaults');
         break;
       case 'server':
       case 'srv':
@@ -933,26 +934,31 @@ async function commandLoop(message) { //All commands stored here
     }
   }
   else if (command === 'pref' || command === 'prefs' || command === 'preferences') {
-    if (input !== undefined) {
-      if (input2 === undefined) {
+    if (input != undefined) {
+      if (input2 == undefined) {
         input2 = '';
       }
+      if (input3 == undefined) {
+        input3 = '';
+      }
       //(see userData function)
-      await func.userData('set', input.toLowerCase(), input2.toLowerCase());
+      await func.userData('set', input.toLowerCase(), input2.toLowerCase(), input3.toLowerCase());
       return await func.messageReturn(`${globalData.toggledMSG}`);
     }
     //if input undefined sends your preferences
     else {
+      let p = '\\' + prefix
       let thumb = message.author.displayAvatarURL({ format: 'png', size: 1024, dynamic: true});
       let embed = new MessageEmbed()
         .setTitle("Your Preferences")
         .setColor(0x686868)
         .addFields(
-          { name: 'point', value: "background : `" + `${globalData.pointBG}` + '`'},
-          { name: 'poster', value: "background : `" + `${globalData.posterBG}` + "`\ntext priority : `" + `${globalData.posterTXT}` + '`'},
-          { name: 'archive', value: "customCMD : `" + `${globalData.customCMD}` + "`\n(Unused commands send\narchived files of the same name)\n⠀"}
+          { name: '⠀\n' + p + 'point : background : `' + `${globalData.pointBG}` + '`', value: "background used if transparency is present"},
+          { name: p + 'poster : background : `' + `${globalData.posterBG}` + '`', value: "background used if transparency is present"},
+          { name: p + 'poster : text : `' + `${globalData.posterTXT}` + '`', value: "which type of text displays with 1 argument"},
+          { name: p + 'archive : customCMD : `' + `${globalData.customCMD}` + '`', value: "unknown commands send archived files of the same name\n⠀"}
         )
-        .setFooter('Usage: ' + prefix + 'pref [command] [setting/parameter]\ne.g. ' + prefix + 'pref point png, ' + prefix + 'pref archive customcmd')
+        .setFooter('Usage: ' + prefix + 'pref [command] [setting] [value]\ne.g. ' + prefix + 'pref point background png\n"reset" can be used as a command or value to restore defaults')
         .setThumbnail(thumb);
       return await func.messageReturn(embed, '', false, false, true);
     }
