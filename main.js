@@ -974,6 +974,14 @@ async function commandLoop(message) { //All commands stored here
     if (command === 'avatar' || command === 'avy' || command === 'ava' || command === 'pfp') {
       errorMsg = "Couldn't find an avatar from that input.";
     }
+    //if a message is replied to, its content is used as input (though it's only admitted for emojis)
+    let reply = false;
+    if (message.reference != undefined) { 
+      var replyMessage =  await message.channel.messages.fetch(message.reference.messageID);
+      input = replyMessage.content;
+      fullInput = input;
+      reply = true;
+    }
     let fileDir = './files/buffer/getBuffer.png';
     let defaultRegex = emojiRegex();
     let customRegex = /<:\w+:(\d+)>/gmd;
@@ -983,25 +991,25 @@ async function commandLoop(message) { //All commands stored here
     //-----------------------
     // AVATAR FROM AUTHOR
     //-----------------------
-    if (input === undefined) {
+    if (input === undefined && !reply) {
       link = message.author.displayAvatarURL({ format: 'png', size: 1024, dynamic: true});
     }
     //-----------------------
     // AVATAR FROM MENTION
     //-----------------------
-    else if (message.mentions.users.first() !== undefined) {
+    else if (message.mentions.users.first() !== undefined && !reply) {
       link = message.mentions.users.first().displayAvatarURL({ format: 'png', size: 1024, dynamic: true});
     }
     //-----------------------
     // SERVER AVATAR
     //-----------------------
-    else if ((input == 'server' || input == 's') && message.guild.iconURL() != null) {
+    else if ((input == 'server' || input == 's') && message.guild.iconURL() != null && !reply) {
       link = message.guild.iconURL({ format: 'png', size: 1024, dynamic: true});
     }
     //-----------------------
     // SERVER EMOJIS
     //-----------------------
-    else if (input == 'emojis' || input == 'emoji' && !(command === 'avatar' || command === 'avy' || command === 'ava' || command === 'pfp')) {
+    else if (input == 'emojis' || input == 'emoji' && !(command === 'avatar' || command === 'avy' || command === 'ava' || command === 'pfp') && !reply) {
       let serverEmoji = message.guild.emojis.cache;
       let emoji = '';
       serverEmoji.forEach(e => {
@@ -1029,7 +1037,7 @@ async function commandLoop(message) { //All commands stored here
     //-----------------------
     // AVATAR FROM ID
     //-----------------------
-    else if (!isNaN(input) && input.length == 18) {
+    else if (!isNaN(input) && input.length == 18 && !reply) {
       let user = await client.users.fetch(input).catch(console.error);
       if (user != undefined) {
         link = user.displayAvatarURL({ format: 'png', size: 1024, dynamic: true});
@@ -1041,7 +1049,7 @@ async function commandLoop(message) { //All commands stored here
     //-----------------------
     // AVATAR FROM USERNAME
     //-----------------------
-    else {
+    else if (!reply) {
       let index = message.content.indexOf('#');
       //trims command and leaves all content up until user tag (e.g. username#1234) if present
       let nameInput = fullInput;
@@ -1057,6 +1065,9 @@ async function commandLoop(message) { //All commands stored here
       else {
         return await func.messageReturn(errorMsg, "Bad Input!");
       }
+    }
+    else {//if no emojis can be found, the user being replied to has their avatar grabbed instead
+      link = replyMessage.author.displayAvatarURL({ format: 'png', size: 1024, dynamic: true});
     }
     //-----------------------
     // EMOJI DOWNLOAD
