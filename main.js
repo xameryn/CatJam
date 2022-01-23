@@ -75,6 +75,7 @@ async function commandLoop(message) { //All commands stored here
   let input2 = args[1];
   let input3 = args[2];
   let fullInput = message.content.slice(prefix.length + command.length).trim();
+  globalData.command = command;
   globalData.message = message;
   globalData.prefix = prefix;
   globalData.args = args;
@@ -333,7 +334,7 @@ async function commandLoop(message) { //All commands stored here
     //-----------------------
     // CALCULATE TEXT PARAMETERS
     //-----------------------
-    await func.textArgs();
+    await func.textArgs(2);
     let inputs = globalData.textInputs;
     let argsText = globalData.argsText;
     if (inputs[0] === undefined) {
@@ -491,7 +492,7 @@ async function commandLoop(message) { //All commands stored here
     let width = globalData.imgCanvasX;
     let height = globalData.imgCanvasY;
     //handling text input
-    await func.textArgs();
+    await func.textArgs(3);
     let inputs = globalData.textInputs;
     let argsText = globalData.argsText;
     //canvas

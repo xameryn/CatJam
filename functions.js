@@ -157,15 +157,12 @@ async function canvasInitialize(canvasWidth, canvasHeight, backgroundImage, pngA
   globalData.canvas = canvas;
   var context = canvas.getContext('2d');
   globalData.context = context;
-
   var background = await Canvas.loadImage(backgroundImage);
   if (args.includes('png')) {
-    console.log('canvasInitialize - ' + getTime(start).toString() + 'ms');
     return;
   }
   else {
     context.drawImage(background, 0, 0, canvas.width, canvas.height);
-    console.log('canvasInitialize - ' + getTime(start).toString() + 'ms');
     return;
   }
 }
@@ -288,7 +285,6 @@ async function scaleDims(imageDims, scaledDim, scaleType) {
     newHeight = (scaledDim / width) * height;
     newWidth = scaledDim;
   }
-  console.log('scaleDims - ' + getTime(start).toString() + 'ms');
   return [newWidth, newHeight];
 }
 async function userData(action, tag, arg) {
@@ -536,46 +532,90 @@ async function drawEmoji(useArgs = false, yPos, emojiX, emojiY, emojiLines, emoj
   console.log('drawEmoji - ' + getTime(start).toString() + 'ms');
   return;
 }
-async function textArgs() {
-  let start = getTime();
+async function textArgs(maxInputs = 1) {
+  let command = globalData.command;
   let message = globalData.message;
   let prefix = globalData.prefix;
-  let content = message.content.slice(prefix.length).trim();
+  let content = ' ' + message.content.slice(prefix.length + command.length + 1).trim() + ' ';
   while (content.includes('“') || content.includes('”')) {
     content = content.replace('“','"');
     content = content.replace('”','"');
   }
-  let strings;
-  if (content.indexOf("'") == -1) {
-    strings = content.split('"')
+  //strings to get indexes of (open/closed single/double quotes, and spaces)
+  let strings = [];
+  let targets = [' "', '" ', " '", "' ", ' ']
+  let indexArrays = [[], [], [], [], []]
+  //get all the relevant indexes
+  for (var i = 0; i < 5; i++) {
+    let index = 0;
+    let targetIndex = content.indexOf(targets[i], index);
+    if (i == 5) {
+      targetIndex = content.trim().indexOf(targets[i], index);
+    }
+    while (targetIndex != -1) {
+      if (i == 0 || i == 2) {
+        indexArrays[i].push(targetIndex + 1);
+      }
+      else {
+        indexArrays[i].push(targetIndex);
+      }
+      index = targetIndex + 1;
+      targetIndex = content.indexOf(targets[i], index);
+      if (i == 5) {
+        targetIndex = content.trim().indexOf(targets[i], index);
+      }
+    }
+    if (i == 4) {
+      indexArrays[i].splice(-1, 1)
+    }
   }
-  else if (content.indexOf('"') == -1) {
-    strings = content.split("'")
+  let quotesExist = false;
+  while ((indexArrays[0].length > 0 && indexArrays[1].length > 0) || (indexArrays[2].length > 0 && indexArrays[3].length > 0)) {//while there is a valid pair of open and close quotes
+    quotesExist = true;
+    //get the very first open quote and its corresponding close quote
+    let startIndex = Math.min(Math.min(...indexArrays[0]), Math.min(...indexArrays[2]));
+    let endIndex = content.indexOf('" ', startIndex);
+    if (content[startIndex] == "'") {
+      endIndex = content.indexOf("' ", startIndex);
+    }
+    //console.log('start, end', [startIndex, endIndex])
+    for (var i = 0; i < 4; i++) {//filter array to only include indexes after the end index, sets up for future loops
+      indexArrays[i] = indexArrays[i].filter(val => val > endIndex);
+    }
+    let priorSpaces = indexArrays[4].filter(val => val < startIndex);
+    if (priorSpaces.length > 1) {//find spaces before the start index, use them to find string arguments, then clear its indexes as well
+      let spaceSplits = content.slice(indexArrays[4][0], startIndex).trim().split(' ');
+      spaceSplits.forEach(string => strings.push(string));
+    }
+    indexArrays[4] = indexArrays[4].filter(val => val > endIndex);
+    //then add the argument within the quotes
+    strings.push(content.slice(startIndex + 1, endIndex))
   }
-  else {
-    if (content.indexOf("'") > content.indexOf('"')) {
-      strings = content.split('"')
+  //if there are more args with spaces after quotes, or no quotes at all
+  if (indexArrays[4].length > 0 || !quotesExist) {
+    let spaceSplits;
+    if (quotesExist) {
+      spaceSplits = content.slice(indexArrays[4][0]).trim().split(' ');
     }
     else {
-      strings = content.split("'")
+      spaceSplits = content.trim().split(' ');
+    }
+    spaceSplits.forEach(string => strings.push(string));
+  }
+
+  let argsText = [''];
+  if (strings.length > maxInputs) {
+    //if no quotes found, assumes all text is one input
+    if (!quotesExist) {
+      strings = [strings.join(' ')];
+    }
+    //any further arguments beyond max are assumed to be command arguments
+    else {
+      argsText = strings.splice(maxInputs)
     }
   }
-  let inputs = [];
-  //odd indexes are the areas enclosed by strings, so they are what's retrieved
-  for (var i = 0; i < strings.length; i++) {
-    if (i % 2 != 0) {
-      inputs.push(strings[i]);
-    }
-  }
-  //if no quotes are found, uses individual args as the strings (so stuff like "$meme text1 text2" will work with no quotes)
-  if (strings.length == 1) {
-    inputs = globalData.args;
-  }
-  //args are set as everything after the last quotes (split into array by spaces), useful to distinguish text content from actual args
-  let argsText = strings[strings.length - 1].trim().split(' ');
-  globalData.textInputs = inputs;
+  globalData.textInputs = strings;
   globalData.argsText = argsText;
-  console.log('textArgs - ' + getTime(start).toString() + 'ms');
   return;
 }
 async function textHandler(text, font, style, maxSize, minSize, maxWidth, maxHeight, byLine, spacing, baseX, baseY, yAlign, xAlign) {
