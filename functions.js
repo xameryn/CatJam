@@ -146,88 +146,40 @@ async function sendFile(fileURL, fileDir){
   console.log('sendFile - ' + getTime(start).toString() + 'ms')
   return message.channel.send(attachment);
 }
-async function canvasInitialize(canvasWidth, canvasHeight, backgroundImage, pngArgs){
+async function canvasInitialize(canvasDims, background){
   let start = getTime();
-  //can be given specific arguments, otherwise uses global ones
-  let args = globalData.args;
-  if (pngArgs !== undefined) {
-    args = pngArgs;
-  }
-  var canvas = Canvas.createCanvas(canvasWidth, canvasHeight);
+  let canvas = Canvas.createCanvas(canvasDims[0], canvasDims[1]);
   globalData.canvas = canvas;
-  var context = canvas.getContext('2d');
+  let context = canvas.getContext('2d');
   globalData.context = context;
-  var background = await Canvas.loadImage(backgroundImage);
-  if (args.includes('png')) {
+  //deciding background
+  let backgroundImage;
+  if (background == 'black') {
+    backgroundImage = await Canvas.loadImage('./files/templates/blackBox.jpg');
+  }
+  else if (background == 'white') {
+    backgroundImage = await Canvas.loadImage('./files/templates/whiteBox.jpg');
+  }
+  else if (background == 'png' || background == undefined) {
+    console.log('canvasInitialize - ' + getTime(start).toString() + 'ms');
     return;
   }
   else {
-    context.drawImage(background, 0, 0, canvas.width, canvas.height);
-    return;
+    backgroundImage = await Canvas.loadImage(background);
   }
-}
-async function canvasScaleFit(fileDir, boxWidth, boxHeight){
-  let canvas = globalData.canvas;
-  let context = globalData.context;
-  let memeSize = await SizeOf(fileDir);
-  if (boxWidth === undefined || boxHeight === undefined) {
-    var boxWidth = canvas.width;
-    var boxHeight = canvas.height;
-  }
-  let memeRatio = memeSize.width / memeSize.height;
-  //wider than canvas, fit width
-  if (memeRatio >= (boxWidth / boxHeight)) {
-    let scalingRatio = memeSize.width / boxWidth;
-    var scaledHeight = memeSize.height / scalingRatio;
-    var scaledWidth = boxWidth;
-    var xAxis = 0;
-    var yAxis = (Math.abs(boxHeight - scaledHeight)) / 2;
-  }
-  //taller than canvas, fit height
-  else if (memeRatio < (boxWidth / boxHeight)) {
-    let scalingRatio = memeSize.height / boxHeight;
-    var scaledHeight = boxHeight;
-    var scaledWidth = memeSize.width / scalingRatio;
-    var xAxis = (Math.abs(boxWidth - scaledWidth)) / 2;
-    var yAxis = 0;
-  }
-  globalData.scaledWidth = scaledWidth;
-  globalData.scaledHeight = scaledHeight;
-  globalData.xAxis = xAxis;
-  globalData.yAxis = yAxis;
+  context.drawImage(backgroundImage, 0, 0, canvas.width, canvas.height);
+  console.log('canvasInitialize - ' + getTime(start).toString() + 'ms');
   return;
 }
-async function canvasScaleFill(fileDir, internalWidth, internalHeight, centerX, centerY){
-  var memeSize = await SizeOf(fileDir);
-  //wider than dimensions, fill to height
-  if ((memeSize.width / memeSize.height) >= (internalWidth / internalHeight)) {
-    var scalingRatio = memeSize.height / internalHeight;
-    if (scalingRatio < 1) {
-      scalingRatio = Math.pow(scalingRatio, -1);
-    }
-    var scaledWidth = memeSize.width * scalingRatio;
-    var scaledHeight = internalHeight;
-    var xAxis = centerX - (scaledWidth / 2);
-    var yAxis = centerY - (internalHeight / 2);
-  }
-  //taller than dimensions, fill to width
-  else if ((memeSize.width / memeSize.height) < (internalWidth / internalHeight)) {
-    var scalingRatio = memeSize.width / internalWidth;
-    if (scalingRatio < 1) {
-      scalingRatio = Math.pow(scalingRatio, -1);
-    }
-    var scaledWidth = internalWidth;
-    var scaledHeight = memeSize.height * scalingRatio;
-    var xAxis = centerX - (internalWidth / 2);
-    var yAxis = centerY - (scaledHeight / 2);
-  }
-  globalData.scaledWidth = scaledWidth;
-  globalData.scaledHeight = scaledHeight;
-  globalData.xAxis = xAxis;
-  globalData.yAxis = yAxis;
-  return;
-}
-async function imageToCanvas(imageDims, widestRatio, tallestRatio, wideDims, tallDims, scaleLength, scaleAxis) {
+async function imageToCanvas(funcArgs) {
+  //imageDims, widestRatio, tallestRatio, wideDims, tallDims, scaleLength, scaleAxis
+  let imageDims = funcArgs.imageDims;
+  let widestRatio = funcArgs.widestRatio;
+  let tallestRatio = funcArgs.tallestRatio;
+  let wideDims = funcArgs.wideDims;
+  let tallDims = funcArgs.tallDims;
+  let scaleLength = funcArgs.scaleLength;
+  let scaleAxis = funcArgs.scaleAxis;
   // widestRatio, tallestRatio - the maximum allowed (width / height) or (height / width) respectively
   // wideDims, tallDims - if the image is too wide (wideDims) or too tall (tallDims), these dimensions are used instead
   // scaleLength - what size the final image should be scaled to (height or width)
@@ -260,32 +212,84 @@ async function imageToCanvas(imageDims, widestRatio, tallestRatio, wideDims, tal
   else if (scaleAxis == 'width') {
     scaleFactor = scaleLength / width;
   }
-  globalData.imgCanvasX = width * scaleFactor;
-  globalData.imgCanvasY = height * scaleFactor;
+  globalData.imgCanvasDims = [width * scaleFactor, height * scaleFactor];
   globalData.imgCanvasEval = imgEval;
   return;
 }
-async function scaleDims(imageDims, scaledDim, scaleType) {
-  //scales largest dimension down to scaledDim by default (Same concept as canvasScaleFit)
-  //if scaleType is up, scales smallest dimension up to scaledDim (Same concept as canvasScaleFill)
+async function scaleImage(imageDims, scaleType, scaleDims) {
+  let canvas = globalData.canvas;
+  if (scaleDims == undefined) {
+    scaleDims = [canvas.width, canvas.height];
+  }
   let width = imageDims[0];
   let height = imageDims[1];
+  let imageRatio = height / width;
+  //determines whether scaleDim is treated as width or height, set dynamically for non-fit/fill (dependent on scaling up or down)
+  let imageBool = height > width;
+
+  let scaleDim = scaleDims;
+  if (typeof scaleDims == 'object') {
+    var scaleWidth = scaleDims[0];
+    var scaleHeight = scaleDims[1];
+    let scaleRatio = scaleHeight / scaleWidth;
+
+    if (scaleType == 'fit') {
+      if (imageRatio > scaleRatio) {//scaleDim set to more significant dimension of the image relative to scaleDims
+        scaleDim = scaleHeight;
+        imageBool = true;
+      }
+      else {
+        scaleDim = scaleWidth;
+        imageBool = false;
+      }
+
+    }
+    else if (scaleType == 'fill') {
+      if (imageRatio > scaleRatio) {//scaleDim set to the least significant dimension
+        scaleDim = scaleWidth;
+        imageBool = false;
+      }
+      else {
+        scaleDim = scaleHeight;
+        imageBool = true;
+      }
+    }
+  }
+  else if (scaleType == 'up') {
+    imageBool = !imageBool;
+  }
+  //actual scaling part
   let newWidth;
   let newHeight;
-
-  let scaleBool = height > width;
-  if (scaleType == 'up') {
-    scaleBool = !scaleBool;
-  }
-  if (scaleBool) {
-    newWidth = (scaledDim / height) * width;
-    newHeight = scaledDim;
+  if (imageBool) {
+    newWidth = (scaleDim / height) * width;
+    newHeight = scaleDim;
   }
   else {
-    newHeight = (scaledDim / width) * height;
-    newWidth = scaledDim;
+    newHeight = (scaleDim / width) * height;
+    newWidth = scaleDim;
   }
-  return [newWidth, newHeight];
+  if (scaleWidth != undefined && scaleHeight != undefined) {
+    globalData.scaledPos = [(scaleWidth - newWidth)/2, (scaleHeight - newHeight)/2];
+  }
+  globalData.scaledDims = [newWidth, newHeight];
+  return;
+}
+async function drawImage(fileDir, offsets = [0,0], imagePos, imageDims) {
+  let start = getTime();
+  let context = globalData.context;
+  if (imagePos == undefined) {
+    imagePos = globalData.scaledPos;
+    imageDims = globalData.scaledDims;
+  }
+  else if (imageDims == undefined) {
+    let imageSize = await SizeOf(fileDir);
+    imageDims = [imageSize.width, imageSize.height];
+  }
+  let image = await Canvas.loadImage(fileDir);
+  context.drawImage(image, imagePos[0] + offsets[0], imagePos[1] + offsets[1], imageDims[0], imageDims[1]);
+  console.log('drawImage - ' + getTime(start).toString() + 'ms');
+  return;
 }
 async function userData(action, command, option, value) {
   let start = getTime();
@@ -560,53 +564,6 @@ async function getEmoji(emoji) {
   console.log('getEmoji - ' + getTime(start).toString() + 'ms');
   return;
 }
-async function drawEmoji(useArgs = false, yPos, emojiX, emojiY, emojiLines, emojiArray, lineHeight, offX, offY) {
-  let start = getTime();
-  // arguments:
-  // emojiArray is globalData emojiMatch
-  // all others are args from textHandler
-  // last 2 are custom offsets for x and y pos
-  let context = globalData.context;
-  if (!useArgs) {
-    yPos = globalData.textY
-    emojiX = globalData.emojiX;
-    emojiY = globalData.emojiY;
-    emojiLines = globalData.emojiLines;
-    emojiArray = globalData.emojiMatch;
-    lineHeight = globalData.lineTextHeight;
-    offX = 0
-    offY = 0
-  }
-  else {
-    globalData.emojiMatch = emojiArray
-  }
-
-  if (emojiArray == undefined) {
-    return;
-  }
-  await getEmoji();
-  let emoji;
-  let nameArray = [];
-  for (var i = 0; i < emojiArray.length; i++) {
-    //accounts for duplicate names
-    let name = await fileNameVerify(encodeURI(emojiArray[i][2]));
-    if (!nameArray.includes(name)) {
-      nameArray.push(name);
-    }
-    else {
-      let repeat = 0;
-      while (nameArray.includes(name + repeat.toString())) {
-        repeat += 1;
-      }
-    } 
-    //actual emoji drawing
-    emoji = await Canvas.loadImage('./files/buffer/emojiDownload/' + name + '.png');
-    context.drawImage(emoji, emojiX[i] + offX, (yPos[emojiLines[i]] - emojiY + offY), lineHeight, lineHeight);
-  } 
-  fs.emptyDirSync('./files/buffer/emojiDownload/');
-  console.log('drawEmoji - ' + getTime(start).toString() + 'ms');
-  return;
-}
 async function textArgs(maxInputs = 1) {
   let command = globalData.command;
   let message = globalData.message;
@@ -693,8 +650,25 @@ async function textArgs(maxInputs = 1) {
   globalData.argsText = argsText;
   return;
 }
-async function textHandler(text, font, style, maxSize, minSize, maxWidth, maxHeight, byLine, spacing, baseX, baseY, yAlign, xAlign) {
+async function textHandler(funcArgs) {
   let start = getTime();
+  //text, font, style, maxSize, minSize, maxWidth, maxHeight, byLine, spacing, baseX, baseY, yAlign, xAlign
+
+  let defaults = {style:'', minSize:1, byLine:false, spacing:0.2, xAlign:'center', yAlign:'center'};
+  funcArgs = {...defaults, ...funcArgs};
+  let text = funcArgs.text;
+  let font = funcArgs.font;
+  let style = funcArgs.style;
+  let maxSize = funcArgs.maxSize;
+  let minSize = funcArgs.minSize;
+  let maxWidth = funcArgs.maxWidth;
+  let maxHeight = funcArgs.maxHeight;
+  let byLine = funcArgs.byLine;
+  let spacing = funcArgs.spacing;
+  let baseX = funcArgs.baseX;
+  let baseY = funcArgs.baseY;
+  let xAlign = funcArgs.xAlign;
+  let yAlign = funcArgs.yAlign;
   // style - bold, italic, etc., must be in form 'bold ' with the space since I am lazy
   // maxHeight - set to 0 for no max height
   // byLine - if true, treats maxHeight as number of lines instead of pixels
@@ -923,7 +897,7 @@ async function textHandler(text, font, style, maxSize, minSize, maxWidth, maxHei
   //-----------------------
   let emojiX = [];
   let emojiLine = [];
-  let charWidth = context.measureText(char).width
+  let charWidth = context.measureText(char).width;
   let offset = (charWidth - height) / 2;
   for (var i = 0; i < lineNum; i++) {
     let from = 0;
@@ -935,20 +909,106 @@ async function textHandler(text, font, style, maxSize, minSize, maxWidth, maxHei
       index = lines[i].indexOf(char, from);
     }
   }
+  //round positions to avoid blurry text
+  xPos.forEach((x, index) => {
+    xPos[index] = Math.round(x);
+  });
+  yPos.forEach((y, index) => {
+    yPos[index] = Math.round(y);
+  });
   //-----------------------
   // FINAL VALUES
   //-----------------------
-  globalData.textLines = lines;
-  globalData.textX = xPos;
-  globalData.textY = yPos;
-  globalData.textSize = size;
-  globalData.textHeight = (height + space) * lineNum;
-  globalData.lineTextHeight = height;
-  globalData.baselineTextHeight = heights[1];
-  globalData.emojiX = emojiX;
-  globalData.emojiY = heights[1] + (heights[0] / 2);
-  globalData.emojiLines = emojiLine;
+  //can store up to two sets of text parameters in global data at a time
+  //need to do it this way since if globalData.text1 is undefined, I can't check if globalData.text1.lines is without crash
+  let channel1 = false;
+  if (globalData.text1 == undefined) {
+    channel1 = true;
+  }
+  else if (globalData.text1.lines == undefined) {
+    channel1 = true;
+  }
+  if (channel1) {
+    globalData.text1 = {};
+    globalData.text1.lines = lines;
+    globalData.text1.pos = [xPos, yPos]
+    globalData.text1.size = size;
+    globalData.text1.height = (height + space) * lineNum;
+    globalData.text1.lineHeight = height;
+    globalData.text1.baselineHeight = heights[1];
+    globalData.text1.emoji = matches;
+    globalData.text1.emojiPos = [emojiX, heights[1] + (heights[0] / 2)]
+    globalData.text1.emojiLines = emojiLine;
+  }
+  else {
+    globalData.text2 = {};
+    globalData.text2.lines = lines;
+    globalData.text2.pos = [xPos, yPos]
+    globalData.text2.size = size;
+    globalData.text2.height = (height + space) * lineNum;
+    globalData.text2.lineHeight = height;
+    globalData.text2.baselineHeight = heights[1];
+    globalData.text2.emoji = matches;
+    globalData.text2.emojiPos = [emojiX, heights[1] + (heights[0] / 2)]
+    globalData.text2.emojiLines = emojiLine;
+  }
   console.log('textHandler - ' + getTime(start).toString() + 'ms');
+  return;
+}
+async function drawText(offsets = [0,0], channel = 1, stroke = false) {
+  let context = globalData.context;
+  if (channel == 1) {
+    var lines = globalData.text1.lines;
+    var textPos = globalData.text1.pos;
+    var lineHeight = globalData.text1.lineHeight;
+    var emojiArray = globalData.text1.emoji;
+    var emojiPos = globalData.text1.emojiPos;
+    var emojiLines = globalData.text1.emojiLines;
+  }
+  else {
+    var lines = globalData.text2.lines;
+    var textPos = globalData.text2.pos;
+    var lineHeight = globalData.text2.lineHeight;
+    var emojiArray = globalData.text2.emoji;
+    var emojiPos = globalData.text2.emojiPos;
+    var emojiLines = globalData.text2.emojiLines;
+  }
+  for (i = 0; i < lines.length; i++) {//draw text
+    if (stroke) {
+      context.strokeText(lines[i], textPos[0][i] + offsets[0], textPos[1][i] + offsets[1]);
+    }
+    context.fillText(lines[i], textPos[0][i] + offsets[0], textPos[1][i] + offsets[1]);
+  }
+  //download emoji
+  if (emojiArray != undefined) {
+    globalData.emojiMatch = emojiArray;
+    await getEmoji();
+    let emoji;
+    let nameArray = [];
+    for (var i = 0; i < emojiArray.length; i++) {
+      //accounts for duplicate names
+      let name = await fileNameVerify(encodeURI(emojiArray[i][2]));
+      if (!nameArray.includes(name)) {
+        nameArray.push(name);
+      }
+      else {
+        let repeat = 0;
+        while (nameArray.includes(name + repeat.toString())) {
+          repeat += 1;
+        }
+      } 
+      //actual emoji drawing
+      emoji = await Canvas.loadImage('./files/buffer/emojiDownload/' + name + '.png');
+      context.drawImage(emoji, emojiPos[0][i] + offsets[0], (textPos[1][emojiLines[i]] - emojiPos[1] + offsets[1]), lineHeight, lineHeight);
+    } 
+    fs.emptyDirSync('./files/buffer/emojiDownload/');
+  }
+  if (channel == 1) {
+    globalData.text1 = {};
+  }
+  else {
+    globalData.text2 = {};
+  }
   return;
 }
 function getTime(startTime) {
@@ -1092,7 +1152,7 @@ async function messageReturn(input, title, textEmbed = true, isAttach = false, s
   return getTime(start);
 }
 
-module.exports = { generalScraper, download, canvasInitialize, canvasScaleFit, canvasScaleFill, imageToCanvas,
+module.exports = { generalScraper, download, canvasInitialize, imageToCanvas,
                   textHandler, getTime, wait, typeCheck, infoScraper, uploadLimitCheck, sendFile,
-                  userData, textArgs, createFolders, findEmoji, getEmoji, fileNameVerify, scaleDims, 
-                  drawEmoji, fileExtension, fileType, canManageMessages, messageReturn };
+                  userData, textArgs, createFolders, findEmoji, getEmoji, fileNameVerify, scaleImage, 
+                  fileExtension, fileType, canManageMessages, messageReturn, drawImage, drawText };
