@@ -297,13 +297,15 @@ async function userData(action, command, option, value) {
   //tag - preference to change
   //arg - thing to set preference to
   let user = globalData.authorID;
+  let defaults = `{"id":"${user}","customCMD":true,"pointBG":"black","posterBG":"white","posterTXT":"big","posterCAPS":true}`
   let prefix = globalData.prefix;
   if (!fs.existsSync('user-data.json')) {
-    fs.writeFileSync('user-data.json', `{"id":"${user}","customCMD":true,"pointBG":"black","posterBG":"white","posterTXT":"big"}`);
+    fs.writeFileSync('user-data.json', defaults);
     globalData.customCMD = true;
     globalData.pointBG = 'black';
     globalData.posterBG = 'white';
     globalData.posterTXT = 'big';
+    globalData.posterCAPS = true;
     globalData.authorIndex = 0;
     return;
   }
@@ -321,6 +323,7 @@ async function userData(action, command, option, value) {
         globalData.pointBG = line.pointBG;
         globalData.posterBG = line.posterBG;
         globalData.posterTXT = line.posterTXT;
+        globalData.posterCAPS = line.posterCAPS;
         globalData.authorIndex = i;
         //console.log('userData - ' + getTime(start).toString() + 'ms');
         return;
@@ -331,8 +334,9 @@ async function userData(action, command, option, value) {
     globalData.pointBG = 'black';
     globalData.posterBG = 'white';
     globalData.posterTXT = 'big';
+    globalData.posterCAPS = true;
     globalData.authorIndex = lines.length - 1;
-    lines.push(`{"id":"${user}","customCMD":true,"pointBG":"black","posterBG":"white","posterTXT":"big"}`);
+    lines.push(defaults);
   }
   //-----------------------
   // SET
@@ -389,6 +393,11 @@ async function userData(action, command, option, value) {
         valueDefault = 'big';
         currentValue = data.posterTXT;
       }
+      else if (option == 'caps') {
+        values = valuesBool;
+        valueDefault = true;
+        currentValue = data.posterCAPS;
+      }
       else {
         return;
       }
@@ -406,7 +415,7 @@ async function userData(action, command, option, value) {
     }
     //pref reset
     else if (command == 'reset') {
-      data = JSON.parse(`{"id":"${user}","customCMD":true,"pointBG":"black","posterBG":"white","posterTXT":"big"}`);
+      data = JSON.parse(defaults);
       globalData.toggledMSG = `Preferences reset! :3`;
     }
     else {
@@ -432,6 +441,9 @@ async function userData(action, command, option, value) {
       }
       else if (command == 'poster' && option == 'text') {
         data.posterTXT = value;
+      }
+      else if (command == 'poster' && option == 'caps') {
+        data.posterCAPS = value;
       }
       else if (command == 'archive' && option == 'customcmd') {
         data.customCMD = value;
@@ -726,6 +738,10 @@ async function textHandler(funcArgs) {
     }
     if (!byLine) {
       var maxLines = Math.floor(maxHeight / (height + (height * spacing)));
+      if (maxLines == 0) {
+        if (n > minSize) { continue; }
+        maxLines = 1;
+      }
     } else {
       var maxLines = maxHeight;
     }
@@ -996,10 +1012,26 @@ async function drawText(offsets = [0,0], channel = 1, stroke = false) {
         while (nameArray.includes(name + repeat.toString())) {
           repeat += 1;
         }
-      } 
+      }
+      let fileDir = './files/buffer/emojiDownload/' + name + '.png'
+      let emojiWidth = lineHeight;
+      let emojiHeight = lineHeight;
+      let emojiSize = await SizeOf(fileDir);
+      if (emojiSize.width != emojiSize.height) {//abnormal proportion emojis e.g. flooshed
+        if (emojiSize.width > emojiSize.height) {
+          emojiHeight = (emojiSize.height/emojiSize.width) * lineHeight;
+          offsets[1] += (lineHeight - emojiHeight) / 2;
+        }
+        else {
+          emojiWidth = (emojiSize.width/emojiSize.height) * lineHeight;
+          offsets[0] += (lineHeight - emojiWidth) / 2;
+        }
+      }
       //actual emoji drawing
-      emoji = await Canvas.loadImage('./files/buffer/emojiDownload/' + name + '.png');
-      context.drawImage(emoji, emojiPos[0][i] + offsets[0], (textPos[1][emojiLines[i]] - emojiPos[1] + offsets[1]), lineHeight, lineHeight);
+      emoji = await Canvas.loadImage(fileDir);
+      context.drawImage(emoji, emojiPos[0][i] + offsets[0], (textPos[1][emojiLines[i]] - emojiPos[1] + offsets[1]), emojiWidth, emojiHeight);
+      offsets[0] -= (lineHeight - emojiWidth) / 2;
+      offsets[1] -= (lineHeight - emojiHeight) / 2;
     } 
     fs.emptyDirSync('./files/buffer/emojiDownload/');
   }

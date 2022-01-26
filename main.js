@@ -467,55 +467,42 @@ async function commandLoop(message) { //All commands stored here
           inputs[0] = '';
         }
       }
+      if (globalData.posterCAPS == true) {
+        inputs[0] = inputs[0].toUpperCase()
+      }
+      let smallSize = 40;
+      if (inputs[0] == '' && inputs[1] != '') {
+        smallSize = 50;
+      }
       //big text
-      await func.textHandler({text:inputs[0].toUpperCase(), font:'Times New Roman', maxSize:150, minSize:30, maxWidth:(canvasWidth + 100), maxHeight:1, byLine:true, spacing:0, baseX:centerX, baseY:711, yAlign:'top'});
+      await func.textHandler({text:inputs[0], font:'Times New Roman', maxSize:150, maxWidth:(canvasWidth + 100), maxHeight:100, baseX:centerX, baseY:711+50, yAlign:'top'});
       let size1 = globalData.text1.size;
       let textHeight1 = globalData.text1.height;
-      let lineHeight1 = globalData.text1.lineHeight;
-      //spacing between the two texts, and each text and its upper and lower bounds
-      let spacing = textHeight1 * 0.5;
-      if (spacing < 50 && spacing > 0) {
-        spacing = 50;
-      }
       //small text
-      await func.textHandler({text:inputs[1], font:'Arial', maxSize:Math.floor(size1 / 3), maxWidth:(canvasWidth + 100), maxHeight:3, byLine:true, baseX:centerX, baseY:(711 + textHeight1 + (2 * spacing)), yAlign:'top'});
+      await func.textHandler({text:inputs[1], font:'Arial', maxSize:smallSize, maxWidth:(canvasWidth + 100), maxHeight:3, byLine:true, baseX:centerX, baseY:(711+50 + textHeight1 + 30), yAlign:'top'});
       let size2 = globalData.text2.size;
       let textHeight2 = globalData.text2.height;
-      let lineHeight2 = globalData.text2.lineHeight;
       //canvas is padded on all sides, lower padding is dependent on text heights
-      //if one of the inputs is empty, spacing is adjusted accordingly, if both are empty it becomes a symmetric square border
+      //if either of the inputs is empty, spacing is adjusted accordingly, if both are empty it is left a symmetric square border
       let padding = 89;
-      let yOffset1 = 0;
       let yOffset2 = 0;
       if (inputs[0] != '' && inputs[1] == '') {
-        padding = (spacing * 2) + textHeight1;
+        padding = (50 * 2) + textHeight1;
       }
       else if (inputs[0] == '' && inputs[1] != '') {
-        spacing = lineHeight2;
-        yOffset2 += spacing;
-        padding = (spacing * 2) + textHeight2;
+        yOffset2 -= 30
+        padding = (50 * 2) + textHeight2;
       }
-      else {
-        padding = (spacing * 3) + textHeight1 + textHeight2;
+      else if (inputs[0] != '' && inputs[1] != '') {
+        padding = (50 * 2 + 30) + textHeight1 + textHeight2;
       }
-      if (padding < 89) {
-        if (inputs[0] != '') {
-          yOffset1 += (89 - padding) / 2;
-        }
-        if (inputs[1] != '') {
-          yOffset2 += (89 - padding) / 2;
-        }
-        padding = 89
-      }
-      yOffset1 += spacing;
-
       await func.canvasInitialize([(canvasWidth + 200), (canvasHeight + 111  + padding)], bgOption);
       //update canvas and context
       canvas = globalData.canvas;
       context = globalData.context;
       await func.scaleImage(imageDims, 'fit', canvasDims);
       await func.drawImage(fileDir, [100, 100]);
-
+      //black space is drawn with rectangles
       context.fillStyle = '#000000';
       context.fillRect(0, 0, (canvasWidth + 200), 100);//top rectangle
       context.fillRect(0, 0, 100, (canvasHeight + 111 + padding));//left rectangle
@@ -524,11 +511,10 @@ async function commandLoop(message) { //All commands stored here
       context.strokeStyle = '#ffffff';
       context.lineWidth = 2;
       context.strokeRect(100-10, 100-10, canvasWidth+20, canvasHeight+20);
-
       //fonts need to be assigned here since text handler was used in an abormal way where its context was overwritten
       context.fillStyle = '#ffffff';
       context.font = `${size1}px Times New Roman`;
-      await func.drawText([0, yOffset1]);
+      await func.drawText();
       context.font = `${size2}px Arial`;
       await func.drawText([0, yOffset2], 2);
     }
@@ -664,11 +650,10 @@ async function commandLoop(message) { //All commands stored here
       //draw given image and mario template on top
       await func.drawImage(fileDir, [595,53]);
       await func.drawImage('./files/templates/mario.png', [0,0], [0,0], canvasDims);
-      //get text string
-      //text string left aligned in its place on template
+      //text handling
       await func.textHandler({text:inputs[0].toUpperCase(), font:'Trebuchet MS', style:'bold ', maxSize:75, maxWidth:526, maxHeight:1, byLine:true, spacing:0, baseX:275, baseY:897, xAlign:'left'});
       context.fillStyle = '#ffffff';
-      if (globalData.emojiMatch != undefined) {
+      if (globalData.emojiMatch != undefined) {//font gets weird with emojis
         await func.drawText([0, 0.1 * globalData.text1.baselineHeight]);
       }
       else {
@@ -830,6 +815,7 @@ async function commandLoop(message) { //All commands stored here
           { name: '⠀\n' + p + 'point : background : `' + `${globalData.pointBG}` + '`', value: "background used if transparency is present"},
           { name: p + 'poster : background : `' + `${globalData.posterBG}` + '`', value: "background used if transparency is present"},
           { name: p + 'poster : text : `' + `${globalData.posterTXT}` + '`', value: "which type of text displays with 1 argument"},
+          { name: p + 'poster : caps : `' + `${globalData.posterCAPS}` + '`', value: "capitalization of the larger text"},
           { name: p + 'archive : customCMD : `' + `${globalData.customCMD}` + '`', value: "unknown commands send archived files of the same name\n⠀"}
         )
         .setFooter('Usage: ' + prefix + 'pref [command] [setting] [value]\ne.g. ' + prefix + 'pref point background png\n"reset" can be used as a command or value to restore defaults')
