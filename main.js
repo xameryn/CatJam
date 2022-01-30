@@ -92,6 +92,10 @@ async function commandLoop(message) { //All commands stored here
     case 'l1984':
       command = 'literally1984';
       break;
+    case 'stuffimg':
+    case 'stuffi':
+      command = 'stuffimage'
+      break;
     case 'obra':
     case 'dinn':
       command = 'obradinn';
@@ -186,18 +190,22 @@ async function commandLoop(message) { //All commands stored here
           .setDescription("Randomizes the colours in an image.");
         break;
       case 'glitch':
+      case 'corrupt':
         embed
           .setTitle(p + "glitch")
           .setColor(0x686868)
           .setDescription("Glitches your image.");
         break;
       case 'obradinn':
+      case 'obra':
+      case 'dinn':
         embed
           .setTitle(p + "obradinn")
           .setColor(0x686868)
           .setDescription("Who was this? How did they die?");
         break;
       case 'poster':
+      case 'canvas':
         embed
           .setTitle(p + "poster [up to 2 text inputs]")
           .setColor(0x686868)
@@ -222,12 +230,25 @@ async function commandLoop(message) { //All commands stored here
           .setDescription("I can't believe they cast them as Mario.");
         break;
       case 'literally1984':
+      case 'l1984':
         embed
           .setTitle(p + "literally1984 [optional text input]")
           .setColor(0x686868)
           .setDescription("For when it is literally 1984.");
         break;
+      case 'stuff':
+      case 'stuffimage':
+      case 'stuffimg':
+      case 'stuffi':
+        embed
+          .setTitle(p + "stuff [text input]")
+          .setColor(0x686868)
+          .setDescription("He is stuff.")
+          .setFooter(prefix + "stuffimage to stick it under an image.");
+        break;
       case 'archive':
+      case 'arc':
+      case 'a':
         embed
           .setTitle(p + "archive [file name] / delete [file name]\n/ rename [file name] [new name] / list")
           .setColor(0x686868)
@@ -235,6 +256,9 @@ async function commandLoop(message) { //All commands stored here
           .setFooter("Unknown commands send archived files of the same name by default!\n(Controlled by " + prefix + "pref)");
         break;
       case 'serverarchive':
+      case 'serverarc':
+      case 'sarc':
+      case 'sa':
         embed
           .setTitle(p + "serverarchive [file name] / delete [file name]\n/ rename [file name] [new name] / list / permissions")
           .setColor(0x686868)
@@ -248,12 +272,15 @@ async function commandLoop(message) { //All commands stored here
           .setDescription("Determine the bpm by counting the beats\n(Make sure to start counting as soon as you click the flag).");
         break;
       case 'twitter':
+      case 'twt':
         embed
           .setTitle(p + "twitter")
           .setColor(0x686868)
           .setDescription("Convert a Twitter video link into a more consistent embed.");
         break;
       case 'flip':
+      case 'coin':
+      case 'toss':
         embed
           .setTitle(p + "flip [probability]")
           .setColor(0x686868)
@@ -261,24 +288,31 @@ async function commandLoop(message) { //All commands stored here
         break;
       case 'get':
       case 'avatar':
+      case 'ava':
+      case 'avy':
+      case 'pfp':
         embed
           .setTitle(p + "get [user] / [emoji]")
           .setColor(0x686868)
           .setDescription("Get avatars (Using mentions, ID, or name)\nor emoji (Custom or default) in picture format.");
         break;
       case 'starpic':
+      case 'sp':
         embed
           .setTitle(p + "starpic")
           .setColor(0x686868)
           .setDescription("Reposts an image with a star reaction, a neutral mediator for starboards.");
         break;
       case 'help':
+      case 'h':
         embed
           .setTitle(p + "help")
           .setColor(0x686868)
           .setDescription("You are beyond help.");
         break;
       case 'pref':
+      case 'preferences':
+      case 'prefs':
         embed
           .setTitle(p + "pref [command] [setting] [value]")
           .setColor(0x686868)
@@ -286,6 +320,7 @@ async function commandLoop(message) { //All commands stored here
           .setFooter('"reset" can be used as a command or value to restore defaults');
         break;
       case 'server':
+      case 'srv':
         embed
           .setTitle(p + "server")
           .setColor(0x686868)
@@ -297,7 +332,7 @@ async function commandLoop(message) { //All commands stored here
           .setColor(0x686868)
           .addFields(
             { name: '\u200B', value:
-            "**__Media:__**\n" + p + "catjam\n" + p + "stellaris\n" + p + "dadon\n" + p + "neco\n" + p + "1984\n\n" +
+            "**__Media:__**\n" + p + "catjam\n" + p + "stellaris\n" + p + "dadon\n" + p + "neco\n" + p + "1984\n" + p + "stuff\n\n" +
             "**__Filter:__**\n" + p + "scatter\n" + p + "glitch\n" + p + "obradinn\n\n" +
             "**__Media Editing:__** \n" + p + "poster\n" + p + "point\n" + p + "meme\n" + p + "mario\n" + p + "literally1984\n⠀",
             inline: true},
@@ -360,7 +395,7 @@ async function commandLoop(message) { //All commands stored here
     }
     return await func.messageReturn(link, '1984.gif', false, true);
   }
-  else if (command === 'poster' || command === 'meme' || command === 'literally1984' || command === 'point' || command === 'mario') {
+  else if (command === 'poster' || command === 'meme' || command === 'literally1984' || command === 'point' || command === 'mario' || command === 'stuff' || command === 'stuffimage') {
     //text argument handling
     let bgOption = 'png';
     switch(command) {
@@ -396,7 +431,7 @@ async function commandLoop(message) { //All commands stored here
       }
     }
     //image download and so on
-    if (!(command === 'literally1984' && inputs[0] != '')) {//literally1984 doesn't need to download an image if it has text
+    if (!(command === 'literally1984' && inputs[0] != '') && command != 'stuff') {//literally1984 doesn't need to download an image if it has text
       var fileDir = `./files/buffer/${command}Buffer.png`;
       var fileURL = await func.generalScraper('image');
       if (fileURL == undefined) {return await func.messageReturn("No file found :(")}
@@ -406,7 +441,7 @@ async function commandLoop(message) { //All commands stored here
     }
     //canvas setup
     let canvasDims;
-    if (command === 'poster' || command === 'meme' || command === 'point') {//image to canvas commands
+    if (command === 'poster' || command === 'meme' || command === 'point' || command === 'stuffimage') {//image to canvas commands
       //normalizing excessively small or large images
       if (command === 'point' || command === 'meme') {
         if (imageSize.height > 1500 || imageSize.width > 1500) {
@@ -439,7 +474,19 @@ async function commandLoop(message) { //All commands stored here
           await func.imageToCanvas({imageDims:imageDims, widestRatio:2, tallestRatio:1, wideDims:[1920,1518], tallDims:[1920,1518]});
         }
       }
-      canvasDims = globalData.imgCanvasDims
+      else if (command === 'stuffimage') {
+        var stuffWidth = (1533-920)/(3-1) * imageDims[0]/imageDims[1] + 613.5;//linear interpolation between (1, 920) and (3, 1533)
+        if (stuffWidth > 1533) {
+          stuffWidth = 1533;
+        }
+        else if (stuffWidth < 920) {
+          stuffWidth = 920;
+        }
+        await func.imageToCanvas({imageDims:imageDims, widestRatio:3, tallestRatio:1, wideDims:[1533,511], tallDims:[920,920], scaleLength:stuffWidth, scaleAxis:'width'});
+        globalData.imgCanvasDims[1] += 511;
+        bgOption = './files/templates/eggshellBox.jpg';
+      }
+      canvasDims = globalData.imgCanvasDims;
     }
     //other canvases
     else if (command === 'literally1984') {
@@ -448,6 +495,11 @@ async function commandLoop(message) { //All commands stored here
     }
     else if (command === 'mario') {
       canvasDims = [1920, 1080];
+    }
+    else if (command === 'stuff') {
+      bgOption = './files/templates/eggshellBox.jpg';
+      var stuffWidth = 1226;
+      canvasDims = [1226, 511];
     }
     await func.canvasInitialize(canvasDims, bgOption);
     let canvas = globalData.canvas;
@@ -659,6 +711,18 @@ async function commandLoop(message) { //All commands stored here
       else {
         await func.drawText();
       }
+    }
+    else if (command === 'stuff' || command === 'stuffimage') {
+      let adjustedHeight = canvasHeight - 511;
+      if (command == 'stuffimage') {
+        await func.scaleImage(imageDims, 'fit', [canvasWidth, adjustedHeight]);
+        await func.drawImage(fileDir);
+      }
+      await func.drawImage('./files/templates/stuff.png', [0,0], [0, adjustedHeight]);
+      let textWidth = canvasWidth - 602 - 50;
+      await func.textHandler({text:inputs[0], font:'arial', style:'bold ', maxSize:100, maxWidth:textWidth, maxHeight:450, baseX:(textWidth/2 + 602 + 25), baseY:255.5});
+      context.fillStyle = '#000000'
+      await func.drawText([0, adjustedHeight]);
     }
     return await func.messageReturn(canvas.toBuffer(), `${command}.png`);
   }

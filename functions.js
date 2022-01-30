@@ -99,10 +99,12 @@ async function download(fileURL, fileDir){
     //checks for cringe metadata, including orientation and colour space
     let dirArray = fileDir.split('.');
     if (dirArray[dirArray.length - 1] == 'png') {
-      let metadata = ['','']
-      metadata = await exifr.parse(fileDir, {chunked: false}).then(output => {
+      let metadata = await exifr.parse(fileDir, {chunked: false}).then(output => {
         if (output != undefined) {
           return [output.ProfileName, output.Orientation];
+        }
+        else {
+          return ['',''];
         }
       });
       if (metadata[0] == 'kCGColorSpaceDisplayP3') {//basically just rewrites the file with generic colour space and metadata
