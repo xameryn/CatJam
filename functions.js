@@ -96,20 +96,60 @@ async function download(fileURL, fileDir){
     while (!finished) {
       await wait(25);
     }
-    //checks for cringe colour space pngs
+    //checks for cringe metadata, including orientation and colour space
     let dirArray = fileDir.split('.');
     if (dirArray[dirArray.length - 1] == 'png') {
-      let profile = await exifr.parse(fileDir, {chunked: false}).then(output => {
+      let metadata = ['','']
+      metadata = await exifr.parse(fileDir, {chunked: false}).then(output => {
         if (output != undefined) {
-          return output.ProfileName;
+          return [output.ProfileName, output.Orientation];
         }
       });
-      if (profile == 'kCGColorSpaceDisplayP3') {
-        //basically just rewrites the file with generic colour space and metadata
+      if (metadata[0] == 'kCGColorSpaceDisplayP3') {//basically just rewrites the file with generic colour space and metadata
         let data = fs.readFileSync(fileDir);
         let png = PNG.sync.read(data);
         let buffer = PNG.sync.write(png);
         fs.writeFileSync(fileDir, buffer);
+      }
+      //possible orientation metadata: Horizontal (normal), Mirror horizontal and rotate 90 CW, Mirror horizontal and rotate 270 CW, Mirror horizontal, Mirror vertical, Rotate 90 CW, Rotate 180, Rotate 270 CW
+      if (metadata[1] != undefined && metadata[1] != '' && metadata[1] != 'Horizontal (normal)') {
+        let imageSize = await SizeOf(fileDir);
+        let orient = metadata[1];
+        let angle = '180';
+        //all rotations other than 180 contain CW
+        if (orient.includes('CW')) {//these rotations will invert dimensions
+          await canvasInitialize([imageSize.height, imageSize.width])
+          angle = orient.slice(-6,-3).trim();
+        }
+        else {
+          await canvasInitialize([imageSize.width, imageSize.height])
+        }
+        let canvas = globalData.canvas;
+        let context = globalData.context;
+        let image = await Canvas.loadImage(fileDir);
+        //mirroring
+        if (orient.includes('Mirror horizontal') && !orient.includes('CW')) {//there is never both vertical mirroring and rotation
+          context.scale(-1,1);
+          context.translate(-canvas.width, 0);
+        }
+        else if (orient.includes('Mirror vertical') || (orient.includes('Mirror horizontal') && orient.includes('CW'))) {
+          context.scale(1,-1);
+          context.translate(0, -canvas.height);
+        }
+        //rotation
+        if (orient.includes('rotate') || orient.includes('Rotate')) {
+          let displace = [canvas.width, canvas.height];
+          if (angle == '90') {
+            displace[1] = 0;
+          }
+          if (angle == '270') {
+            displace[0] = 0;
+          }
+          context.translate(displace[0], displace[1]);
+          context.rotate(Math.PI * parseInt(angle) / 180);
+        }
+        context.drawImage(image, 0, 0, imageSize.width, imageSize.height);
+        fs.writeFileSync(fileDir, canvas.toBuffer());
       }
     }
     console.log('download - ' + getTime(start).toString() + 'ms');
