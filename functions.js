@@ -339,15 +339,11 @@ async function userData(action, command, option, value) {
   //tag - preference to change
   //arg - thing to set preference to
   let user = globalData.authorID;
-  let defaults = `{"id":"${user}","customCMD":true,"pointBG":"black","posterBG":"white","posterTXT":"big","posterCAPS":true}`
-  let prefix = globalData.prefix;
+  let defaultsOBJ = {id:user, prefixC:' ', prefixD:true, customCMD:true, pointBG:'black', posterBG:'white', posterTXT:'big', posterCAPS:true};
+  let defaults = JSON.stringify(defaultsOBJ);
   if (!fs.existsSync('user-data.json')) {
     fs.writeFileSync('user-data.json', defaults);
-    globalData.customCMD = true;
-    globalData.pointBG = 'black';
-    globalData.posterBG = 'white';
-    globalData.posterTXT = 'big';
-    globalData.posterCAPS = true;
+    globalData.userData = defaultsOBJ;
     globalData.authorIndex = 0;
     return;
   }
@@ -361,22 +357,14 @@ async function userData(action, command, option, value) {
     for (var i = 0; i < lines.length; i++) {
       let line = JSON.parse(lines[i]);
       if (line.id == user) {
-        globalData.customCMD = line.customCMD;
-        globalData.pointBG = line.pointBG;
-        globalData.posterBG = line.posterBG;
-        globalData.posterTXT = line.posterTXT;
-        globalData.posterCAPS = line.posterCAPS;
+        globalData.userData = line;
         globalData.authorIndex = i;
         //console.log('userData - ' + getTime(start).toString() + 'ms');
         return;
       }
     }
     //will only be run if no id found (since if it was found function returns), sets values to defaults and adds new line
-    globalData.customCMD = true;
-    globalData.pointBG = 'black';
-    globalData.posterBG = 'white';
-    globalData.posterTXT = 'big';
-    globalData.posterCAPS = true;
+    globalData.userData = defaultsOBJ;
     globalData.authorIndex = lines.length - 1;
     lines.push(defaults);
   }
@@ -394,18 +382,25 @@ async function userData(action, command, option, value) {
     else if (value == 'false') {
       value = false;
     }
-    if (option == 'bg') {
-      option = 'background';
-    }
-    else if (option == 'custom' || option == 'cmd') {
-      option = 'customcmd';
-    }
     if (command == 'canvas') {
       command = 'poster';
     }
     if (command == 'a' || command == 'arc') {
       command = 'archive';
     }
+    if (option == 'bg') {
+      option = 'background';
+    }
+    else if ((option == 'custom' || option == 'cmd') && command == 'archive') {
+      option = 'customcmd';
+    }
+    else if (option == 'c' && command == 'prefix') {
+      option = 'custom';
+    }
+    else if (option == 'd') {
+      option = 'default';
+    }
+    let prefix = globalData.escapedPrefix;
     let valuesBG = ['black','white','png']
     let valuesTXT = ['big','small']
     let valuesBool = [true,false]
@@ -455,14 +450,38 @@ async function userData(action, command, option, value) {
         return;
       }
     }
+    else if (command == 'prefix') {
+      prefix = '';
+      if (option == 'custom') {
+        valueDefault = ' ';
+        currentValue = data.prefixC;
+        let argsArray = globalData.args;
+        let textValue = argsArray.splice(2).join(' ');
+        await textArgs(1, textValue);
+        value = globalData.textInputs[0];
+        if (value.length > 50) {
+          return;
+        }
+        if (value == globalData.globalPrefix) {
+          value = 'reset';
+        }
+        values = [value];
+      }
+      else if (option == 'default') {
+        values = valuesBool;
+        valueDefault = true;
+        currentValue = data.prefixD;
+      }
+    }
     //pref reset
     else if (command == 'reset') {
-      data = JSON.parse(defaults);
+      data = defaultsOBJ;
       globalData.toggledMSG = `Preferences reset! :3`;
     }
     else {
       return;
     }
+    let re = '';
     if (command != 'reset' && (values.includes(value) || value == 'reset' || value == '')) {//determining/setting value, then creating message
       if (value == '') {
         if (values.length == 2) {//sets it to the other value in the array
@@ -473,6 +492,7 @@ async function userData(action, command, option, value) {
         }
       }
       else if (value == 'reset') {
+        re = 're';
         value = valueDefault;
       }
       if (command == 'point' && option == 'background') {
@@ -490,12 +510,40 @@ async function userData(action, command, option, value) {
       else if (command == 'archive' && option == 'customcmd') {
         data.customCMD = value;
       }
+      else if (command == 'prefix' && option == 'custom') {
+        data.prefixC = value;
+        globalData.changedPrefix = true;
+      }
+      else if (command == 'prefix' && option == 'default') {
+        data.prefixD = value;
+      }
       else {
         return;
       }
-      globalData.toggledMSG = 'Preferences for \\' + prefix + `${command} ${option}` + ' set to `' + `${value}` + '`! :3';
+      globalData.toggledMSG = 'Preferences for ' + prefix + `${command} ${option} ` + re + 'set to `' + `${value}` + '`! :3';
     }
     lines[globalData.authorIndex] = JSON.stringify(data);
+  }
+  else if (action == 'prefix') {//load prefix array
+    let prefixes = [globalData.globalPrefix];
+    for (var i = 0; i < lines.length; i++) {
+      let line = JSON.parse(lines[i]);
+      if (line.prefixC != ' ') {
+        prefixes.push(line.prefixC);
+      }
+    }
+    //console.log('userData - ' + getTime(start).toString() + 'ms');
+    return prefixes;
+  }
+  else if (action == 'update') {//update user-data.json (for when new preferences are added in an update)
+    let length = Object.keys(defaultsOBJ).length;
+    for (var i = 0; i < lines.length; i++) {
+      let line = JSON.parse(lines[i]);
+      if(Object.keys(line).length != length) {
+        line = {...defaultsOBJ, ...line};
+        lines[i] = JSON.stringify(line);
+      }
+    }
   }
   //-----------------------
   // DATA UPDATE
@@ -518,7 +566,7 @@ async function findEmoji(emojiString) {
   let start = getTime();
   let defaultRegex = emojiRegex();
   let customRegex = /<:(\w+):(\d+)>/gmd;
-  let animRegex = /<a:(\w+):(\d+)>/gmd;
+  let animRegex = /<a:(\w+):(\d+)>/gmdi;
   let matches = [];
   //guide to match: [(unicode emoji/emoji id), (index within string), (name), (name used in discord), (is animated boolean)]
   //default emoji
@@ -605,6 +653,20 @@ async function getEmoji(emoji) {
       else {
         ext = '.png';
       }
+      let names = [''];
+      if (fs.existsSync('./files/buffer/emojiDownload/')) {
+        names = fs.readdirSync('./files/buffer/emojiDownload/');
+        names.forEach((n, index) => {
+          names[index] = n.slice(0,-4)
+        });
+      }
+      if (names.includes(fileName)) {//for emojis with same name
+        let repeat = 0;
+        while (names.includes(fileName + repeat.toString())) {
+          repeat += 1;
+        }
+        fileName += repeat.toString();
+      }
       fileName = await fileNameVerify(fileName, './files/buffer/emojiDownload/', ext);
       await download('https://cdn.discordapp.com/emojis/' + ident + ext + '?size=1024', './files/buffer/emojiDownload/' + fileName + ext);
     }
@@ -618,11 +680,14 @@ async function getEmoji(emoji) {
   console.log('getEmoji - ' + getTime(start).toString() + 'ms');
   return;
 }
-async function textArgs(maxInputs = 1) {
+async function textArgs(maxInputs = 1, input) {
   let command = globalData.command;
-  let message = globalData.message;
+  let message = globalData.message.content;
   let prefix = globalData.prefix;
-  let content = ' ' + message.content.slice(prefix.length + command.length + 1).trim() + ' ';
+  if (input) {
+    message = prefix + command + ' ' + input;
+  }
+  let content = ' ' + message.slice(prefix.length + command.length + 1).trim() + ' ';
   while (content.includes('“') || content.includes('”')) {
     content = content.replace('“','"');
     content = content.replace('”','"');
@@ -736,11 +801,11 @@ async function textHandler(funcArgs) {
   //-----------------------
   //replaces emojis with invisible character to be drawn over later
   let defaultRegex = emojiRegex();
-  let customRegex = /<:\w+:(\d+)>/gmd;
-  let animRegex = /<a:\w+:(\d+)>/gmd;
+  let customRegex = /<:(\w+):(\d+)>/gmd;
+  let animRegex = /<a:(\w+):(\d+)>/gmdi;
   let char = ' ';
   text = text.replace(char, ' ');
-  if (text.search(defaultRegex) != -1 || customRegex.test(text) || animRegex.test(text)) {
+  if (text.search(defaultRegex) != -1 || text.search(customRegex) != -1 || text.search(animRegex) != -1 ) {
     await findEmoji(text);
     var matches = globalData.emojiMatch;
     for (var match of matches) {
@@ -1054,8 +1119,15 @@ async function drawText(offsets = [0,0], channel = 1, stroke = false) {
         while (nameArray.includes(name + repeat.toString())) {
           repeat += 1;
         }
+        name += repeat.toString();
       }
-      let fileDir = './files/buffer/emojiDownload/' + name + '.png'
+      if (emojiArray[i][4]) {
+        name += '.gif';
+      }
+      else {
+        name += '.png';
+      }
+      let fileDir = './files/buffer/emojiDownload/' + name;
       let emojiWidth = lineHeight;
       let emojiHeight = lineHeight;
       let emojiSize = await SizeOf(fileDir);
@@ -1165,11 +1237,11 @@ async function fileNameVerify(string, filePath, extension) {
   let charRegex = /[\\/:\*\?"<>\|]+/g; // \ / : * ? " < > |
   let nameRegex = /^(aux|nul|prn|con|lpt[1-9]|com[1-9])(\.|$)/i;
   string = string.replaceAll(charRegex, '-');
-  if (nameRegex.test(string)) {
-    string = '-'
+  if (string.search(nameRegex) != -1) {
+    string = '-';
   }
   if (filePath != undefined && fs.existsSync(filePath + string + extension)) {
-    let repeat = 0
+    let repeat = 0;
     while (fs.existsSync(filePath + string + repeat.toString() + extension)) {
       repeat += 1;
     }

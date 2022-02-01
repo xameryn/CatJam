@@ -19,7 +19,7 @@ import { catJamArrayStorage, stellarisArrayStorage } from './arrays.js';
 
 const client = new Client({ intents: [Intents.FLAGS.GUILDS, Intents.FLAGS.GUILD_MESSAGES] });
 const DISCORDTOKEN = discordKey;
-const prefix = prefixKey;
+const globalPrefix = prefixKey;
 const catJamArray = catJamArrayStorage;
 const stellarisArray = stellarisArrayStorage;
 
@@ -47,14 +47,25 @@ process.on('uncaughtException', function (err) {
 
 });
 
-client.on("ready", () =>{
+client.on("ready", () => {
     console.log(`Logged in as ${client.user.tag}`);
     client.user.setActivity('In Development');
     func.createFolders();
     setInterval(function(){ 
       //console.log('looping now :3'); 
     }, 2500);
- });
+});
+
+func.userData('update');
+
+globalData.globalPrefix = globalPrefix;
+let prefixArray = [globalPrefix];
+if (fs.existsSync('user-data.json')) {
+  func.userData('prefix').then(array => {
+    prefixArray = array;
+  });
+}
+
 
 let running = false;
 let alreadyRunning = false;
@@ -64,23 +75,43 @@ async function commandLoop(message) { //All commands stored here
   if (running) {
     alreadyRunning = true;
   }
-	if (!message.content.startsWith(prefix) || message.author.bot) return;
+  if (message.mentions.has(client.user)) {
+    if (message.content.includes('prefix')) {
+      globalData.authorID = message.author.id;
+      globalData.message = message;
+      await func.userData('get');
+      await func.userData('set', 'prefix', 'default', '');
+      return await func.messageReturn(`${globalData.toggledMSG}`);
+    }
+  }
+  if (!prefixArray.some(p => message.content.startsWith(p)) || message.author.bot) { return; }
+  globalData = {};
+  globalData.authorID = message.author.id;
+  await func.userData('get');
+  let prefix;
+  if (message.content.startsWith(globalData.userData.prefixC)) {
+    prefix = globalData.userData.prefixC;
+  }
+  else if (message.content.startsWith(globalPrefix) && globalData.userData.prefixD) {
+    prefix = globalPrefix;
+  }
+  else { return; }
+  globalData.globalPrefix = globalPrefix;
+  globalData.prefix = prefix;
+  let escapedPrefix = prefix.replaceAll(/[^\w\s]/g, '\\$&');//backslash escapes on non-alphanumeric characters
+  globalData.escapedPrefix = escapedPrefix;
+
   running = true;
   start = func.getTime();
-  globalData = {}
 	const args = message.content.slice(prefix.length).trim().split(' ');
 	command = args.shift().toLowerCase();
-  const user = message.author.id;
   let input = args[0];
   let input2 = args[1];
   let input3 = args[2];
   let fullInput = message.content.slice(prefix.length + command.length).trim();
   globalData.command = command;
   globalData.message = message;
-  globalData.prefix = prefix;
   globalData.args = args;
-  globalData.authorID = message.author.id;
-  await func.userData('get');
   //alternate commands
   switch(command) {
     case 'h':
@@ -151,7 +182,7 @@ async function commandLoop(message) { //All commands stored here
   }
   if (command === 'help') {
     let embed = new MessageEmbed();
-    let p = "\\" + prefix;
+    let p = escapedPrefix;
     switch(input) {
       case 'catjam':
         embed
@@ -316,7 +347,7 @@ async function commandLoop(message) { //All commands stored here
         embed
           .setTitle(p + "pref [command] [setting] [value]")
           .setColor(0x686868)
-          .setDescription("Alter the default behaviour of various commands.")
+          .setDescription("Alter the default behaviour of various commands (And prefixes).")
           .setFooter('"reset" can be used as a command or value to restore defaults');
         break;
       case 'server':
@@ -400,14 +431,14 @@ async function commandLoop(message) { //All commands stored here
     let bgOption = 'png';
     switch(command) {
       case 'poster':
-        bgOption = globalData.posterBG;
+        bgOption = globalData.userData.posterBG;
         await func.textArgs(2);
         break;
       case 'meme':
         await func.textArgs(3);
         break;
       case 'point':
-        bgOption = globalData.pointBG;
+        bgOption = globalData.userData.pointBG;
         break;
       default:
         await func.textArgs();
@@ -514,12 +545,12 @@ async function commandLoop(message) { //All commands stored here
       //single input case
       if (inputs[1] == undefined) {
         inputs[1] = '';
-        if (globalData.posterTXT == 'small') {
+        if (globalData.userData.posterTXT == 'small') {
           inputs[1] = inputs[0];
           inputs[0] = '';
         }
       }
-      if (globalData.posterCAPS == true) {
+      if (globalData.userData.posterCAPS == true) {
         inputs[0] = inputs[0].toUpperCase()
       }
       let smallSize = 40;
@@ -739,7 +770,8 @@ async function commandLoop(message) { //All commands stored here
       await func.canvasInitialize([(250 * imageSize.width / imageSize.height), 250], fileDir);
     }
     else if (filter == 'scatter' && (imageSize.width > 400 || imageSize.height > 400)) {
-      let dims = await func.scaleImage([imageSize.width, imageSize.height], 'down', 400)
+      await func.scaleImage([imageSize.width, imageSize.height], 'down', 400);
+      let dims = globalData.scaledDims;
       await func.canvasInitialize(dims, fileDir);
     }
     else {
@@ -866,21 +898,26 @@ async function commandLoop(message) { //All commands stored here
       }
       //(see userData function)
       await func.userData('set', input.toLowerCase(), input2.toLowerCase(), input3.toLowerCase());
+      if (globalData.changedPrefix) {
+        prefixArray = await func.userData('prefix');
+      }
       return await func.messageReturn(`${globalData.toggledMSG}`);
     }
     //if input undefined sends your preferences
     else {
-      let p = '\\' + prefix
+      let p = escapedPrefix
       let thumb = message.author.displayAvatarURL({ format: 'png', size: 1024, dynamic: true});
       let embed = new MessageEmbed()
         .setTitle("Your Preferences")
         .setColor(0x686868)
         .addFields(
-          { name: '⠀\n' + p + 'point : background : `' + `${globalData.pointBG}` + '`', value: "background used if transparency is present"},
-          { name: p + 'poster : background : `' + `${globalData.posterBG}` + '`', value: "background used if transparency is present"},
-          { name: p + 'poster : text : `' + `${globalData.posterTXT}` + '`', value: "which type of text displays with 1 argument"},
-          { name: p + 'poster : caps : `' + `${globalData.posterCAPS}` + '`', value: "capitalization of the larger text"},
-          { name: p + 'archive : customCMD : `' + `${globalData.customCMD}` + '`', value: "unknown commands send archived files of the same name\n⠀"}
+          { name: '⠀\n' + p + 'point : background : `' + `${globalData.userData.pointBG}` + '`', value: "background used if transparency is present"},
+          { name: p + 'poster : background : `' + `${globalData.userData.posterBG}` + '`', value: "background used if transparency is present"},
+          { name: p + 'poster : text : `' + `${globalData.userData.posterTXT}` + '`', value: "which type of text displays with 1 argument"},
+          { name: p + 'poster : caps : `' + `${globalData.userData.posterCAPS}` + '`', value: "capitalization of the larger text"},
+          { name: p + 'archive : customCMD : `' + `${globalData.userData.customCMD}` + '`', value: "unknown commands send archived files of the same name\n⠀"},
+          { name: 'prefix : custom : `' + `${globalData.userData.prefixC}` + '`', value: "custom prefix for all commands"},
+          { name: 'prefix : default : `' + `${globalData.userData.prefixD}` + '`', value: 'whether default prefix is still used\n(also toggled by pinging the bot with the word "prefix")\n⠀'}
         )
         .setFooter('Usage: ' + prefix + 'pref [command] [setting] [value]\ne.g. ' + prefix + 'pref point background png\n"reset" can be used as a command or value to restore defaults')
         .setThumbnail(thumb);
@@ -960,7 +997,7 @@ async function commandLoop(message) { //All commands stored here
     //-----------------------
     // EMOJI
     //-----------------------
-    else if ((defaultRegex.test(fullInput) || customRegex.test(fullInput) || animRegex.test(fullInput)) && !(command === 'avatar')) {
+    else if ((fullInput.search(defaultRegex) != -1 || fullInput.search(customRegex) != -1 || fullInput.search(animRegex) != -1) && !(command === 'avatar')) {
       await func.getEmoji(fullInput);
       foundEmoji = true
     }
@@ -1200,7 +1237,7 @@ async function commandLoop(message) { //All commands stored here
     //arc, serverarc, and custom command checks
     let customCMD = false
     if (!(command === 'arc' || command === 'a' || command === 'archive' || command === 'sarc' || command === 'serverarc' || command === 'sa' || command === 'serverarchive')) {
-      if (globalData.customCMD) {
+      if (globalData.userData.customCMD) {
         input = command;
         customCMD = true
       }
