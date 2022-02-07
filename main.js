@@ -1243,7 +1243,7 @@ async function commandLoop(message) { //All commands stored here
       else { return; }
     }
     let serverArc = false;
-    if (command === 'sarc' || command === 'serverarc' || command === 'sa' || command === 'serverarchive' || customCMD) {
+    if ((command === 'sarc' || command === 'serverarc' || command === 'sa' || command === 'serverarchive' || customCMD) && message.author.id != 233771949770276864) {
       serverArc = true;
     }
     //wow that's a lot of variables
