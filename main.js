@@ -905,17 +905,16 @@ async function commandLoop(message) { //All commands stored here
     }
     //if input undefined sends your preferences
     else {
-      let p = escapedPrefix
       let thumb = message.author.displayAvatarURL({ format: 'png', size: 1024, dynamic: true});
       let embed = new MessageEmbed()
         .setTitle("Your Preferences")
         .setColor(0x686868)
         .addFields(
-          { name: '⠀\n' + p + 'point : background : `' + `${globalData.userData.pointBG}` + '`', value: "background used if transparency is present"},
-          { name: p + 'poster : background : `' + `${globalData.userData.posterBG}` + '`', value: "background used if transparency is present"},
-          { name: p + 'poster : text : `' + `${globalData.userData.posterTXT}` + '`', value: "which type of text displays with 1 argument"},
-          { name: p + 'poster : caps : `' + `${globalData.userData.posterCAPS}` + '`', value: "capitalization of the larger text"},
-          { name: p + 'archive : customCMD : `' + `${globalData.userData.customCMD}` + '`', value: "unknown commands send archived files of the same name\n⠀"},
+          { name: '⠀\n' + 'point : background : `' + `${globalData.userData.pointBG}` + '`', value: "background used if transparency is present"},
+          { name: 'poster : background : `' + `${globalData.userData.posterBG}` + '`', value: "background used if transparency is present"},
+          { name: 'poster : text : `' + `${globalData.userData.posterTXT}` + '`', value: "which type of text displays with 1 argument"},
+          { name: 'poster : caps : `' + `${globalData.userData.posterCAPS}` + '`', value: "capitalization of the larger text"},
+          { name: 'archive : customCMD : `' + `${globalData.userData.customCMD}` + '`', value: "unknown commands send archived files of the same name\n⠀"},
           { name: 'prefix : custom : `' + `${globalData.userData.prefixC}` + '`', value: "custom prefix for all commands"},
           { name: 'prefix : default : `' + `${globalData.userData.prefixD}` + '`', value: 'whether default prefix is still used\n(also toggled by pinging the bot with the word "prefix")\n⠀'}
         )

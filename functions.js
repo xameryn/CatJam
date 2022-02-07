@@ -407,6 +407,7 @@ async function userData(action, command, option, value) {
     let values;
     let valueDefault;
     let currentValue;
+    let space = '';
     //point prefs
     if (command == 'point') {
       if (option == 'background') {
@@ -465,12 +466,18 @@ async function userData(action, command, option, value) {
         if (value == globalData.globalPrefix) {
           value = 'reset';
         }
+        if (value == '`') {
+          space = ' ';
+        }
         values = [value];
       }
       else if (option == 'default') {
         values = valuesBool;
         valueDefault = true;
         currentValue = data.prefixD;
+      }
+      else {
+        return;
       }
     }
     //pref reset
@@ -520,7 +527,7 @@ async function userData(action, command, option, value) {
       else {
         return;
       }
-      globalData.toggledMSG = 'Preferences for ' + prefix + `${command} ${option} ` + re + 'set to `' + `${value}` + '`! :3';
+      globalData.toggledMSG = 'Preferences for ' + prefix + `${command} ${option} ` + re + 'set to `' + value + space + '`! :3';
     }
     lines[globalData.authorIndex] = JSON.stringify(data);
   }
@@ -1114,12 +1121,13 @@ async function drawText(offsets = [0,0], channel = 1, stroke = false) {
       if (!nameArray.includes(name)) {
         nameArray.push(name);
       }
-      else {
+      else if (emojiArray[i][0] != emojiArray[i][3]) {//for custom emoji only
         let repeat = 0;
         while (nameArray.includes(name + repeat.toString())) {
           repeat += 1;
         }
         name += repeat.toString();
+        nameArray.push(name);
       }
       if (emojiArray[i][4]) {
         name += '.gif';
