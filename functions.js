@@ -1260,6 +1260,10 @@ function canManageMessages(msg) {
   return msg.member.permissionsIn(msg.channel).has('MANAGE_MESSAGES')
 }
 async function messageReturn(input, title, textEmbed = true, isAttach = false, sendRaw = false, thumbnail = '') {
+  //textEmbed : puts input text into a plain embed, optionally with title
+  //isAttach : gets attachment using input as file path, and title as file name
+  //sendRaw : just sends whatever the input is, either plain text or a premade attachment
+  //thumbnail : thumbnail link to put in embed
   let start = getTime();
   //note title can either be title of embed, or name of file for message attachment
   let message = globalData.message;
