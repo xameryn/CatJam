@@ -914,7 +914,8 @@ async function commandLoop(message) { //All commands stored here
           { name: 'poster : background : `' + `${globalData.userData.posterBG}` + '`', value: "background used if transparency is present"},
           { name: 'poster : text : `' + `${globalData.userData.posterTXT}` + '`', value: "which type of text displays with 1 argument"},
           { name: 'poster : caps : `' + `${globalData.userData.posterCAPS}` + '`', value: "capitalization of the larger text"},
-          { name: 'archive : customCMD : `' + `${globalData.userData.customCMD}` + '`', value: "unknown commands send archived files of the same name\n⠀"},
+          { name: 'archive : customCMD : `' + `${globalData.userData.customCMD}` + '`', value: "unknown commands send archived files of the same name"},
+          { name: 'archive : priority : `' + `${globalData.userData.priorityARC}` + '`', value: "archive which takes priority for custom commands\n⠀"},
           { name: 'prefix : custom : `' + `${globalData.userData.prefixC}` + '`', value: "custom prefix for all commands"},
           { name: 'prefix : default : `' + `${globalData.userData.prefixD}` + '`', value: 'whether default prefix is still used\n(also toggled by pinging the bot with the word "prefix")\n⠀'}
         )
@@ -1235,15 +1236,14 @@ async function commandLoop(message) { //All commands stored here
   else { //archive stuff
     //arc, serverarc, and custom command checks
     let customCMD = false
-    if (!(command === 'arc' || command === 'a' || command === 'archive' || command === 'sarc' || command === 'serverarc' || command === 'sa' || command === 'serverarchive')) {
+    if (!(command === 'archive' || command === 'serverarchive')) {
       if (globalData.userData.customCMD) {
-        input = command;
         customCMD = true
       }
       else { return; }
     }
     let serverArc = false;
-    if ((command === 'sarc' || command === 'serverarc' || command === 'sa' || command === 'serverarchive' || customCMD) && message.author.id != 233771949770276864) {
+    if (command === 'serverarchive' || (customCMD && globalData.userData.priorityARC == 'server')) {
       serverArc = true;
     }
     //wow that's a lot of variables
@@ -1263,12 +1263,55 @@ async function commandLoop(message) { //All commands stored here
     let listThumb = '';
     let argsString = '';
     
-    if (input != undefined) { //sanitize input
-      input = encodeURI(await func.fileNameVerify(input));
+    //identifying file name from command
+    let argArray = ['delete', 'd', 'rename', 'r', 'list', 'l', 'permissions', 'perms', 'global', 'moderator'];
+    let startIndex = prefix.length;
+    let text = fullInput;
+    let stringNum = 1;
+    if (input == 'rename' || input == 'r') {
+      stringNum = 2;
     }
-    else if (input2 != undefined) { //sanitize input
-      input2 = encodeURI(await func.fileNameVerify(input2));
+    if (customCMD) {//custom command case
+      text = message.content;
     }
+    else if (argArray.includes(input)) {//case for valid input
+      startIndex = fullInput.indexOf(' ') + 1;
+    }
+    else {//case for no input
+      startIndex = 0;
+    }
+    //finding name using textArgs
+    await func.textArgs(stringNum, text.slice(startIndex));
+    let name = globalData.textInputs[0]
+    await func.findEmoji(name);
+    let matches = globalData.emojiMatch;
+    for (var match of matches) {
+      if (match[3] != match[0]) {
+        name = name.replace(match[3], match[2])
+      }
+    }
+    name = await func.fileNameVerify(name);
+    name = name.replaceAll(' ', '-');
+    if (name == '' || name == undefined) {
+      name = '-'
+    }
+    let newName;
+    if (globalData.textInputs[1] != undefined) {
+      newName = globalData.textInputs[1];
+      await func.findEmoji(newName);
+      let matches = globalData.emojiMatch;
+      for (var match of matches) {
+        if (match[3] != match[0]) {
+          newName = newName.replace(match[3], match[2])
+        }
+      }
+      newName = await func.fileNameVerify(newName);
+      newName = newName.replaceAll(' ', '-');
+      if (newName == '') {
+        newName = '-'
+      }
+    }
+
     if (serverArc) { // ARC/SERVER ARC SPECIFIC
       id = message.guild.id;
       canManageMessages = func.canManageMessages(message);
@@ -1333,7 +1376,7 @@ async function commandLoop(message) { //All commands stored here
     }
     if ((input === 'delete' || input === 'd') && canManageMessages && !peepingTom && !customCMD) { // Delete from JSON
       for (let i = 0; i < archiveList.length; i++) { //Check if the given name exists in the JSON
-        if (archiveList[i].name === input2) {
+        if (archiveList[i].name === name) {
           fileExists = true;
           arrayPosition = i;
           break;
@@ -1347,41 +1390,44 @@ async function commandLoop(message) { //All commands stored here
         archiveList.splice(arrayPosition, 1);
         var archiveJSON = JSON.stringify(archiveList);
         fs.writeFileSync(`./files/archive/${id}.json`, archiveJSON);
-        return await func.messageReturn('"' + input2 + '" deleted.');
+        return await func.messageReturn('"' + name + '" deleted.');
       }
       else {
         return await func.messageReturn('Please include a valid file name.');
       }
     }
     if ((input === 'rename' || input === 'r') && canManageMessages && !peepingTom && !customCMD) { // Ranme file in JSON
+      if (newName == undefined) {
+        return await func.messageReturn('Please include two valid file names.');
+      }
       for (let i = 0; i < archiveList.length; i++) { //Check if the original name exists in the JSON
-        if (archiveList[i].name === input2) {
+        if (archiveList[i].name === name) {
           fileExists = true;
           arrayPosition = i;
           break;
         }
       }
       for (let i = 0; i < archiveList.length; i++) { //Check if the new name exists in the JSON
-        if (archiveList[i].name === input3) {
+        if (archiveList[i].name === newName) {
           newNameExists = true;
           break;
         }
       }
       if (newNameExists === true) {
-        return await func.messageReturn('The name "' + input3 + '" is already taken.');
+        return await func.messageReturn('The name "' + newName + '" is already taken.');
       }
       if (fileExists === true) {
         let thumb = '';
         if (archiveList[arrayPosition].type === 'image' || archiveList[arrayPosition].type === 'gif') {
           thumb = archiveList[arrayPosition].link;
         }
-        archiveList[arrayPosition].name = input3;
+        archiveList[arrayPosition].name = newName;
         var archiveJSON = JSON.stringify(archiveList);
         fs.writeFileSync(`./files/archive/${id}.json`, archiveJSON);
-        return await func.messageReturn('"' + input2 + '"' + ' has been renamed to ' + '"' + input3 + '".', '', true, false, false, thumb);
+        return await func.messageReturn('"' + name + '"' + ' has been renamed to ' + '"' + newName + '".', '', true, false, false, thumb);
       }
       else {
-        return await func.messageReturn('Please include a valid file name.');
+        return await func.messageReturn('Please include two valid file names.');
       }
     }
     else if ((input === 'list' || input === 'l') && !customCMD) { // List files from JSON
@@ -1478,7 +1524,7 @@ async function commandLoop(message) { //All commands stored here
     }
     else { // SEND or ADD File
       for (let i = 0; i < archiveList.length; i++) { //Check if the given name exists in the JSON
-        if (archiveList[i].name === input) {
+        if (archiveList[i].name === name) {
           if (archiveList[i].type === 'link') {
             typeLink = true;
           }
@@ -1502,7 +1548,7 @@ async function commandLoop(message) { //All commands stored here
         archiveList = await filteredArchiveList;
         //search re-executed for user files
         for (let i = 0; i < archiveList.length; i++) {
-          if (archiveList[i].name === input) {
+          if (archiveList[i].name === name) {
             if (archiveList[i].type === 'link') {
               typeLink = true;
             }
@@ -1539,7 +1585,7 @@ async function commandLoop(message) { //All commands stored here
         let fileType = await func.fileType(extension);
 
         var archive = {}
-        archive.name = input
+        archive.name = name
         archive.link = link
         archive.extension = extension
         archive.type = fileType
@@ -1556,7 +1602,7 @@ async function commandLoop(message) { //All commands stored here
         /*else if (link.includes('https://tenor.com/') && link.includes('-gif-')) { // If link is Tenor, do special embed (because Tenor is aids.)
           thumb = 'https://cdn.discordapp.com/attachments/813337498029391873/933875660202602546/unknown.png';
         }*/
-        return await func.messageReturn('File saved as "' + input + '"', '', true, false, false, thumb);
+        return await func.messageReturn('File saved as "' + name + '"', '', true, false, false, thumb);
       }
       else if (peepingTom) {
         return await func.messageReturn('You may not edit another users files.');

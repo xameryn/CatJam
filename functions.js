@@ -339,7 +339,7 @@ async function userData(action, command, option, value) {
   //tag - preference to change
   //arg - thing to set preference to
   let user = globalData.authorID;
-  let defaultsOBJ = {id:user, prefixC:' ', prefixD:true, customCMD:true, pointBG:'black', posterBG:'white', posterTXT:'big', posterCAPS:true};
+  let defaultsOBJ = {id:user, prefixC:' ', prefixD:true, customCMD:true, priorityARC:'server', pointBG:'black', posterBG:'white', posterTXT:'big', posterCAPS:true};
   let defaults = JSON.stringify(defaultsOBJ);
   if (!fs.existsSync('user-data.json')) {
     fs.writeFileSync('user-data.json', defaults);
@@ -397,13 +397,17 @@ async function userData(action, command, option, value) {
     else if (option == 'c' && command == 'prefix') {
       option = 'custom';
     }
+    else if (option == 'prio') {
+      option = 'priority';
+    }
     else if (option == 'd') {
       option = 'default';
     }
     let prefix = globalData.escapedPrefix;
-    let valuesBG = ['black','white','png']
-    let valuesTXT = ['big','small']
-    let valuesBool = [true,false]
+    let valuesBG = ['black','white','png'];
+    let valuesTXT = ['big','small'];
+    let valuesARC = ['server','user'];
+    let valuesBool = [true,false];
     let values;
     let valueDefault;
     let currentValue;
@@ -446,6 +450,11 @@ async function userData(action, command, option, value) {
         values = valuesBool;
         valueDefault = true;
         currentValue = data.customCMD;
+      }
+      else if (option == 'priority') {
+        values = valuesARC;
+        valueDefault = 'server';
+        currentValue = data.priorityARC;
       }
       else {
         return;
@@ -516,6 +525,9 @@ async function userData(action, command, option, value) {
       }
       else if (command == 'archive' && option == 'customcmd') {
         data.customCMD = value;
+      }
+      else if (command == 'archive' && option == 'priority') {
+        data.priorityARC = value;
       }
       else if (command == 'prefix' && option == 'custom') {
         data.prefixC = value;
