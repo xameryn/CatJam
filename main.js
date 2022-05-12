@@ -1233,6 +1233,68 @@ async function commandLoop(message) { //All commands stored here
   else if (command === 'test') {
     return;
   }
+  else if (command === 'math' || command === 'm') { // Math
+    let fullMessage = message.toString();
+    let stringCommand = command.toString();
+    let tempMessage;
+    let tempA;
+    let tempB;
+    let returnMessage = 0.0;
+
+    fullMessage = fullMessage
+      .replace(stringCommand,"")
+      .replace(prefix,"")
+      .split(" ")    
+
+    for (let i = 1; i < fullMessage.length; i++) {
+      if (fullMessage[i].includes('+')) {
+        tempMessage = await fullMessage[i].toString();
+        tempMessage = await tempMessage.split('+');
+        returnMessage = parseFloat(tempMessage[0]) + parseFloat(tempMessage[1]);
+      }
+      else if (fullMessage[i].includes('-')) {
+        tempMessage = await fullMessage[i].toString();
+        tempMessage = await tempMessage.split('-');
+        returnMessage = parseFloat(tempMessage[0]) - parseFloat(tempMessage[1]);
+      }
+      else if (fullMessage[i].includes('*')) {
+        tempMessage = await fullMessage[i].toString();
+        tempMessage = await tempMessage.split('*');
+        returnMessage = parseFloat(tempMessage[0]) * parseFloat(tempMessage[1]);
+      }
+      else if (fullMessage[i].includes('/')) {
+        tempMessage = await fullMessage[i].toString();
+        tempMessage = await tempMessage.split('/');
+        returnMessage = parseFloat(tempMessage[0]) / parseFloat(tempMessage[1]);
+      }
+      else if (fullMessage[i].includes('^')) {
+        tempMessage = await fullMessage[i].toString();
+        tempMessage = await tempMessage.split('^');
+        returnMessage = Math.pow(parseFloat(tempMessage[0]), parseFloat(tempMessage[1]));
+      }
+      else if (fullMessage[i].includes('d')) {
+        tempMessage = await fullMessage[i].toString();
+        tempMessage = await tempMessage.split('d');
+
+        if (tempMessage[0] == '') {tempMessage[0] = 1}
+
+        console.log(typeof(tempMessage[0]));
+        console.log(tempMessage[0]);
+        console.log(tempMessage[1]);
+
+        for (let j = 0; j < parseFloat(tempMessage[0]); j++) {
+          returnMessage = returnMessage + Math.floor(Math.random() * parseFloat(tempMessage[1])) + 1;
+        }
+      }
+      else {
+        returnMessage = 'NaN';
+      }
+
+      await func.messageReturn(returnMessage.toString(), fullMessage[i]);
+    }
+    
+    return;
+  }
   else { //archive stuff
     //arc, serverarc, and custom command checks
     let customCMD = false
