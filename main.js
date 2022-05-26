@@ -1144,7 +1144,7 @@ async function commandLoop(message) { //All commands stored here
     let messageContent = lastMessage.content.split('https')
     let splitURL = originalURL.split('/');
     if (splitURL[2] == 'twitter.com') {
-      splitURL[2] = 'fxtwitter.com';
+      splitURL[2] = 'vxtwitter.com';
       let joinedURL = splitURL.join('/');
       message.delete();
       lastMessage.delete();
