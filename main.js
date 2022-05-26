@@ -11,17 +11,20 @@ const emojiRegex = require('emoji-regex');
 const glitch = require('glitch-canvas');
 const Canvas = require('canvas');
 const SizeOf = require('image-size');
+const twitterGetUrl = require("twitter-url-direct")
+var ffmpeg = require('fluent-ffmpeg');
 
 const func = require("./functions.js");
 
 import { discordKey, prefixKey } from './keys.js';
-import { catJamArrayStorage, stellarisArrayStorage } from './arrays.js';
+import { catJamArrayStorage, stellarisArrayStorage, developerIDStorage } from './arrays.js';
 
 const client = new Client({ intents: [Intents.FLAGS.GUILDS, Intents.FLAGS.GUILD_MESSAGES] });
 const DISCORDTOKEN = discordKey;
 const globalPrefix = prefixKey;
 const catJamArray = catJamArrayStorage;
 const stellarisArray = stellarisArrayStorage;
+const devIDArray = developerIDStorage;
 
 var globalData = {};
 var crashLog = ''
@@ -109,9 +112,13 @@ async function commandLoop(message) { //All commands stored here
   let input2 = args[1];
   let input3 = args[2];
   let fullInput = message.content.slice(prefix.length + command.length).trim();
+  let developerCheck = false;
   globalData.command = command;
   globalData.message = message;
   globalData.args = args;
+  if (devIDArray.includes(message.author.id)) {
+    developerCheck = true;
+  }
   //alternate commands
   switch(command) {
     case 'h':
@@ -1071,38 +1078,6 @@ async function commandLoop(message) { //All commands stored here
     }
     return await func.messageReturn(fileDir);
   }
-  else if (command === 'convert' || command === 'conv') {
-    /*
-    let fileURL = await func.generalScraper('file');
-
-    console.log(input);
-    console.log(input2);
-
-    if (fileURL == undefined) {return message.channel.send("No File Found :(");}
-
-    let fileType = await func.typeCheck(fileURL).then();
-    if (fileType == undefined) {return message.channel.send("Bad Embed :(");}
-
-    let fileDirBase = await './files/buffer/conversionDownload/filePreConversion.';
-    let fileDirInput = await fileDirBase + fileType;
-    let fileDirOutput = await './files/buffer/conversionDownload/filePostConversion.' + input;
-    console.log(fileDirOutput);
-
-    await func.download(fileURL, fileDirInput);
-
-    await func.wait(1000)
-
-    if (fileType === 'webp') {
-      console.log("This is a .webp, SAD!");
-      const result = await webp.dwebp(fileDirInput, fileDirOutput);
-      result.then((response) => {console.log(response)});
-    }
-
-    attachment = await new MessageAttachment(fileDirOutput);
-    return message.channel.send(attachment);
-    */
-   return;
-  }
   else if (command === 'bpm') {
     const msg = await message.channel.send(`Press 🏁 to begin, count 10 beats (starting on 1) then press the 🛑.`); //Sends initial message
     let iterator = await 0;
@@ -1181,20 +1156,6 @@ async function commandLoop(message) { //All commands stored here
       return await func.messageReturn("This is not a twitter link.");
     }
   }
-  else if (command === 'repost') {
-    let fileURL = await func.generalScraper('file');
-
-    if (fileURL == undefined) {return await func.messageReturn("No file found :(");}
-
-    let fileType = await func.typeCheck(fileURL).then();
-    if (fileType == undefined) {return await func.messageReturn("Bad embed :(");}
-
-    let fileDir = './files/buffer/testBuffer.' + fileType;
-
-    await func.download(fileURL, fileDir);
-    await func.sendFile(fileURL, fileDir);
-    return;
-  }
   else if (command === 'starpic') {
     let fileURL = await func.generalScraper('image');
 
@@ -1211,12 +1172,82 @@ async function commandLoop(message) { //All commands stored here
     starMessage.react("⭐");
     return;
   }
-  else if (command === 'probe') {
+  else if (command === 't2' && developerCheck === true) {
+    let originalURL = await func.generalScraper('twitter');
+
+    let lastMessage = await globalData.targetMessage;
+    if (lastMessage == undefined) { return await func.messageReturn("No Twitter link found :(");}
+
+    let response = await twitterGetUrl(originalURL);
+
+    /*
+
+    let maxUrlLoops = response[dimensionsAvailable];
+    let urlArray;
+
+    for (let i = 0; i < maxUrlLoops; i++) {
+      if (response['download'][i]['url'].includes('.mp4')) {
+        urlArray.push(response['download'][i]['url'])
+      }
+    }
+
+    */
+
+    const embed = new MessageEmbed()
+      .setTitle("Your Preferences")
+      .setColor(0x686868)
+      .setUrl("https://video.twimg.com/amplify_video/1524843595550838793/vid/1280x720/FuCjDx79xZOfPc83.mp4?tag=14")
+    return await func.messageReturn(embed, '', false, false, true);
+
+    /*if(response['found'] == 'false') {return func.messageReturn('Invalid Link');}
+    if(response['type'] == 'video') {
+
+    }
+    if(response['type'] == 'image') {
+      
+    }*/
+
+    //return console.log('response JSON: ' + response['download'][0]['url']);
+    return console.log('response String: ' + JSON.stringify(response));
+    //return func.messageReturn(JSON.stringify(response));
+  }
+  else if (command === 'vidT' && developerCheck === true) {
+    new FFmpeg()
+    .addInput("C:/Users/xameryn/Downloads/video.mp4")
+    .addInput("C:/Users/xameryn/Downloads/audio.mp3")
+    .output("C:/Users/xameryn/Downloads/output.mp4");
+
+    return;
+
+    //return await func.messageReturn();
+  }
+  else if (command === 'repost' && developerCheck === true) {
+    //let fileURL = await func.generalScraper('file');
+
+    let fileURL = 'https://twitter.com/i/videos/tweet/1524844800574378003';
+
+    if (fileURL == undefined) {return await func.messageReturn("No file found :(");}
+
+    //let fileType = await func.typeCheck(fileURL).then();
+    let fileType = 'mp4';
+    if (fileType == undefined) {return await func.messageReturn("Bad embed :(");}
+
+    let fileDir = './files/buffer/testBuffer.' + fileType;
+
+    await func.download(fileURL, fileDir);
+    await func.sendFile(fileURL, fileDir);
+    return;
+  }
+  else if (command === 'info' && developerCheck === true) {
+    await func.infoScraper();
+    return;
+  }
+  else if (command === 'probe' && developerCheck === true) {
     await func.infoScraper();
     //console.log(link);
     return;
   }
-  else if (command === 'link') {
+  else if (command === 'link' && developerCheck === true) {
     let link = await func.generalScraper('file');
     console.log(message.reference);
 
@@ -1226,14 +1257,14 @@ async function commandLoop(message) { //All commands stored here
 
     return;
   }
-  else if (command === 'kill') {
+  else if (command === 'kill' && developerCheck === true) {
     log();
     return;
   }
-  else if (command === 'test') {
+  else if (command === 'test' && developerCheck === true) {
     return;
   }
-  else if (command === 'math' || command === 'm') { // Math
+  else if ((command === 'math' || command === 'm') && developerCheck === true) { // Math
     let fullMessage = message.toString();
     let stringCommand = command.toString();
     let tempMessage;
@@ -1294,6 +1325,38 @@ async function commandLoop(message) { //All commands stored here
     }
     
     return;
+  }
+  else if ((command === 'convert' || command === 'conv') && developerCheck === true) {
+    /*
+    let fileURL = await func.generalScraper('file');
+
+    console.log(input);
+    console.log(input2);
+
+    if (fileURL == undefined) {return message.channel.send("No File Found :(");}
+
+    let fileType = await func.typeCheck(fileURL).then();
+    if (fileType == undefined) {return message.channel.send("Bad Embed :(");}
+
+    let fileDirBase = await './files/buffer/conversionDownload/filePreConversion.';
+    let fileDirInput = await fileDirBase + fileType;
+    let fileDirOutput = await './files/buffer/conversionDownload/filePostConversion.' + input;
+    console.log(fileDirOutput);
+
+    await func.download(fileURL, fileDirInput);
+
+    await func.wait(1000)
+
+    if (fileType === 'webp') {
+      console.log("This is a .webp, SAD!");
+      const result = await webp.dwebp(fileDirInput, fileDirOutput);
+      result.then((response) => {console.log(response)});
+    }
+
+    attachment = await new MessageAttachment(fileDirOutput);
+    return message.channel.send(attachment);
+    */
+   return;
   }
   else { //archive stuff
     //arc, serverarc, and custom command checks

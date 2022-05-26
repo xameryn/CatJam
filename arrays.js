@@ -11,6 +11,8 @@ var stellarisArrayStorage = ["https://i.imgur.com/ys7BoS4.gif", "https://i.imgur
 "https://i.imgur.com/K5XMeRx.gif", "https://i.imgur.com/tbsCdy9.gif", "https://i.imgur.com/Shxvl4u.gif", "https://i.imgur.com/UCbsNfV.gif",
 "https://i.imgur.com/2ITcDzY.gif", "https://i.imgur.com/nUMwqhA.gif"];
 
+var developerIDStorage = [ '314215806118526976', '233771575550279680' ];
+
 var imageTypes = ['png', 'jpg', 'raw', 'tiff', 'ico', 'bmp', 'jpeg', 'webp', 'svg', 'jfif'];
 
 var videoTypes = ['mp4', 'mov', 'avi', 'webm', 'mkv', '3gp', 'wmv', '3g2', 'flv', 'h264', 'm4v', 'mpg', 'mpeg'];
@@ -19,4 +21,4 @@ var audioTypes = ['mp3', 'wav', 'ogg', 'aif', 'mid', 'wma', 'mpa', 'midi', 'cda'
 
 var textTypes = ['txt', 'json', 'js', 'dat', 'xml', 'csv', 'log', 'mdb', 'pdf', 'py', 'java', 'doc', 'docx', 'php', 'html', 'css', 'c', 'h', 'class', 'cs', 'sh', 'vb', 'cpp', 'tex', 'odt', 'rtf', 'wpd'];
 
-export { catJamArrayStorage, stellarisArrayStorage, imageTypes, videoTypes, audioTypes, textTypes };
+export { catJamArrayStorage, stellarisArrayStorage, developerIDStorage, imageTypes, videoTypes, audioTypes, textTypes };

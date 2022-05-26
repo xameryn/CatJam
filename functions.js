@@ -1213,7 +1213,7 @@ async function infoScraper() {
       url = await messageListLastAttachment.attachments.first().url;
     }
     else if (messageListLastAttachment.embeds[0] != undefined) {
-      url = await messageListLastAttachment.embeds[0].url;
+      url = await messageListLastAttachment.embeds[0].images[1];
     }
 
     console.log(url);
