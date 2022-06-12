@@ -12,6 +12,7 @@ const glitch = require('glitch-canvas');
 const Canvas = require('canvas');
 const SizeOf = require('image-size');
 const twitterGetUrl = require("twitter-url-direct")
+const apng2gif = require('apng2gif');
 var ffmpeg = require('fluent-ffmpeg');
 
 const func = require("./functions.js");
@@ -282,7 +283,7 @@ async function commandLoop(message) { //All commands stored here
           .setTitle(p + "stuff [text input]")
           .setColor(0x686868)
           .setDescription("He is stuff.")
-          .setFooter(prefix + "stuffimage to stick it under an image.");
+          .setFooter({text:prefix + "stuffimage to stick it under an image."});
         break;
       case 'archive':
       case 'arc':
@@ -291,7 +292,7 @@ async function commandLoop(message) { //All commands stored here
           .setTitle(p + "archive [file name] / delete [file name]\n/ rename [file name] [new name] / list")
           .setColor(0x686868)
           .setDescription("Save any file, then call upon it when you need it most (In any server).")
-          .setFooter("Unknown commands send archived files of the same name by default!\n(Controlled by " + prefix + "pref)");
+          .setFooter({text:"Unknown commands send archived files of the same name by default!\n(Controlled by " + prefix + "pref)"});
         break;
       case 'serverarchive':
       case 'serverarc':
@@ -301,7 +302,7 @@ async function commandLoop(message) { //All commands stored here
           .setTitle(p + "serverarchive [file name] / delete [file name]\n/ rename [file name] [new name] / list / permissions")
           .setColor(0x686868)
           .setDescription("Save any file to the server collection, then let anyone in the server call upon it when they need it most.")
-          .setFooter("Unknown commands send archived files of the same name by default!\n(Controlled by " + prefix + "pref)");
+          .setFooter({text:"Unknown commands send archived files of the same name by default!\n(Controlled by " + prefix + "pref)"});
         break;
       case 'bpm':
         embed
@@ -332,7 +333,8 @@ async function commandLoop(message) { //All commands stored here
         embed
           .setTitle(p + "get [user] / [emoji]")
           .setColor(0x686868)
-          .setDescription("Get avatars (Using mentions, ID, or name)\nor emoji (Custom or default) in picture format.");
+          .setDescription("Get avatars (Using mentions, ID, or name)\nor emoji (Custom or default) in picture format.")
+          .setFooter({text:"Add 'global' to get global avatars or use 'server' to get server avatars."});
         break;
       case 'starpic':
       case 'sp':
@@ -355,7 +357,7 @@ async function commandLoop(message) { //All commands stored here
           .setTitle(p + "pref [command] [setting] [value]")
           .setColor(0x686868)
           .setDescription("Alter the default behaviour of various commands (And prefixes).")
-          .setFooter('"reset" can be used as a command or value to restore defaults');
+          .setFooter({text:'"reset" can be used as a command or value to restore defaults'});
         break;
       case 'server':
       case 'srv':
@@ -379,7 +381,7 @@ async function commandLoop(message) { //All commands stored here
             "**__Meta:__**\n" + p + "help\n" + p + "pref\n" + p + "server\n⠀",
             inline: true}
           )
-          .setFooter('DISCLAIMER: Not all command names and arguments are disclosed.\nModerator permissions may also be required.')
+          .setFooter({text: 'DISCLAIMER: Not all command names and arguments are disclosed.\nModerator permissions may also be required.'})
     }
     return await func.messageReturn(embed, '', false, false, true);
   }
@@ -394,7 +396,6 @@ async function commandLoop(message) { //All commands stored here
 		}
     else if (output > 180) {
       link = catJamArray[24];
-      console.log(link);
     }
     else {
       link = catJamArray[(output - 60) / 5];
@@ -926,7 +927,7 @@ async function commandLoop(message) { //All commands stored here
           { name: 'prefix : custom : `' + `${globalData.userData.prefixC}` + '`', value: "custom prefix for all commands"},
           { name: 'prefix : default : `' + `${globalData.userData.prefixD}` + '`', value: 'whether default prefix is still used\n(also toggled by pinging the bot with the word "prefix")\n⠀'}
         )
-        .setFooter('Usage: ' + prefix + 'pref [command] [setting] [value]\ne.g. ' + prefix + 'pref point background png\n"reset" can be used as a command or value to restore defaults')
+        .setFooter({text:'Usage: ' + prefix + 'pref [command] [setting] [value]\ne.g. ' + prefix + 'pref point background png\n"reset" can be used as a command or value to restore defaults'})
         .setThumbnail(thumb);
       return await func.messageReturn(embed, '', false, false, true);
     }
@@ -944,14 +945,28 @@ async function commandLoop(message) { //All commands stored here
   }
   else if (command === 'get' || command === 'avatar') {
     //catch for alternate commands
-    let errorMsg = "Couldn't find an avatar or emoji from that input.";
+    let errorMsg = "Couldn't find an avatar, emoji, or sticker from that input.";
     if (command === 'avatar') {
       errorMsg = "Couldn't find an avatar from that input.";
     }
-    //if a message is replied to, its content is used as input (though it's only admitted for emojis)
+    //decide on guild or global avatar
+    let guildAvy = true;
+    if (args.includes('global') || args.includes('g')) {
+      guildAvy = false;
+      fullInput = (' ' + fullInput).replaceAll(' global', '').replaceAll(' g', '').trim();
+      input = fullInput.split(' ')[0];
+      if (fullInput == '') {
+        input = undefined;
+      }
+      else if (input == '') {
+        input = fullInput
+      }
+    }
+    //if a message is replied to, its content is used as input
     let reply = false;
+    let replyMessage = message;
     if (message.reference != undefined) { 
-      var replyMessage =  await message.channel.messages.fetch(message.reference.messageID);
+      replyMessage =  await message.channel.messages.fetch(message.reference.messageId);
       input = replyMessage.content;
       fullInput = input;
       reply = true;
@@ -963,16 +978,52 @@ async function commandLoop(message) { //All commands stored here
     let foundEmoji = false;
     let link;
     //-----------------------
+    // STICKERS
+    //-----------------------
+    //must have no input if you send a sticker, but when replying to a sticker, it prioritizes the sticker over the message content
+    //also note replyMessage will be the regular message if there is no reply
+    if (replyMessage.stickers.last() != undefined && (input === undefined || reply) && !(command === 'avatar')) {
+      let sticker = replyMessage.stickers.last();
+      if (sticker.format == 'PNG') {
+        link = sticker.url;
+      }
+      else if (sticker.format == 'APNG') {
+        await func.download(sticker.url, fileDir);
+        apng2gif.sync(fileDir, './files/buffer/getBuffer.gif');
+        fileDir = './files/buffer/getBuffer.gif'
+      }
+      else {
+        await func.download(sticker.url, './files/buffer/getBuffer.json');
+        fileDir = './files/buffer/getBuffer.json'
+      }
+    }
+    //-----------------------
     // AVATAR FROM AUTHOR
     //-----------------------
-    if (input === undefined && !reply) {
-      link = message.author.displayAvatarURL({ format: 'png', size: 1024, dynamic: true});
+    else if (input === undefined && !reply) {
+      if (guildAvy) {
+        let guildUser = await message.guild.members.fetch(message.author.id).catch(console.error);
+        if (guildUser != undefined) {
+          link = guildUser.displayAvatarURL({ format: 'png', size: 1024, dynamic: true});
+        }
+        else {
+          return await func.messageReturn(errorMsg, "Bad Input!");
+        }
+      }
+      else {
+        link = message.author.displayAvatarURL({ format: 'png', size: 1024, dynamic: true});
+      }
     }
     //-----------------------
     // AVATAR FROM MENTION
     //-----------------------
     else if (message.mentions.users.first() !== undefined && !reply) {
-      link = message.mentions.users.first().displayAvatarURL({ format: 'png', size: 1024, dynamic: true});
+      if (guildAvy) {
+        link = message.mentions.members.first().displayAvatarURL({ format: 'png', size: 1024, dynamic: true});
+      }
+      else {
+        link = message.mentions.users.first().displayAvatarURL({ format: 'png', size: 1024, dynamic: true});
+      }
     }
     //-----------------------
     // SERVER AVATAR
@@ -999,21 +1050,25 @@ async function commandLoop(message) { //All commands stored here
         return await func.messageReturn(errorMsg, "Bad Input!");
       }
       await func.getEmoji(emoji);
-      foundEmoji = true
+      foundEmoji = true;
     }
     //-----------------------
     // EMOJI
     //-----------------------
     else if ((fullInput.search(defaultRegex) != -1 || fullInput.search(customRegex) != -1 || fullInput.search(animRegex) != -1) && !(command === 'avatar')) {
       await func.getEmoji(fullInput);
-      foundEmoji = true
+      foundEmoji = true;
     }
     //-----------------------
     // AVATAR FROM ID
     //-----------------------
     else if (!isNaN(input) && input.length == 18 && !reply) {
       let user = await client.users.fetch(input).catch(console.error);
-      if (user != undefined) {
+      let guildUser = await message.guild.members.fetch(input).catch(console.error);
+      if (guildUser != undefined && guildAvy) {
+        link = guildUser.displayAvatarURL({ format: 'png', size: 1024, dynamic: true});
+      }
+      else if (user != undefined) {
         link = user.displayAvatarURL({ format: 'png', size: 1024, dynamic: true});
       }
       else {
@@ -1024,7 +1079,7 @@ async function commandLoop(message) { //All commands stored here
     // AVATAR FROM USERNAME
     //-----------------------
     else if (!reply) {
-      let index = message.content.indexOf('#');
+      let index = fullInput.indexOf('#');
       //trims command and leaves all content up until user tag (e.g. username#1234) if present
       let nameInput = fullInput;
       if (index != -1) {
@@ -1034,7 +1089,12 @@ async function commandLoop(message) { //All commands stored here
       let member = await message.guild.members.fetch({ query: nameInput, limit: 1 }).catch(console.error);
       //user from guild member
       if (member.first() != undefined) {
-        link = member.first().user.displayAvatarURL({ format: 'png', size: 1024, dynamic: true});
+        if (guildAvy) {
+          link = member.first().displayAvatarURL({ format: 'png', size: 1024, dynamic: true});
+        }
+        else {
+          link = member.first().user.displayAvatarURL({ format: 'png', size: 1024, dynamic: true});
+        }
       }
       else {
         return await func.messageReturn(errorMsg, "Bad Input!");
@@ -1068,7 +1128,7 @@ async function commandLoop(message) { //All commands stored here
       }
     }
     //-----------------------
-    // AVATAR DOWNLOAD
+    // LINK DOWNLOAD
     //-----------------------
     else if (link != undefined) {
       if (link.indexOf('.gif') != -1) {
@@ -1124,7 +1184,7 @@ async function commandLoop(message) { //All commands stored here
       var odds = input;
     }
     let attachment = new MessageAttachment('https://i.imgur.com/xzE6qF4.gif');
-    const msg = await message.channel.send(attachment);
+    const msg = await message.channel.send({files: [attachment]});
     await func.wait(2100);
     msg.delete();
     if (odds > Math.random()) {
@@ -1158,9 +1218,8 @@ async function commandLoop(message) { //All commands stored here
   }
   else if (command === 'starpic') {
     let fileURL = await func.generalScraper('image');
-
+    
     if (fileURL == undefined) {return await func.messageReturn("No file found :(");}
-
     let fileType = await func.typeCheck(fileURL).then();
     if (fileType == undefined) {return await func.messageReturn("Bad embed :(");}
 
@@ -1736,7 +1795,7 @@ async function commandLoop(message) { //All commands stored here
   }
 }
 
-client.on('message', async message => {
+client.on('messageCreate', async message => {
 	await commandLoop(message).then( sendTime => {
     if (running && !alreadyRunning) {
       let totalTime = func.getTime(start);

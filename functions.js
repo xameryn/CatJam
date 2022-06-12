@@ -40,12 +40,12 @@ async function generalScraper(scrapeType) {
   let lastMessage = await messageList.sort((a, b) => b.createdTimestamp - a.createdTimestamp).filter(searchParams).first();
 
   if (message.reference != undefined) { //If a message is replied to it takes priority
-    let replyMessage =  await message.channel.messages.fetch(message.reference.messageID);
+    let replyMessage =  await message.channel.messages.fetch(message.reference.messageId);
     if (searchParams) {
       lastMessage = replyMessage;
     }
   }
-
+  
   globalData.targetMessage = await lastMessage; //Saves the message it locates
 
   if (lastMessage == undefined) {
@@ -182,11 +182,11 @@ async function sendFile(fileURL, fileDir){
       fileURL = await fileURL.join('.'); //Joins URL at every '.'
     }
     console.log("embed");
-    return message.channel.send(fileURL);
+    return message.channel.send({content: fileURL});
   }
   var attachment = await new MessageAttachment(fileDir);
   console.log('sendFile - ' + getTime(start).toString() + 'ms')
-  return message.channel.send(attachment);
+  return message.channel.send({files: [attachment]});
 }
 async function canvasInitialize(canvasDims, background){
   let start = getTime();
@@ -1278,43 +1278,49 @@ async function messageReturn(input, title, textEmbed = true, isAttach = false, s
   //thumbnail : thumbnail link to put in embed
   let start = getTime();
   //note title can either be title of embed, or name of file for message attachment
+  let messageOptions;
   let message = globalData.message;
-  let content;
   if (typeof input == 'string') {
     if (input.indexOf('./') == 0) {
       isAttach = true;
     }
   }
+  //turn text into embed
   if (typeof input == 'string' && textEmbed && !isAttach) {
-    //embed stuff
-      if (title != undefined && title != '') {
-        content = new MessageEmbed()
-          .setTitle(title)
-          .setDescription(input)
-          .setColor(0x686868)
-          .setThumbnail(thumbnail);
-      }
-      else {
-        content = new MessageEmbed()
-          .setTitle(input)
-          .setColor(0x686868)
-          .setThumbnail(thumbnail);
-      }
+    let embed;
+    if (title != undefined && title != '') {
+      embed = new MessageEmbed()
+        .setTitle(title)
+        .setDescription(input)
+        .setColor(0x686868)
+        .setThumbnail(thumbnail);
+    }
+    else {
+      embed = new MessageEmbed()
+        .setTitle(input)
+        .setColor(0x686868)
+        .setThumbnail(thumbnail);
+    }
+    messageOptions = {embeds: [embed]}
   }
   //attachment case
   else if (!sendRaw) {
     if (title != undefined){
-      content = new MessageAttachment(input, title);
+      messageOptions = {files: [{attachment: input, name: title}]};
     }
     else {
-      content = new MessageAttachment(input);
+      messageOptions = {files: [input]};
     }
   }
-  //encompasses raw text being sent, or an already prepared embed
-  else {
-    content = input;
+  //raw text being sent
+  else if (typeof input == 'string') {
+    messageOptions = {content: input};
   }
-  await message.channel.send(content);
+  //already prepared embed
+  else {
+    messageOptions = {embeds: [input]};
+  }
+  await message.channel.send(messageOptions);
   fs.emptyDirSync('./files/buffer/emojiDownload/');
   if (fs.existsSync('./files/buffer/emojis.zip') == true) {
     fs.unlinkSync('./files/buffer/emojis.zip');
