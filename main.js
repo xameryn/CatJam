@@ -1311,6 +1311,16 @@ async function commandLoop(message) { //All commands stored here
 
     //return await func.messageReturn();
   }
+  else if (command === 'YoutubeDownload' && developerCheck === true) {
+    /*
+    ytdl('https://www.youtube.com/watch?v=OJ3SRV8QPfU').pipe(fs.createWriteStream('video.mp4'));
+    ytdl('https://www.youtube.com/watch?v=OJ3SRV8QPfU').pipe(fs.createWriteStream('audio.mp3'));
+    
+    console.log(args);
+
+    return;*/
+    //return await func.messageReturn();
+  }
   else if (command === 'switch' && developerCheck === true) {
     //basic get image make canvas from that image
     let fileDir = './files/buffer/switchBuffer.png';
@@ -1472,7 +1482,7 @@ async function commandLoop(message) { //All commands stored here
     */
    return;
   }
-  else { //archive stuff
+  else { //archive
     //arc, serverarc, and custom command checks
     let customCMD = false
     if (!(command === 'archive' || command === 'serverarchive')) {
