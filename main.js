@@ -1270,6 +1270,37 @@ async function commandLoop(message) { //All commands stored here
     return console.log('response String: ' + JSON.stringify(response));
     //return func.messageReturn(JSON.stringify(response));
   }
+  else if (command === 't3' && developerCheck === true) {
+    let originalURL = await func.generalScraper('twitter');
+
+    //Download twitter video from originalURL
+    let response = await twitterGetUrl(originalURL);
+    console.log('response String: ' + JSON.stringify(response));
+    if (response['found'] == 'false') {return func.messageReturn('Invalid Link');}
+    if (response['type'] == 'video') {
+      let dimensionsAvailable = response['dimensionsAvailable'];
+      let videoURL = response['download'][dimensionsAvailable-1]['url'];
+      let videoDir = './files/buffer/videoBuffer.' + "mp4";
+      await func.download(videoURL, videoDir);
+      await func.sendFile(videoURL, videoDir);
+      return;
+    }
+    if (response['type'] == 'image') {
+      let dimensionsAvailable = response['dimensionsAvailable'];
+      let imageURL = response['download'][dimensionsAvailable-1]['url'];
+      let imageDir = './files/buffer/imageBuffer.' + "jpg";
+      await func.download(imageURL, imageDir);
+      await func.sendFile(imageURL, imageDir);
+      return;
+    }
+  }
+  else if (command === 't4' && developerCheck === true) {
+    let originalURL = await func.generalScraper('twitter');
+
+    //Get twitter profile from tweet url (originalURL)
+    
+
+  }
   else if (command === 'vidT' && developerCheck === true) {
     new FFmpeg()
     .addInput("C:/Users/xameryn/Downloads/video.mp4")
@@ -1279,6 +1310,30 @@ async function commandLoop(message) { //All commands stored here
     return;
 
     //return await func.messageReturn();
+  }
+  else if (command === 'switch' && developerCheck === true) {
+    //basic get image make canvas from that image
+    let fileDir = './files/buffer/switchBuffer.png';
+    let fileURL = await func.generalScraper('image');
+    if (fileURL == undefined) {return await func.messageReturn("No file found :(")}
+    await func.download(fileURL, fileDir);
+    let imageSize = await SizeOf(fileDir);
+    //reduce image resolution
+    let canvasRes = [imageSize.width*0.1, imageSize.height*0.1]
+    await func.canvasInitialize(canvasRes, fileDir);
+    let canvas = globalData.canvas;
+    let context = globalData.context;
+    let canvasWidth = canvas.width;
+    let canvasHeight = canvas.height;
+
+    canvasRes = [imageSize.width, imageSize.height]
+    await func.canvasInitialize(canvasRes, fileDir);
+    canvas = globalData.canvas;
+    context = globalData.context;
+    canvasWidth = canvas.width;
+    canvasHeight = canvas.height;
+
+    return await func.messageReturn(canvas.toBuffer(), 'switch.png');
   }
   else if (command === 'repost' && developerCheck === true) {
     //let fileURL = await func.generalScraper('file');
