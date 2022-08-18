@@ -1,4 +1,5 @@
-const { Client, Intents, MessageAttachment, MessageEmbed, Permissions, MessageActionRow, MessageButton } = require('discord.js');
+const { Client, Intents, MessageAttachment, MessageEmbed, Permissions, MessageActionRow, MessageButton, EmbedBuilder, WebhookClient } = require('discord.js');
+//const { webhookId, webhookToken } = require('./config.json');
 const sharp = require('sharp');
 const request = require(`request`);
 const stringify = require('json-stringify');
@@ -14,12 +15,15 @@ const SizeOf = require('image-size');
 const twitterGetUrl = require("twitter-url-direct")
 const apng2gif = require('apng2gif');
 var ffmpeg = require('fluent-ffmpeg');
+var synonyms = require("synonyms");
+var Twit = require('twit');
 
 const func = require("./functions.js");
 
-import { discordKey, prefixKey } from './keys.js';
+import { discordKey, prefixKey, twt_key, twt_secret } from './keys.js';
 import { catJamArrayStorage, stellarisArrayStorage, developerIDStorage } from './arrays.js';
 
+const webhookClient = new WebhookClient({ id: 1006093627753238619, token: 'b9TvZYCY8T_dKoxSmfLTU-xH-CDRl-Zxq7N6rBCPVBUTsfNPQ7yLq_ZfylJQQGTr-yZ0' });
 const client = new Client({ intents: [Intents.FLAGS.GUILDS, Intents.FLAGS.GUILD_MESSAGES] });
 const DISCORDTOKEN = discordKey;
 const globalPrefix = prefixKey;
@@ -36,6 +40,11 @@ var startTime =    currentdate.getDate() + "-"
                 + currentdate.getHours() + "."  
                 + currentdate.getMinutes() + "." 
                 + currentdate.getSeconds();
+var twit = new Twit({
+  consumer_key:         twt_key,
+  consumer_secret:      twt_secret,
+  app_only_auth:        true,
+})
 
 process.on('uncaughtException', function (err) {
   let crashMessage = 'Caught exception: ' + err;
@@ -384,6 +393,19 @@ async function commandLoop(message) { //All commands stored here
           .setFooter({text: 'DISCLAIMER: Not all command names and arguments are disclosed.\nModerator permissions may also be required.'})
     }
     return await func.messageReturn(embed, '', false, false, true);
+  }
+  else if (command === 'test' && developerCheck === true) {
+    
+    /*message.channel.createWebhook('Snek', {
+      avatar: 'https://i.imgur.com/mI8XcpG.jpg',
+      reason: 'Needed a cool new Webhook'
+    })
+      .then(console.log)
+      .catch(console.error)
+    */
+    //client.user.setUsername("CatJam's Utilities R&D");
+
+    return;
   }
   else if (command === 'catjam') {
     let output = (Math.round((input)/5))*5;
@@ -923,7 +945,8 @@ async function commandLoop(message) { //All commands stored here
           { name: 'poster : text : `' + `${globalData.userData.posterTXT}` + '`', value: "which type of text displays with 1 argument"},
           { name: 'poster : caps : `' + `${globalData.userData.posterCAPS}` + '`', value: "capitalization of the larger text"},
           { name: 'archive : customCMD : `' + `${globalData.userData.customCMD}` + '`', value: "unknown commands send archived files of the same name"},
-          { name: 'archive : priority : `' + `${globalData.userData.priorityARC}` + '`', value: "archive which takes priority for custom commands\n⠀"},
+          { name: 'archive : priority : `' + `${globalData.userData.priorityARC}` + '`', value: "archive which takes priority for custom commands"},
+          { name: 'archive : delete : `' + `${globalData.userData.deleteArchiveMessage}` + '`', value: 'whether to delete your archive message'},
           { name: 'prefix : custom : `' + `${globalData.userData.prefixC}` + '`', value: "custom prefix for all commands"},
           { name: 'prefix : default : `' + `${globalData.userData.prefixD}` + '`', value: 'whether default prefix is still used\n(also toggled by pinging the bot with the word "prefix")\n⠀'}
         )
@@ -1311,6 +1334,87 @@ async function commandLoop(message) { //All commands stored here
 
     //return await func.messageReturn();
   }
+  else if (command === 'reaction' && developerCheck === true) {
+    var SearchInput = '';
+    var SearchArr = [];
+    var searchAny = [];
+    var searchPhrase = [];
+    let meme = JSON.parse(fs.readFileSync(`./files/memes/meme.json`, 'utf8'));
+
+    for (let i = 0; i < args.length; i++) { //Turns args into a string
+      SearchInput += args[i] + ' ';
+    }
+    
+    SearchInput = SearchInput.trim(); //Removes last space
+    if (SearchInput.includes('"')) {
+      SearchArr = SearchInput.split('"'); //Splits string into array by ' " '
+      SearchInput = '';
+      console.log('SearchArr.length: ' + SearchArr.length);
+      for (let i = 0; i < SearchArr.length; i++) {
+        if(i % 2 == 0) {
+          SearchArr[i] = SearchArr[i].trim();
+          SearchInput += SearchArr[i] + ' ';
+        }
+        else {
+          SearchArr[i] = SearchArr[i].trim()
+          searchPhrase.push(SearchArr[i]);
+        }
+      }
+    }
+    
+    searchAny = SearchInput.trim().split(' ');
+
+    if (searchAny.length > 0) { // Finds and adds synonoms to key words
+      var synonomAny = [];
+      var synonomAnyTemp = [];
+      for (let i = 0; i < searchAny.length; i++) {
+        if (synonyms(searchAny[i],"v") != undefined) {
+          synonomAnyTemp = synonyms(searchAny[i],"v");
+          synonomAnyTemp.shift();
+          synonomAny = synonomAny.concat(synonomAnyTemp);
+        }
+      }
+      searchAny = searchAny.concat(synonomAny)
+    }
+
+    var memeTemp = [];
+    var memeSort = '['
+    var matchCount = 0;
+
+
+    if (searchPhrase.length > 0) {
+      for (let i = 0; i < meme.length; i++) {
+        for (let j = 0; j < searchPhrase.length; j++) {
+          if (searchPhrase.every(item => meme[i].Text.includes(item))) {
+            memeTemp.push(meme[i]);
+          }
+        }
+      }
+      meme = memeTemp;
+    }
+
+    for (let i = 0; i < meme.length; i++) {
+      for (let j = 0; j < searchAny.length; j++) {
+        if (new RegExp(`\\b${searchAny[j]}\\b`).test(meme[i].Text)) {
+          matchCount++;
+        }
+      }
+      if (matchCount > 0) {
+        memeSort += '{ "link": "' + meme[i].Media + '", "matches": ' + matchCount + '}, '
+      }
+      matchCount = 0;
+    }
+
+    memeSort = memeSort.slice(0, -2) + ']'
+    memeSort = JSON.parse(memeSort);
+
+    memeSort.sort((a, b) => b.matches - a.matches);
+    
+    var link = memeSort[0].link.toString();
+    
+    return await func.messageReturn(link, 'reaction.jpg', false, true);
+
+  }
   else if (command === 'YoutubeDownload' && developerCheck === true) {
     /*
     ytdl('https://www.youtube.com/watch?v=OJ3SRV8QPfU').pipe(fs.createWriteStream('video.mp4'));
@@ -1385,8 +1489,91 @@ async function commandLoop(message) { //All commands stored here
     log();
     return;
   }
-  else if (command === 'test' && developerCheck === true) {
-    return;
+  else if (command === 'twitter_search' && developerCheck === true) {
+    // Stored cause totally working, but only searches past 30 days, so not of use right now.
+    
+    var twitsearchPhrase = '';
+    var twitsearchAny = '';
+    var twitSearchArr = [];
+
+    if (false) {
+      for (let i = 0; i < args.length; i++) { //Turns args into a string
+        twitsearchPhrase += args[i] + ' ';
+      }
+
+      twitsearchPhrase = twitsearchPhrase.trim(); //Removes last space
+      twitSearchArr = twitsearchPhrase.split('"'); //Splits string into array by ' " '
+      twitsearchPhrase = '';
+
+      for (let i = 0; i < twitSearchArr.length; i++) {
+        if(i % 2 == 0) {
+          twitSearchArr[i] = twitSearchArr[i].trim();
+          twitsearchAny += twitSearchArr[i] + ' ';
+        }
+        else {
+          twitsearchPhrase += '"' + twitSearchArr[i] + '" ';
+        }
+      }
+
+      twitsearchAny = twitsearchAny.trim();
+      twitsearchPhrase = twitsearchPhrase.trim(); //Removes last space
+      twitSearchArr = twitsearchAny.split(' '); //Splits string into array by ' '
+      twitsearchAny = '';
+
+      for (let i = 0; i < twitSearchArr.length; i++) { //Turns args into a string
+        twitsearchAny += twitSearchArr[i] + ' OR ';
+      }
+
+      twitsearchAny = twitsearchAny.substring(0, twitsearchAny.length - 4); // Removes last ' OR '
+      twitSearchArr = [];
+
+      if (twitsearchPhrase != '') {
+        twitsearchPhrase = twitsearchPhrase + ' ';
+      }
+      if (twitsearchAny != '') {
+        twitsearchAny = '(' + twitsearchAny + ') ';
+      }
+
+      /*twit.get('search/tweets', { q: 'from (from:reactjpg)', count: 20 }, function (err, data, response) {
+        console.log(data);
+        console.log(data.statuses.length);
+        
+        if (twitSearchCompare != '') {
+          twitSearchCompare = twitSearchCompare.replace(/[()]/g, '');
+          twitSearchArr = twitSearchCompare.split(' OR ');
+          for (let i = 0; i < twitSearchArr.length; i++) {
+            twitSearchArr[i] = twitSearchArr[i].trim();
+          }
+          console.log('CRASH');
+          for (let i = 0; i < data.statuses.length; i++) {
+            console.log('for loop A: ' + i);
+            for (let j = 0; j < twitSearchArr.length; j++) {
+              console.log('for loop B: ' + j);
+              if (data.statuses[i].text.includes(twitSearchArr[j])) {
+                currentSearchMatches++;
+              }
+            }
+            console.log('update4');
+            if (currentSearchMatches > bestSearchMatches) {
+              console.log('updateIF');
+              bestSearchMatches = currentSearchMatches;
+              bestSearch = i;
+            }
+          }
+        }
+        else {
+          console.log('updateElse');
+          bestSearch = 0;
+        }
+        console.log('update6');
+        
+        console.log(data.statuses[bestSearch].text);
+      });*/
+
+      console.log('Results: "' + twitsearchPhrase + twitsearchAny + '"');
+      console.log('twitsearchPhrase: "' + twitsearchPhrase + '"');
+      console.log('twitsearchAny: "' + twitsearchAny + '"');
+  }
   }
   else if ((command === 'math' || command === 'm') && developerCheck === true) { // Math
     let fullMessage = message.toString();

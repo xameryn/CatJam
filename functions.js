@@ -339,7 +339,7 @@ async function userData(action, command, option, value) {
   //tag - preference to change
   //arg - thing to set preference to
   let user = globalData.authorID;
-  let defaultsOBJ = {id:user, prefixC:' ', prefixD:true, customCMD:true, priorityARC:'server', pointBG:'black', posterBG:'white', posterTXT:'big', posterCAPS:true};
+  let defaultsOBJ = {id:user, prefixC:' ', prefixD:true, customCMD:true, priorityARC:'server', deleteArchiveMessage:false, pointBG:'black', posterBG:'white', posterTXT:'big', posterCAPS:true};
   let defaults = JSON.stringify(defaultsOBJ);
   if (!fs.existsSync('user-data.json')) {
     fs.writeFileSync('user-data.json', defaults);
@@ -456,6 +456,11 @@ async function userData(action, command, option, value) {
         valueDefault = 'server';
         currentValue = data.priorityARC;
       }
+      else if (option == 'delete') {
+        values = valuesBool;
+        valueDefault = false;
+        currentValue = data.deleteArchiveMessage;
+      }
       else {
         return;
       }
@@ -528,6 +533,9 @@ async function userData(action, command, option, value) {
       }
       else if (command == 'archive' && option == 'priority') {
         data.priorityARC = value;
+      }
+      else if (command == 'archive' && option == 'delete') {
+        data.deleteArchiveMessage = value;
       }
       else if (command == 'prefix' && option == 'custom') {
         data.prefixC = value;
