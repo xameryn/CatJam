@@ -1,4 +1,4 @@
-const { Client, Intents, MessageAttachment, MessageEmbed, MessageActionRow, MessageButton } = require('discord.js');
+const { Client, Intents, MessageAttachment, MessageEmbed, MessageActionRow, MessageButton, EmbedBuilder, AttachmentBuilder, MessagePayload } = require('discord.js');
 const sharp = require('sharp');
 const stringify = require('json-stringify');
 const compress_images = require("compress-images");
@@ -10,6 +10,7 @@ const SizeOf = require('image-size');
 const emojiDict = require("emoji-dictionary");
 const exifr = require('exifr');
 const PNG = require("pngjs").PNG;
+const fetch = require('node-fetch');
 
 import { globalData } from './main.js';
 import { catJamArrayStorage, stellarisArrayStorage, imageTypes, videoTypes, audioTypes, textTypes } from './arrays.js';
@@ -21,19 +22,16 @@ async function generalScraper(scrapeType) {
 
   if (scrapeType === undefined) {scrapeType = 'link';}
 
-  if (scrapeType === 'link') { //Used for $archive
-    searchParams = (m) => (m.attachments.size > 0) || (m.embeds.length > 0);
-  }
-  else if (scrapeType === 'image') { //Misc Use
+  if (scrapeType === 'image') { //grab images
     let atc = null;
     let emb = null;
-    searchParams = (m) => (atc = m.attachments.first(), emb = m.embeds, ((m.attachments.size > 0) && (atc != undefined) && ((atc.url.includes('.png')) || (atc.url.includes('.jpg')) || (atc.url.includes('.bmp')) || (atc.url.includes('.jpeg')) || (atc.url.includes('.jfif')) || (atc.url.includes('.tiff')) || (atc.url.includes('.webp')))) || (emb.length > 0 && (emb[0].type == 'image')));
+    searchParams = (m) => (atc = m.attachments.first(), emb = m.embeds, ((m.attachments.size > 0) && (atc != undefined) && ((atc.url.includes('.png')) || (atc.url.includes('.jpg')) || (atc.url.includes('.bmp')) || (atc.url.includes('.jpeg')) || (atc.url.includes('.jfif')) || (atc.url.includes('.tiff')))) || (emb.length > 0 && (emb[0].data.type == 'image' || (emb[0].data.type == 'rich' && emb[0].data.image != undefined))));
   }
-  else if (scrapeType === 'file') { //Misc Use
-    searchParams = (m) => ((m.embeds.length > 0 && (m.embeds[0].type == 'image' || m.embeds[0].type == 'video' || m.embeds[0].type == 'gifv')) || m.attachments.size > 0);
+  else if (scrapeType === 'file') { //grab any file/embed
+    searchParams = (m) => ((m.embeds.length > 0 && (m.embeds[0].data.type == 'image' || m.embeds[0].data.type == 'video' || m.embeds[0].data.type == 'gifv' || (m.embeds[0].data.type == 'rich' && m.embeds[0].data.image != undefined))) || m.attachments.size > 0);
   }
   else if (scrapeType === 'twitter') { //Used for $twitter
-    searchParams = (m) => ((m.embeds.length > 0) && (m.embeds[0].type === 'rich') && (m.embeds[0].url != null) && (m.embeds[0].url.includes('twitter.com')));
+    searchParams = (m) => (((m.embeds.length > 0) && (m.embeds[0].data.type === 'rich') && (m.embeds[0].data.url != null) && (m.embeds[0].data.url.includes('twitter.com'))) || (m.content.startsWith('https://twitter.com/') && m.content.includes('/status/')));
   }
 
   var scraperURL = message.channel.messages.fetch().then(async messageList => { //Message search
@@ -52,14 +50,24 @@ async function generalScraper(scrapeType) {
     return undefined;
   }
 
+  if (scrapeType == 'twitter' && lastMessage.embeds.length == 0) {
+    return lastMessage.content;
+  }
+
   if (lastMessage.attachments.size > 0) {
     let url = await lastMessage.attachments.first().url;
     return url;
   }
 
   else if (lastMessage.embeds.length > 0) {
-    let url = await lastMessage.embeds[0].url;
-    return url;
+    if (lastMessage.embeds[0].data.type == 'rich' && lastMessage.embeds[0].data.image != undefined) {
+      let url = await lastMessage.embeds[0].data.image.url;
+      return url;
+    }
+    else {
+      let url = await lastMessage.embeds[0].data.url;
+      return url;
+    }
   }
   });
   var attachedFileURL = await scraperURL.then();
@@ -67,10 +75,10 @@ async function generalScraper(scrapeType) {
   console.log('generalScraper - ' + getTime(start).toString() + 'ms');
   return outputURL;
 }
-function uploadLimitCheck(fileDir) {
+function uploadLimitCheck(fileDir, size = 8000000) {
   const statz = fs.statSync(fileDir);
   const fileSizeInBytes = statz.size;
-  if (fileSizeInBytes > 8000000) {
+  if (fileSizeInBytes > size) {
     //console.log(fileSizeInBytes);
     return true;
   }
@@ -106,54 +114,56 @@ async function download(fileURL, fileDir){
         else {
           return ['',''];
         }
-      });
-      if (metadata[0] == 'kCGColorSpaceDisplayP3') {//basically just rewrites the file with generic colour space and metadata
-        let data = fs.readFileSync(fileDir);
-        let png = PNG.sync.read(data);
-        let buffer = PNG.sync.write(png);
-        fs.writeFileSync(fileDir, buffer);
-      }
-      //possible orientation metadata: Horizontal (normal), Mirror horizontal and rotate 90 CW, Mirror horizontal and rotate 270 CW, Mirror horizontal, Mirror vertical, Rotate 90 CW, Rotate 180, Rotate 270 CW
-      if (metadata[1] != undefined && metadata[1] != '' && metadata[1] != 'Horizontal (normal)') {
-        let imageSize = await SizeOf(fileDir);
-        let orient = metadata[1];
-        let angle = '180';
-        //all rotations other than 180 contain CW
-        if (orient.includes('CW')) {//these rotations will invert dimensions
-          await canvasInitialize([imageSize.height, imageSize.width])
-          angle = orient.slice(-6,-3).trim();
+      }).catch(console.error);
+      if (metadata != undefined) {
+        if (metadata[0] == 'kCGColorSpaceDisplayP3') {//basically just rewrites the file with generic colour space and metadata
+          let data = fs.readFileSync(fileDir);
+          let png = PNG.sync.read(data);
+          let buffer = PNG.sync.write(png);
+          fs.writeFileSync(fileDir, buffer);
         }
-        else {
-          await canvasInitialize([imageSize.width, imageSize.height])
-        }
-        let canvas = globalData.canvas;
-        let context = globalData.context;
-        let image = await Canvas.loadImage(fileDir);
-        //mirroring
-        if (orient.includes('Mirror horizontal') && !orient.includes('CW')) {//there is never both vertical mirroring and rotation
-          context.scale(-1,1);
-          context.translate(-canvas.width, 0);
-        }
-        else if (orient.includes('Mirror vertical') || (orient.includes('Mirror horizontal') && orient.includes('CW'))) {
-          context.scale(1,-1);
-          context.translate(0, -canvas.height);
-        }
-        //rotation
-        if (orient.includes('rotate') || orient.includes('Rotate')) {
-          let displace = [canvas.width, canvas.height];
-          if (angle == '90') {
-            displace[1] = 0;
+        //possible orientation metadata: Horizontal (normal), Mirror horizontal and rotate 90 CW, Mirror horizontal and rotate 270 CW, Mirror horizontal, Mirror vertical, Rotate 90 CW, Rotate 180, Rotate 270 CW
+        if (metadata[1] != undefined && metadata[1] != '' && metadata[1] != 'Horizontal (normal)') {
+          let imageSize = await SizeOf(fileDir);
+          let orient = metadata[1];
+          let angle = '180';
+          //all rotations other than 180 contain CW
+          if (orient.includes('CW')) {//these rotations will invert dimensions
+            await canvasInitialize([imageSize.height, imageSize.width])
+            angle = orient.slice(-6,-3).trim();
           }
-          if (angle == '270') {
-            displace[0] = 0;
+          else {
+            await canvasInitialize([imageSize.width, imageSize.height])
           }
-          context.translate(displace[0], displace[1]);
-          context.rotate(Math.PI * parseInt(angle) / 180);
+          let canvas = globalData.canvas;
+          let context = globalData.context;
+          let image = await Canvas.loadImage(fileDir);
+          //mirroring
+          if (orient.includes('Mirror horizontal') && !orient.includes('CW')) {//there is never both vertical mirroring and rotation
+            context.scale(-1,1);
+            context.translate(-canvas.width, 0);
+          }
+          else if (orient.includes('Mirror vertical') || (orient.includes('Mirror horizontal') && orient.includes('CW'))) {
+            context.scale(1,-1);
+            context.translate(0, -canvas.height);
+          }
+          //rotation
+          if (orient.includes('rotate') || orient.includes('Rotate')) {
+            let displace = [canvas.width, canvas.height];
+            if (angle == '90') {
+              displace[1] = 0;
+            }
+            if (angle == '270') {
+              displace[0] = 0;
+            }
+            context.translate(displace[0], displace[1]);
+            context.rotate(Math.PI * parseInt(angle) / 180);
+          }
+          context.drawImage(image, 0, 0, imageSize.width, imageSize.height);
+          fs.writeFileSync(fileDir, canvas.toBuffer());
         }
-        context.drawImage(image, 0, 0, imageSize.width, imageSize.height);
-        fs.writeFileSync(fileDir, canvas.toBuffer());
       }
-    }
+    } 
     console.log('download - ' + getTime(start).toString() + 'ms');
     return;
   }
@@ -184,7 +194,7 @@ async function sendFile(fileURL, fileDir){
     console.log("embed");
     return message.channel.send({content: fileURL});
   }
-  var attachment = await new MessageAttachment(fileDir);
+  var attachment = await new AttachmentBuilder(fileDir);
   console.log('sendFile - ' + getTime(start).toString() + 'ms')
   return message.channel.send({files: [attachment]});
 }
@@ -1268,6 +1278,8 @@ async function fileNameVerify(string, filePath, extension) {
   if (string.search(nameRegex) != -1) {
     string = '-';
   }
+  //if all 3 args used, treat string as the file name, and check for dupes
+  //(only if file is being downloaded)
   if (filePath != undefined && fs.existsSync(filePath + string + extension)) {
     let repeat = 0;
     while (fs.existsSync(filePath + string + repeat.toString() + extension)) {
@@ -1279,56 +1291,147 @@ async function fileNameVerify(string, filePath, extension) {
 function canManageMessages(msg) {
   return msg.member.permissionsIn(msg.channel).has('MANAGE_MESSAGES')
 }
-async function messageReturn(input, title, textEmbed = true, isAttach = false, sendRaw = false, thumbnail = '') {
-  //textEmbed : puts input text into a plain embed, optionally with title
-  //isAttach : gets attachment using input as file path, and title as file name
-  //sendRaw : just sends whatever the input is, either plain text or a premade attachment
-  //thumbnail : thumbnail link to put in embed
+async function messageReturn(funcArgs) {
   let start = getTime();
-  //note title can either be title of embed, or name of file for message attachment
+  //using conditional operator to create default values
+  let input = funcArgs.input;//the main input (e.g. text, link, file path, buffer, embed, etc.)
+  let type = funcArgs.type ? funcArgs.type : 'raw'; 
+  let filename = funcArgs.filename ? funcArgs.filename : '';
+
+  let link = false;
+  if (type == 'link') {//links largely similar to attachments with a few differences
+    type = 'attach'
+    link = true
+  }
+  //more niche arguments:
+  let title = funcArgs.title ? funcArgs.title : null;
+  let thumbnail = funcArgs.thumbnail ? funcArgs.thumbnail : null;
+  let components = funcArgs.components;//for buttons, etc.
+  
+  let desc = funcArgs.desc ? funcArgs.desc : null;
+  let author = funcArgs.author ? funcArgs.author : null;//THIS USES AN OPTIONS OBJECT (from which you can add images as well); smaller text appearing as title, if you want URL to not be on the title use this as a title instead 
+  let url = funcArgs.url ? funcArgs.url : null;//link attached to title text
+  let commandDisplay = funcArgs.commandDisplay ? funcArgs.commandDisplay : globalData.globalPrefix + globalData.trueCommand
+
+  let transformative = true;//if false, the scraped image is deleted under some circumstances (should only happen when the image is not sufficiently transformed, and thus may flood chat with two similar images)
+  if (funcArgs.transformative === false) {//only when explicitly false, not when undefined
+    transformative = false;
+  }
+
+  //Type explanation:
+  //raw (default): if text, sends a message with just that text, otherwise it treats it as a message options object to be sent directly
+  //               (used for elaborate custom embeds or sending a non-embedded link)
+  //text: creates a simple text embed, if title is absent, the input is treated as the title (no description), otherwise input is the description
+  //      can also optionally specify thumbnail link
+  //attach: for sending any kind of file or image, with two main cases:
+  //        file path: the path of some local file to send  
+  //        buffer: a canvas buffer to send
+  //        filename to send it with can be included (must be if it's a buffer), if not it is extracted from the file path
+  //link: for sending a file as a link instead of an upload (ONLY IMAGES AND GIFs)
+  //      practically quite similar to attach
   let messageOptions;
   let message = globalData.message;
-  if (typeof input == 'string') {
-    if (input.indexOf('./') == 0) {
-      isAttach = true;
-    }
+  let targetMessage = globalData.targetMessage//this is specifically the message scraped by file scraper
+
+  let refID;
+  if (message.reference != undefined) {//if message is referencing something, usually a reply
+    refID = message.reference.messageId;
   }
-  //turn text into embed
-  if (typeof input == 'string' && textEmbed && !isAttach) {
+
+  let caller = await message.guild.members.fetch(message.author.id).catch(console.error)//the person who called the command
+  let username = caller.displayName;
+
+  if (type == 'text') {
     let embed;
-    if (title != undefined && title != '') {
-      embed = new MessageEmbed()
+    if (title == null) {//if no title given, using input as title text
+      title = input;
+      input = null;
+    }
+    embed = new EmbedBuilder()
+      .setColor(0x686868)
+      .setTitle(title)
+      .setURL(url)
+      .setAuthor(author)
+      .setFooter({text: username + ' : ' + commandDisplay, iconURL: caller.displayAvatarURL({ extension: 'png', size: 256, dynamic: true})})
+      .setDescription(input)
+      .setThumbnail(thumbnail);
+    messageOptions = {embeds: [embed]};
+    await message.delete();
+  }
+
+  else if (type == 'attach') {//also includes links
+    if (filename == '') {//extract file name from path if not given
+      filename = input.split('/').pop();
+    }
+    //name sanitization:
+    let name = await fileNameVerify(filename);
+    name = name.replaceAll(' ', '_').replaceAll(/[~\(\)\!'&@\$\+\,;\=#\[\]\{\}\^%]+/g, '');//extra name sanitization since discord attachment names must follow their own weird rules
+    let regex = /[^_\.]/ //must contain a not-dot or non-underscore character
+    if (!regex.test(name) || name == '') {
+      name = '-';
+    }
+
+    let attachment = new AttachmentBuilder(input, {name: name});
+    let image = null;
+    let validEmbed = false;
+    if(fileType(name.split('.').pop()) == 'image' || fileType(name.split('.').pop()) == 'gif') {//only gifs and images make proper attachments
+      validEmbed = true;
+      if (link) {
+        image = input;
+      }
+      else {
+        image = 'attachment://' + name; //weird quirk where "local" attachments can be called via a "url", but it's very picky about names thus the thorough sanitization
+      }
+    }
+    let embed = new EmbedBuilder()
+        .setColor(0x686868)
         .setTitle(title)
-        .setDescription(input)
-        .setColor(0x686868)
-        .setThumbnail(thumbnail);
+        .setURL(url)
+        .setAuthor(author)
+        .setFooter({text: username + ' : ' + commandDisplay, iconURL: caller.displayAvatarURL({ extension: 'png', size: 256, dynamic: true})})
+        .setImage(image)
+        .setDescription(desc);
+    messageOptions = {embeds: [embed]};
+
+    if (!link) {//add file as attachment (unless it's a link which includes attachment already)
+      messageOptions.files = [attachment]
     }
-    else {
-      embed = new MessageEmbed()
-        .setTitle(input)
-        .setColor(0x686868)
-        .setThumbnail(thumbnail);
+  
+    await message.delete();//delete command message
+    var noReply = false;
+    if (!transformative && targetMessage != undefined) {//possibly delete scraped message
+      let lastMessage = await message.channel.messages.fetch({ limit: 1 }).then(async messages => {//get most recent message (with command deleted this is the message prior to command)
+        let lastM = await messages.first();
+        return lastM;
+      }).catch(console.error);
+      if (lastMessage.id == targetMessage.id && targetMessage.author.id == caller.id) {//if the scraped message is directly adjacent to command message, and sent by the same person
+        noReply = true;
+        await targetMessage.delete()
+      }
     }
-    messageOptions = {embeds: [embed]}
   }
-  //attachment case
-  else if (!sendRaw) {
-    if (title != undefined){
-      messageOptions = {files: [{attachment: input, name: title}]};
-    }
-    else {
-      messageOptions = {files: [input]};
-    }
-  }
-  //raw text being sent
-  else if (typeof input == 'string') {
+  else if (typeof input == 'string') {//raw text/link being sent
     messageOptions = {content: input};
   }
-  //already prepared embed
-  else {
-    messageOptions = {embeds: [input]};
+  else {//already prepared options object
+    messageOptions = input;
   }
-  await message.channel.send(messageOptions);
+  if (components != undefined) {
+    messageOptions.components = components;
+  }
+  if (targetMessage != undefined && (message.id != targetMessage.id && !noReply)) {//file was scraped & not from deleted command message & not deleted itself
+    messageOptions.allowedMentions = {repliedUser: false}//turn off ping reply
+    await targetMessage.reply(messageOptions);//reply to scraped message
+  }
+  else if (refID != undefined) {
+    messageOptions.allowedMentions = {repliedUser: false}//turn off ping reply
+    let refMessage = await message.channel.messages.fetch(refID).catch(console.error);
+    await refMessage.reply(messageOptions);//reply to referenced message
+  }
+  else {
+    await message.channel.send(messageOptions);
+  }
+  //clear the emoji buffer, idk why exactly we have to do this but it's been this way for like a year so I trust it makes sense
   fs.emptyDirSync('./files/buffer/emojiDownload/');
   if (fs.existsSync('./files/buffer/emojis.zip') == true) {
     fs.unlinkSync('./files/buffer/emojis.zip');
