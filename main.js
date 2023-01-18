@@ -203,6 +203,7 @@ async function commandLoop(message) { //All commands stored here
     let p = escapedPrefix;
     let component;
     switch(input) {
+      case 'basic':
       case 'basics':
         embed
           .setTitle("About CatJam's Utilities")
@@ -416,6 +417,7 @@ async function commandLoop(message) { //All commands stored here
           )
           //.setFooter({text: message.member.displayName + ' : ' + globalData.globalPrefix + 'help', iconURL: message.author.displayAvatarURL({ extension: 'png', size: 256, dynamic: true})})
           .setFooter({text: 'Not all command aliases and arguments are given here.\nFeel free to experiment!'})
+        input = '';
     }
     if (input == undefined) {
       input = '';
@@ -1245,11 +1247,17 @@ async function commandLoop(message) { //All commands stored here
     const msg = await message.channel.send({files: [attachment]});
     await func.wait(2100);
     msg.delete();
-    if (odds > Math.random()) {
-      return await func.messageReturn({input: "Success! / Heads / Yes", type: 'text'});
+    if (input == undefined) {
+      input = ''
     }
     else {
-      return await func.messageReturn({input: "Failure! / Tails / No", type: 'text'});
+      input = ' ' + input
+    }
+    if (odds > Math.random()) {
+      return await func.messageReturn({input: "Success! / Heads / Yes", type: 'text', commandDisplay: 'flip' + input});
+    }
+    else {
+      return await func.messageReturn({input: "Failure! / Tails / No", type: 'text', commandDisplay: 'flip' + input});
     }
   }
   else if (command === 'twitter') {

@@ -1356,7 +1356,10 @@ async function messageReturn(funcArgs) {
       .setDescription(input)
       .setThumbnail(thumbnail);
     messageOptions = {embeds: [embed]};
-    await message.delete();
+    
+    if (message.attachments.size == 0 || !transformative) {//only delete if no attachment or if attachment is redundant (as in non-transformative commands like $meme)
+      await message.delete();
+    }
   }
 
   else if (type == 'attach') {//also includes links
@@ -1397,7 +1400,9 @@ async function messageReturn(funcArgs) {
       messageOptions.files = [attachment]
     }
   
-    await message.delete();//delete command message
+    if (message.attachments.size == 0 || !transformative) {//only delete if no attachment or if attachment is redundant (as in non-transformative commands like $meme)
+      await message.delete();
+    }
     var noReply = false;
     if (!transformative && targetMessage != undefined) {//possibly delete scraped message
       let lastMessage = await message.channel.messages.fetch({ limit: 1 }).then(async messages => {//get most recent message (with command deleted this is the message prior to command)
