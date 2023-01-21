@@ -60,7 +60,11 @@ async function generalScraper(scrapeType) {
   }
 
   else if (lastMessage.embeds.length > 0) {
-    if (lastMessage.embeds[0].data.type == 'rich' && lastMessage.embeds[0].data.image != undefined) {
+    if (scrapeType == 'twitter') {
+      let url = await lastMessage.embeds[0].data.url;
+      return url;
+    }
+    else if (lastMessage.embeds[0].data.type == 'rich' && lastMessage.embeds[0].data.image != undefined) {
       let url = await lastMessage.embeds[0].data.image.url;
       return url;
     }
