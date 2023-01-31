@@ -1403,7 +1403,7 @@ async function messageReturn(funcArgs) {
     if (!link) {//add file as attachment (unless it's a link which includes attachment already)
       messageOptions.files = [attachment]
     }
-  
+    
     if (message.attachments.size == 0 || !transformative) {//only delete if no attachment or if attachment is redundant (as in non-transformative commands like $meme)
       await message.delete();
     }
@@ -1413,7 +1413,7 @@ async function messageReturn(funcArgs) {
         let lastM = await messages.first();
         return lastM;
       }).catch(console.error);
-      if (lastMessage.id == targetMessage.id && targetMessage.author.id == caller.id) {//if the scraped message is directly adjacent to command message, and sent by the same person
+      if (lastMessage.id == targetMessage.id && targetMessage.author.id == caller.id && targetMessage.content == '') {//if the scraped message is directly adjacent to command message, and sent by the same person
         noReply = true;
         await targetMessage.delete()
       }
