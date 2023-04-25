@@ -11,6 +11,7 @@ const emojiDict = require("emoji-dictionary");
 const exifr = require('exifr');
 const PNG = require("pngjs").PNG;
 const fetch = require('node-fetch');
+const nEmoji = require('node-emoji');
 
 import { globalData } from './main.js';
 import { catJamArrayStorage, stellarisArrayStorage, imageTypes, videoTypes, audioTypes, textTypes } from './arrays.js';
@@ -612,7 +613,7 @@ async function findEmoji(emojiString) {
   //guide to match: [(unicode emoji/emoji id), (index within string), (name), (name used in discord), (is animated boolean)]
   //default emoji
   for (var match of emojiString.matchAll(defaultRegex)) {
-    matches.push([match[0], match.index, emojiDict.getName(match[0]), match[0], false]);
+    matches.push([match[0], match.index, nEmoji.find(match[0]) ? nEmoji.find(match[0]).key : undefined, match[0], false]);
   }
   //custom (and animated) emoji
   for (var match of emojiString.matchAll(customRegex)) {
