@@ -34,6 +34,7 @@
     "http": "0.0.1-security",
     "image-size": "^1.0.0",
     "json-stringify": "^1.0.0",
+    "node-emoji": "^1.11.0",
     "node-fetch": "^2.6.8",
     "pngjs": "^6.0.0",
     "qs": "^6.10.3",

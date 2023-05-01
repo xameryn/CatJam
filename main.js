@@ -528,13 +528,23 @@ async function commandLoop(message) { //All commands stored here
       }
     }
     //image download and so on
+    let textScrape = false;
     if (!(command === 'literally1984' && inputs[0] != '') && command != 'stuff') {//literally1984 doesn't need to download an image if it has text
       var fileDir = `./files/buffer/${command}Buffer.png`;
       var fileURL = await func.generalScraper('image');
-      if (fileURL == undefined) {return await func.messageReturn({input: "No file found :(", type:'text'})}
+      if (fileURL == undefined) {
+        if (command === 'literally1984' && message.reference != undefined) {//is reply and is l1984 asking for text (since no image found text is fallback if it can be found in reply)
+          textScrape = true;
+        }
+        else {return await func.messageReturn({input: "No file found :(", type:'text'})}
+      }
       await func.download(fileURL, fileDir);
       var imageSize = await SizeOf(fileDir);
       var imageDims = [imageSize.width, imageSize.height];
+    }
+    if ((command === 'stuff' && inputs[0] == '' && message.reference != undefined) || textScrape == true) {//if a text command doesn't have any text input directly, try the replied message
+      let replyMessage = await message.channel.messages.fetch(message.reference.messageId);
+      inputs[0] = replyMessage.content;
     }
     //canvas setup
     let canvasDims;
@@ -1048,12 +1058,12 @@ async function commandLoop(message) { //All commands stored here
       }
       else if (sticker.format == 2) {
         await func.download(sticker.url, fileDir);
-        apng2gif.sync(fileDir, './files/buffer/getBuffer.gif');
-        fileDir = './files/buffer/getBuffer.gif'
+        apng2gif.sync(fileDir, './files/buffer/' + sticker.id.toString() + '.gif');
+        fileDir = './files/buffer/' + sticker.id.toString() + '.gif';
       }
       else {
-        await func.download(sticker.url, './files/buffer/getBuffer.json');
-        fileDir = './files/buffer/getBuffer.json'
+        await func.download(sticker.url, './files/buffer/' + sticker.id.toString() + '.json');
+        fileDir = './files/buffer/' + sticker.id.toString() + '.json';
       }
     }
     //-----------------------
@@ -1064,7 +1074,8 @@ async function commandLoop(message) { //All commands stored here
         let guildUser = await message.guild.members.fetch(message.author.id).catch(console.error);
         if (guildUser != undefined) {
           link = guildUser.displayAvatarURL({ extension: 'png', size: 1024});
-          console.log(link)
+          fileDir = './files/buffer/' + message.author.id.toString() + '.png';
+          //console.log(link)
         }
         else {
           return await func.messageReturn({input: errorMsg, type: 'text', title: "Bad Input!"});
@@ -1072,6 +1083,7 @@ async function commandLoop(message) { //All commands stored here
       }
       else {
         link = message.author.displayAvatarURL({ extension: 'png', size: 1024, dynamic: true});
+        fileDir = './files/buffer/' + message.author.id.toString() + '.png';
       }
     }
     //-----------------------
@@ -1079,10 +1091,14 @@ async function commandLoop(message) { //All commands stored here
     //-----------------------
     else if (message.mentions.users.first() !== undefined && !reply) {
       if (guildAvy) {
-        link = message.mentions.members.first().displayAvatarURL({ extension: 'png', size: 1024, dynamic: true});
+        let guildMember = message.mentions.members.first();
+        link = guildMember.displayAvatarURL({ extension: 'png', size: 1024, dynamic: true});
+        fileDir = './files/buffer/' + guildMember.id.toString() + '.png';
       }
       else {
-        link = message.mentions.users.first().displayAvatarURL({ extension: 'png', size: 1024, dynamic: true});
+        let guildUser = message.mentions.users.first();
+        link = guildUser.displayAvatarURL({ extension: 'png', size: 1024, dynamic: true});
+        fileDir = './files/buffer/' + guildUser.id.toString() + '.png';
       }
     }
     //-----------------------
@@ -1090,6 +1106,7 @@ async function commandLoop(message) { //All commands stored here
     //-----------------------
     else if ((input == 'server' || input == 's') && message.guild.iconURL() != null && !reply) {
       link = message.guild.iconURL({ extension: 'png', size: 1024, dynamic: true});
+      fileDir = './files/buffer/' + message.guild.id.toString() + '.png';
     }
     //-----------------------
     // SERVER EMOJIS
@@ -1125,6 +1142,7 @@ async function commandLoop(message) { //All commands stored here
     else if (!isNaN(input) && input.length == 18 && !reply) {
       let user = await client.users.fetch(input).catch(console.error);
       let guildUser = await message.guild.members.fetch(input).catch(console.error);
+      fileDir = './files/buffer/' + input.toString() + '.png';
       if (guildUser != undefined && guildAvy) {
         link = guildUser.displayAvatarURL({ extension: 'png', size: 1024, dynamic: true});
       }
@@ -1151,9 +1169,11 @@ async function commandLoop(message) { //All commands stored here
       if (member.first() != undefined) {
         if (guildAvy) {
           link = member.first().displayAvatarURL({ extension: 'png', size: 1024, dynamic: true});
+          fileDir = './files/buffer/' + member.first().id.toString() + '.png';
         }
         else {
           link = member.first().user.displayAvatarURL({ extension: 'png', size: 1024, dynamic: true});
+          fileDir = './files/buffer/' + member.first().user.id.toString() + '.png';
         }
       }
       else {
@@ -1162,6 +1182,7 @@ async function commandLoop(message) { //All commands stored here
     }
     else {//if no emojis can be found, the user being replied to has their avatar grabbed instead
       link = replyMessage.author.displayAvatarURL({ extension: 'png', size: 1024, dynamic: true});
+      fileDir = './files/buffer/' + replyMessage.author.id.toString() + '.png';
     }
     //-----------------------
     // EMOJI DOWNLOAD
@@ -1191,8 +1212,9 @@ async function commandLoop(message) { //All commands stored here
     // LINK DOWNLOAD
     //-----------------------
     else if (link != undefined) {
-      if (link.indexOf('.gif') != -1) {
-        fileDir = './files/buffer/getBuffer.gif';
+      if (link.slice(-13,-10) == 'gif') {
+        fileDir = fileDir.slice(0,-3);
+        fileDir += 'gif';
       }
      await func.download(link, fileDir)
     }
@@ -1737,7 +1759,7 @@ async function commandLoop(message) { //All commands stored here
       }
     }
     name = await func.fileNameVerify(name);
-    let compareName = name.replaceAll(' ', '');//used for checking JSON and button IDs
+    let compareName = name.replaceAll(' ', '').toLowerCase();//used for checking JSON and button IDs
     if (compareName == '' || compareName == undefined) {
       compareName = '-'
     }
@@ -1819,7 +1841,7 @@ async function commandLoop(message) { //All commands stored here
       let fileExists = false;
       let arrayPosition;
       for (let i = 0; i < archiveList.length; i++) { //Check if the given name exists in the JSON
-        if (archiveList[i].name.replaceAll(' ', '') === compareName) {
+        if (archiveList[i].name.replaceAll(' ', '').toLowerCase() === compareName) {
           fileExists = true;
           arrayPosition = i;
           break;
@@ -1845,7 +1867,7 @@ async function commandLoop(message) { //All commands stored here
         archiveList = await filteredArchiveList;
           
         for (let i = 0; i < archiveList.length; i++) {//search re-executed
-          if (archiveList[i].name.replaceAll(' ', '') === compareName) {
+          if (archiveList[i].name.replaceAll(' ', '').toLowerCase() === compareName) {
             fileExists = true;
             arrayPosition = i;
             break;
@@ -1988,7 +2010,7 @@ client.on(Events.InteractionCreate, async interaction => {
       let arrayPosition;
       if (info[2] == 'delete') { //DELETE
         for (let i = 0; i < archiveList.length; i++) { //Check if the given name exists in the JSON
-          if (archiveList[i].name.replaceAll(' ', '') === name) {
+          if (archiveList[i].name.replaceAll(' ', '').toLowerCase() === name) {
             fileExists = true;
             arrayPosition = i;
             break;
@@ -2090,7 +2112,6 @@ client.on(Events.InteractionCreate, async interaction => {
   }
   else if (interaction.isModalSubmit()) {
     if (info[0] == 'arc') {
-      console.log(info)
       let id = info[1];
       if (id != info[4]) {//user id is stored in info[1], while JSON reference id is stored in info[4], if they're the same, JSON reference is to user and thus the command is archive, otherwise it's server archive
         id = info[4];
@@ -2112,9 +2133,17 @@ client.on(Events.InteractionCreate, async interaction => {
         }
         newName = await func.fileNameVerify(newName).then();
 
+        for (let i = 0; i < archiveList.length; i++) { //Check if the original name exists in the JSON
+          if (archiveList[i].name.replaceAll(' ', '').toLowerCase() === name) {
+            fileExists = true;
+            arrayPosition = i;
+            break;
+          }
+        }
+
         let newNameExists = false;
         for (let i = 0; i < archiveList.length; i++) { //Check if the new name exists in the JSON
-          if (archiveList[i].name.replaceAll(' ', '') === newName.replaceAll(' ', '')) {
+          if (archiveList[i].name.replaceAll(' ', '').toLowerCase() === newName.replaceAll(' ', '').toLowerCase() && arrayPosition != i) {//array position check means something can be renamed to its own name (for case/spacing differences)
             newNameExists = true;
             break;
           }
@@ -2127,13 +2156,7 @@ client.on(Events.InteractionCreate, async interaction => {
           return;
         }
 
-        for (let i = 0; i < archiveList.length; i++) { //Check if the original name exists in the JSON
-          if (archiveList[i].name.replaceAll(' ', '') === name) {
-            fileExists = true;
-            arrayPosition = i;
-            break;
-          }
-        }
+ 
         name = archiveList[arrayPosition].name;//restore spaces to name
         let embed;
         if (fileExists === true) {
