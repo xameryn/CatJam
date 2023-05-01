@@ -1758,11 +1758,8 @@ async function commandLoop(message) { //All commands stored here
         name = name.replace(match[3], match[2])
       }
     }
-    name = await func.fileNameVerify(name);
-    let compareName = name.replaceAll(' ', '').toLowerCase();//used for checking JSON and button IDs
-    if (compareName == '' || compareName == undefined) {
-      compareName = '-'
-    }
+    name = await func.fileNameVerify(name);//used for checking JSON and button IDs
+    let compareName = await func.arcName(name);
     let id;
     let title;
     let listThumb = null;
@@ -1841,7 +1838,7 @@ async function commandLoop(message) { //All commands stored here
       let fileExists = false;
       let arrayPosition;
       for (let i = 0; i < archiveList.length; i++) { //Check if the given name exists in the JSON
-        if (archiveList[i].name.replaceAll(' ', '').toLowerCase() === compareName) {
+        if (await func.arcName(archiveList[i].name) === compareName) {
           fileExists = true;
           arrayPosition = i;
           break;
@@ -1867,7 +1864,7 @@ async function commandLoop(message) { //All commands stored here
         archiveList = await filteredArchiveList;
           
         for (let i = 0; i < archiveList.length; i++) {//search re-executed
-          if (archiveList[i].name.replaceAll(' ', '').toLowerCase() === compareName) {
+          if (await func.arcName(archiveList[i].name) === compareName) {
             fileExists = true;
             arrayPosition = i;
             break;
@@ -2010,13 +2007,13 @@ client.on(Events.InteractionCreate, async interaction => {
       let arrayPosition;
       if (info[2] == 'delete') { //DELETE
         for (let i = 0; i < archiveList.length; i++) { //Check if the given name exists in the JSON
-          if (archiveList[i].name.replaceAll(' ', '').toLowerCase() === name) {
+          if (await func.arcName(archiveList[i].name) === name) {
             fileExists = true;
             arrayPosition = i;
             break;
           }
         }
-        name = archiveList[arrayPosition].name;//restore spaces to name
+        name = archiveList[arrayPosition].name;//restore spaces etc. to name
         let embed;
         if (fileExists) {
           let thumb = null;
@@ -2134,7 +2131,7 @@ client.on(Events.InteractionCreate, async interaction => {
         newName = await func.fileNameVerify(newName).then();
 
         for (let i = 0; i < archiveList.length; i++) { //Check if the original name exists in the JSON
-          if (archiveList[i].name.replaceAll(' ', '').toLowerCase() === name) {
+          if (await func.arcName(archiveList[i].name) === name) {
             fileExists = true;
             arrayPosition = i;
             break;
@@ -2143,7 +2140,7 @@ client.on(Events.InteractionCreate, async interaction => {
 
         let newNameExists = false;
         for (let i = 0; i < archiveList.length; i++) { //Check if the new name exists in the JSON
-          if (archiveList[i].name.replaceAll(' ', '').toLowerCase() === newName.replaceAll(' ', '').toLowerCase() && arrayPosition != i) {//array position check means something can be renamed to its own name (for case/spacing differences)
+          if (await func.arcName(archiveList[i].name) === await func.arcName(newName) && arrayPosition != i) {//array position check means something can be renamed to its own name (for case/spacing differences)
             newNameExists = true;
             break;
           }
@@ -2157,7 +2154,7 @@ client.on(Events.InteractionCreate, async interaction => {
         }
 
  
-        name = archiveList[arrayPosition].name;//restore spaces to name
+        name = archiveList[arrayPosition].name;//restore spaces etc. to name
         let embed;
         if (fileExists === true) {
           let thumb = null;

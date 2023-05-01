@@ -1293,6 +1293,13 @@ async function fileNameVerify(string, filePath, extension) {
   }
   return string;
 }
+async function arcName(name){
+  let newName = name.replaceAll(' ', '').replaceAll("'", '').toLowerCase();
+  if (newName == '' || newName == undefined) {
+    newName = '-';
+  }
+  return newName;
+}
 function canManageMessages(msg) {
   return msg.member.permissionsIn(msg.channel).has('MANAGE_MESSAGES')
 }
@@ -1452,4 +1459,4 @@ async function messageReturn(funcArgs) {
 module.exports = { generalScraper, download, canvasInitialize, imageToCanvas,
                   textHandler, getTime, wait, typeCheck, infoScraper, uploadLimitCheck, sendFile,
                   userData, textArgs, createFolders, findEmoji, getEmoji, fileNameVerify, scaleImage, 
-                  fileExtension, fileType, canManageMessages, messageReturn, drawImage, drawText };
+                  fileExtension, fileType, arcName, canManageMessages, messageReturn, drawImage, drawText };
