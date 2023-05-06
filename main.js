@@ -769,7 +769,7 @@ async function commandLoop(message) { //All commands stored here
       } else if (args.includes('real')) {
         pointImage1 = './files/templates/pointing/pointingReal1.png';
         pointImage2 = './files/templates/pointing/pointingReal2.png';
-      } else if (args.includes('myth')) {
+      } else if (args.includes('myth') || args.includes('mythbusters')) {
         pointImage1 = './files/templates/pointing/pointingMyth1.png';
         pointImage2 = './files/templates/pointing/pointingMyth2.png';
         var explosionImage = './files/templates/pointing/pointingMythExplosion.png';
@@ -779,6 +779,9 @@ async function commandLoop(message) { //All commands stored here
       } else if (args.includes('hearthian')) {
         pointImage1 = './files/templates/pointing/pointingHearthian1.png';
         pointImage2 = './files/templates/pointing/pointingHearthian2.png';
+      } else if (args.includes('gg') || args.includes('guiltygear')) {
+        pointImage1 = './files/templates/pointing/pointingGuiltyGear1.png';
+        pointImage2 = './files/templates/pointing/pointingGuiltyGear2.png';
       } else {
         pointImage1 = './files/templates/pointing/pointing1.png';
         pointImage2 = './files/templates/pointing/pointing2.png';
