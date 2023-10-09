@@ -1290,7 +1290,14 @@ async function commandLoop(message) { //All commands stored here
 
     let lastMessage = await globalData.targetMessage;
     if (lastMessage == undefined) { return await func.messageReturn({input: "No Twitter link found :(", type: 'text'});}
-    let nickName = lastMessage.member.displayName;
+    let nickName;
+    if (lastMessage.member === null) {
+      let member = await lastMessage.guild.members.fetch(lastMessage.author.id).catch(console.error);
+      nickName = member.displayName;
+    }
+    else {
+      nickName = lastMessage.member.displayName;
+    }
     let messageContent = lastMessage.content.split('https')
     let splitURL = originalURL.split('/');
     if (splitURL[2] == 'twitter.com' || splitURL[2] == 'x.com') {
@@ -1387,10 +1394,20 @@ async function commandLoop(message) { //All commands stored here
     }
   }
   else if (command === 't4' && developerCheck === true) {
-    let originalURL = await func.generalScraper('twitter');
-
+    //let originalURL = await func.generalScraper('twitter');
     //Get twitter profile from tweet url (originalURL)
-    
+
+
+    //let targetChannel = await message.guild.channels.fetch('').catch(console.error);
+    //let targetMessage = await targetChannel.messages.fetch('');
+    //let targetMessage = await message.channel.messages.fetch('');
+    //console.log(targetMessage.member === null);
+    //let member = await targetMessage.guild.members.fetch(targetMessage.author.id).catch(console.error);
+    //console.log(member.displayName);
+
+    //console.log(targetMessage);
+    //console.log(targetMessage.member);
+    //console.log(targetMessage.member.displayName);
 
   }
   else if (command === 'vidT' && developerCheck === true) {
