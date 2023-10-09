@@ -1298,7 +1298,8 @@ async function commandLoop(message) { //All commands stored here
     else {
       nickName = lastMessage.member.displayName;
     }
-    let messageContent = lastMessage.content.split('https')
+    let messageContent = lastMessage.content.split('https://')
+    originalURL = 'https://' + messageContent[1]
     let splitURL = originalURL.split('/');
     if (splitURL[2] == 'twitter.com' || splitURL[2] == 'x.com') {
       splitURL[2] = 'vxtwitter.com'; 
