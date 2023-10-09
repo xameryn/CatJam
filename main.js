@@ -55,7 +55,7 @@ process.on('uncaughtException', function (err) {
   fs.writeFileSync('./files/crashlogs/crash-' + startTime + '.json', crashLog);
 
 });
-
+//client.on("debug", console.log).on("warn", console.log)
 client.on("ready", () => {
     console.log(`Logged in as ${client.user.tag}`);
     client.user.setActivity('In Development');
@@ -1293,9 +1293,11 @@ async function commandLoop(message) { //All commands stored here
     let nickName = lastMessage.member.displayName;
     let messageContent = lastMessage.content.split('https')
     let splitURL = originalURL.split('/');
-    if (splitURL[2] == 'twitter.com') {
-      splitURL[2] = 'vxtwitter.com';
+    if (splitURL[2] == 'twitter.com' || splitURL[2] == 'x.com') {
+      splitURL[2] = 'vxtwitter.com'; 
       let joinedURL = splitURL.join('/');
+      let tokenSplitURL = joinedURL.split('?');
+      joinedURL = tokenSplitURL[0];
       message.delete();
       lastMessage.delete();
       console.log(command + ' - ' + func.getTime(start).toString() + 'ms');

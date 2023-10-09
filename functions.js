@@ -32,7 +32,7 @@ async function generalScraper(scrapeType) {
     searchParams = (m) => ((m.embeds.length > 0 && (m.embeds[0].data.type == 'image' || m.embeds[0].data.type == 'video' || m.embeds[0].data.type == 'gifv' || (m.embeds[0].data.type == 'rich' && m.embeds[0].data.image != undefined))) || m.attachments.size > 0);
   }
   else if (scrapeType === 'twitter') { //Used for $twitter
-    searchParams = (m) => (((m.embeds.length > 0) && (m.embeds[0].data.type === 'rich') && (m.embeds[0].data.url != null) && (m.embeds[0].data.url.includes('twitter.com'))) || (m.content.startsWith('https://twitter.com/') && m.content.includes('/status/')));
+    searchParams = (m) => (((m.embeds.length > 0) && (m.embeds[0].data.type === 'rich') && (m.embeds[0].data.url != null) && (m.embeds[0].data.url.includes('twitter.com') || m.embeds[0].data.url.includes('x.com'))) || ((m.content.startsWith('https://twitter.com/') || m.content.startsWith('https://x.com/')) && m.content.includes('/status/')));
   }
 
   var scraperURL = message.channel.messages.fetch().then(async messageList => { //Message search
