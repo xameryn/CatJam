@@ -21,4 +21,4 @@ var audioTypes = ['mp3', 'wav', 'ogg', 'aif', 'mid', 'wma', 'mpa', 'midi', 'cda'
 
 var textTypes = ['txt', 'json', 'js', 'dat', 'xml', 'csv', 'log', 'mdb', 'pdf', 'py', 'java', 'doc', 'docx', 'php', 'html', 'css', 'c', 'h', 'class', 'cs', 'sh', 'vb', 'cpp', 'tex', 'odt', 'rtf', 'wpd'];
 
-export { catJamArrayStorage, stellarisArrayStorage, developerIDStorage, imageTypes, videoTypes, audioTypes, textTypes };
+module.exports = { catJamArrayStorage, stellarisArrayStorage, developerIDStorage, imageTypes, videoTypes, audioTypes, textTypes };

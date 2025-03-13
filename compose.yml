@@ -1,0 +1,7 @@
+version: '3'
+services:
+  discord-bot:
+    build: .
+    container_name: discord-catjam
+    restart: unless-stopped
+    command: npm start

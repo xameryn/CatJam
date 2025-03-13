@@ -1,0 +1,30 @@
+# Node
+node_modules
+npm-debug.log
+yarn-debug.log
+yarn-error.log
+
+# Development
+.git
+.gitignore
+.env
+.env.local
+.env.*.local
+.dockerignore
+Dockerfile
+docker-compose.yml
+README.md
+
+# Project specific
+tests
+docs
+*.md
+.vscode
+.idea
+coverage
+dist
+build
+
+# OS specific
+.DS_Store
+Thumbs.db

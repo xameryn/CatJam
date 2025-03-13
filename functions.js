@@ -1,352 +1,26 @@
 const { Client, Intents, MessageAttachment, MessageEmbed, MessageActionRow, MessageButton, EmbedBuilder, AttachmentBuilder, MessagePayload } = require('discord.js');
-const sharp = require('sharp');
-const stringify = require('json-stringify');
-const compress_images = require("compress-images");
 const emojiRegex = require('emoji-regex');
 const fs = require('fs-extra')
-const request = require('request');
+const axios = require('axios');
 const Canvas = require('canvas');
 const SizeOf = require('image-size');
-const emojiDict = require("emoji-dictionary");
 const exifr = require('exifr');
 const PNG = require("pngjs").PNG;
-const fetch = require('node-fetch');
 const nEmoji = require('node-emoji');
 
-import { globalData } from './main.js';
-import { catJamArrayStorage, stellarisArrayStorage, imageTypes, videoTypes, audioTypes, textTypes } from './arrays.js';
+const { globalData } = require('./main.js');
+const { catJamArrayStorage, stellarisArrayStorage, imageTypes, videoTypes, audioTypes, textTypes } = require('./arrays.js');
 
-async function generalScraper(scrapeType) {
-  let start = getTime();
-  let message = globalData.message;
-  let searchParams = undefined
-
-  if (scrapeType === undefined) {scrapeType = 'link';}
-
-  if (scrapeType === 'image') { //grab images
-    let atc = null;
-    let emb = null;
-    searchParams = (m) => (atc = m.attachments.first(), emb = m.embeds, ((m.attachments.size > 0) && (atc != undefined) && ((atc.url.includes('.png')) || (atc.url.includes('.jpg')) || (atc.url.includes('.bmp')) || (atc.url.includes('.jpeg')) || (atc.url.includes('.jfif')) || (atc.url.includes('.tiff')))) || (emb.length > 0 && (emb[0].data.type == 'image' || (emb[0].data.type == 'rich' && emb[0].data.image != undefined))));
-  }
-  else if (scrapeType === 'file') { //grab any file/embed
-    searchParams = (m) => ((m.embeds.length > 0 && (m.embeds[0].data.type == 'image' || m.embeds[0].data.type == 'video' || m.embeds[0].data.type == 'gifv' || (m.embeds[0].data.type == 'rich' && m.embeds[0].data.image != undefined))) || m.attachments.size > 0);
-  }
-  else if (scrapeType === 'twitter') { //Used for $twitter
-    searchParams = (m) => (((m.embeds.length > 0) && (m.embeds[0].data.type === 'rich') && (m.embeds[0].data.url != null) && (m.embeds[0].data.url.includes('twitter.com') || m.embeds[0].data.url.includes('x.com'))) || ((m.content.includes('https://twitter.com/') || m.content.includes('https://x.com/')) && m.content.includes('/status/')));
-  }
-
-  var scraperURL = message.channel.messages.fetch().then(async messageList => { //Message search
-  let lastMessage = await messageList.sort((a, b) => b.createdTimestamp - a.createdTimestamp).filter(searchParams).first();
-
-  if (message.reference != undefined) { //If a message is replied to it takes priority
-    let replyMessage =  await message.channel.messages.fetch(message.reference.messageId);
-    if (searchParams) {
-      lastMessage = replyMessage;
-    }
-  }
-  
-  globalData.targetMessage = await lastMessage; //Saves the message it locates
-
-  if (lastMessage == undefined) {
-    return undefined;
-  }
-
-  if (scrapeType == 'twitter' && lastMessage.embeds.length == 0) {
-    return lastMessage.content;
-  }
-
-  if (lastMessage.attachments.size > 0) {
-    let url = await lastMessage.attachments.first().url;
-    return url;
-  }
-
-  else if (lastMessage.embeds.length > 0) {
-    if (scrapeType == 'twitter') {
-      let url = await lastMessage.embeds[0].data.url;
-      return url;
-    }
-    else if (lastMessage.embeds[0].data.type == 'rich' && lastMessage.embeds[0].data.image != undefined) {
-      let url = await lastMessage.embeds[0].data.image.url;
-      return url;
-    }
-    else {
-      let url = await lastMessage.embeds[0].data.url;
-      return url;
-    }
-  }
-  });
-  var attachedFileURL = await scraperURL.then();
-  let outputURL = attachedFileURL;
-  console.log('generalScraper - ' + getTime(start).toString() + 'ms');
-  return outputURL;
+function fileExtension(url) {
+  return url.split(/[#?]/)[0].split('.').pop().trim().toLowerCase();
 }
-function uploadLimitCheck(fileDir, size = 8000000) {
-  const statz = fs.statSync(fileDir);
-  const fileSizeInBytes = statz.size;
-  if (fileSizeInBytes > size) {
-    //console.log(fileSizeInBytes);
-    return true;
-  }
-  else {
-    return false;
-  }
-}
-async function download(fileURL, fileDir){
-  let start = getTime();
-  if (await fileURL == undefined || fileDir == undefined) { //Prevents a download if the provided URL or directory is undefined
-    console.log('download - ' + getTime(start).toString() + 'ms');
-    return;
-  }
-  else {
-    //downloads URL in directory
-    let write = fs.createWriteStream(fileDir);
-    request.get(fileURL).pipe(write);
-    //waits until download is finished
-    let finished = false;
-    write.on('finish', () => {
-      finished = true
-    });
-    while (!finished) {
-      await wait(25);
-    }
-    //checks for cringe metadata, including orientation and colour space
-    let dirArray = fileDir.split('.');
-    if (dirArray[dirArray.length - 1] == 'png') {
-      let metadata = await exifr.parse(fileDir, {chunked: false}).then(output => {
-        if (output != undefined) {
-          return [output.ProfileName, output.Orientation];
-        }
-        else {
-          return ['',''];
-        }
-      }).catch(console.error);
-      if (metadata != undefined) {
-        if (metadata[0] == 'kCGColorSpaceDisplayP3') {//basically just rewrites the file with generic colour space and metadata
-          let data = fs.readFileSync(fileDir);
-          let png = PNG.sync.read(data);
-          let buffer = PNG.sync.write(png);
-          fs.writeFileSync(fileDir, buffer);
-        }
-        //possible orientation metadata: Horizontal (normal), Mirror horizontal and rotate 90 CW, Mirror horizontal and rotate 270 CW, Mirror horizontal, Mirror vertical, Rotate 90 CW, Rotate 180, Rotate 270 CW
-        if (metadata[1] != undefined && metadata[1] != '' && metadata[1] != 'Horizontal (normal)') {
-          let imageSize = await SizeOf(fileDir);
-          let orient = metadata[1];
-          let angle = '180';
-          //all rotations other than 180 contain CW
-          if (orient.includes('CW')) {//these rotations will invert dimensions
-            await canvasInitialize([imageSize.height, imageSize.width])
-            angle = orient.slice(-6,-3).trim();
-          }
-          else {
-            await canvasInitialize([imageSize.width, imageSize.height])
-          }
-          let canvas = globalData.canvas;
-          let context = globalData.context;
-          let image = await Canvas.loadImage(fileDir);
-          //mirroring
-          if (orient.includes('Mirror horizontal') && !orient.includes('CW')) {//there is never both vertical mirroring and rotation
-            context.scale(-1,1);
-            context.translate(-canvas.width, 0);
-          }
-          else if (orient.includes('Mirror vertical') || (orient.includes('Mirror horizontal') && orient.includes('CW'))) {
-            context.scale(1,-1);
-            context.translate(0, -canvas.height);
-          }
-          //rotation
-          if (orient.includes('rotate') || orient.includes('Rotate')) {
-            let displace = [canvas.width, canvas.height];
-            if (angle == '90') {
-              displace[1] = 0;
-            }
-            if (angle == '270') {
-              displace[0] = 0;
-            }
-            context.translate(displace[0], displace[1]);
-            context.rotate(Math.PI * parseInt(angle) / 180);
-          }
-          context.drawImage(image, 0, 0, imageSize.width, imageSize.height);
-          fs.writeFileSync(fileDir, canvas.toBuffer());
-        }
-      }
-    } 
-    console.log('download - ' + getTime(start).toString() + 'ms');
-    return;
-  }
-}
-async function typeCheck(fileURL){ //Checks the file type of the URL
-  let fileTypeArray = await fileURL.split('.'); //Splits URL at every '.'
-  let suffix = await fileTypeArray.pop(); //Takes the last split part (the file type)
-  if (await suffix.includes('?')) {
-    suffix = await suffix.split('?');
-    await suffix.pop();
-  }
-  if (suffix.length > 5) {
-    return undefined;
-  }
-  return suffix;
-}
-async function sendFile(fileURL, fileDir){
-  let start = getTime();
-  let message = globalData.message;
-  if (await uploadLimitCheck(fileDir)) { //If gif is over 8MB, embeds as link
-    console.log("over 8 mb");
-    if (await fileURL.includes('tenor.com/view') || fileURL.includes('.gif')) { //Fuck you Tenor
-      console.log(fileURL);
-      fileURL = await fileURL.split('.'); //Splits URL at every '.'
-                fileURL.pop(); //Removes file type (.gif)
-      fileURL = await fileURL.join('.'); //Joins URL at every '.'
-    }
-    console.log("embed");
-    return message.channel.send({content: fileURL});
-  }
-  var attachment = await new AttachmentBuilder(fileDir);
-  console.log('sendFile - ' + getTime(start).toString() + 'ms')
-  return message.channel.send({files: [attachment]});
-}
-async function canvasInitialize(canvasDims, background){
-  let start = getTime();
-  let canvas = Canvas.createCanvas(canvasDims[0], canvasDims[1]);
-  globalData.canvas = canvas;
-  let context = canvas.getContext('2d');
-  globalData.context = context;
-  //deciding background
-  let backgroundImage;
-  if (background == 'black') {
-    backgroundImage = await Canvas.loadImage('./files/templates/blackBox.jpg');
-  }
-  else if (background == 'white') {
-    backgroundImage = await Canvas.loadImage('./files/templates/whiteBox.jpg');
-  }
-  else if (background == 'png' || background == undefined) {
-    console.log('canvasInitialize - ' + getTime(start).toString() + 'ms');
-    return;
-  }
-  else {
-    backgroundImage = await Canvas.loadImage(background);
-  }
-  context.drawImage(backgroundImage, 0, 0, canvas.width, canvas.height);
-  console.log('canvasInitialize - ' + getTime(start).toString() + 'ms');
-  return;
-}
-async function imageToCanvas(funcArgs) {
-  //imageDims, widestRatio, tallestRatio, wideDims, tallDims, scaleLength, scaleAxis
-  let imageDims = funcArgs.imageDims;
-  let widestRatio = funcArgs.widestRatio;
-  let tallestRatio = funcArgs.tallestRatio;
-  let wideDims = funcArgs.wideDims;
-  let tallDims = funcArgs.tallDims;
-  let scaleLength = funcArgs.scaleLength;
-  let scaleAxis = funcArgs.scaleAxis;
-  // widestRatio, tallestRatio - the maximum allowed (width / height) or (height / width) respectively
-  // wideDims, tallDims - if the image is too wide (wideDims) or too tall (tallDims), these dimensions are used instead
-  // scaleLength - what size the final image should be scaled to (height or width)
-  // scaleAxis - 'height' or 'width' depending on what scaleLength represents
-  // (above 2 arguments can be left undefined for no scaling)
-  let imageWidth = imageDims[0];
-  let imageHeight = imageDims[1];
-  let wideWidth = wideDims[0];
-  let wideHeight = wideDims[1];
-  let tallWidth = tallDims[0];
-  let tallHeight = tallDims[1];
-
-  let width = imageWidth;
-  let height = imageHeight;
-  let imgEval = '';
-  // if too wide, height scaled to the "wide" dimensions (width is fit to edges)
-  if (imageWidth / imageHeight > widestRatio) {
-    imgEval = 'wide';
-    height = (imageWidth / wideWidth) * wideHeight;
-  } // if too tall, width scaled to the "tall" dimensions (height is fit to edges)
-  else if (imageHeight / imageWidth > tallestRatio) {
-    imgEval = 'tall';
-    width = (imageHeight / tallHeight) * tallWidth;
-  }
-
-  let scaleFactor = 1;
-  if (scaleAxis == 'height') {
-    scaleFactor = scaleLength / height;
-  }
-  else if (scaleAxis == 'width') {
-    scaleFactor = scaleLength / width;
-  }
-  globalData.imgCanvasDims = [width * scaleFactor, height * scaleFactor];
-  globalData.imgCanvasEval = imgEval;
-  return;
-}
-async function scaleImage(imageDims, scaleType, scaleDims) {
-  let canvas = globalData.canvas;
-  if (scaleDims == undefined) {
-    scaleDims = [canvas.width, canvas.height];
-  }
-  let width = imageDims[0];
-  let height = imageDims[1];
-  let imageRatio = height / width;
-  //determines whether scaleDim is treated as width or height, set dynamically for non-fit/fill (dependent on scaling up or down)
-  let imageBool = height > width;
-
-  let scaleDim = scaleDims;
-  if (typeof scaleDims == 'object') {
-    var scaleWidth = scaleDims[0];
-    var scaleHeight = scaleDims[1];
-    let scaleRatio = scaleHeight / scaleWidth;
-
-    if (scaleType == 'fit') {
-      if (imageRatio > scaleRatio) {//scaleDim set to more significant dimension of the image relative to scaleDims
-        scaleDim = scaleHeight;
-        imageBool = true;
-      }
-      else {
-        scaleDim = scaleWidth;
-        imageBool = false;
-      }
-
-    }
-    else if (scaleType == 'fill') {
-      if (imageRatio > scaleRatio) {//scaleDim set to the least significant dimension
-        scaleDim = scaleWidth;
-        imageBool = false;
-      }
-      else {
-        scaleDim = scaleHeight;
-        imageBool = true;
-      }
-    }
-  }
-  else if (scaleType == 'up') {
-    imageBool = !imageBool;
-  }
-  //actual scaling part
-  let newWidth;
-  let newHeight;
-  if (imageBool) {
-    newWidth = (scaleDim / height) * width;
-    newHeight = scaleDim;
-  }
-  else {
-    newHeight = (scaleDim / width) * height;
-    newWidth = scaleDim;
-  }
-  if (scaleWidth != undefined && scaleHeight != undefined) {
-    globalData.scaledPos = [(scaleWidth - newWidth)/2, (scaleHeight - newHeight)/2];
-  }
-  globalData.scaledDims = [newWidth, newHeight];
-  return;
-}
-async function drawImage(fileDir, offsets = [0,0], imagePos, imageDims) {
-  let start = getTime();
-  let context = globalData.context;
-  if (imagePos == undefined) {
-    imagePos = globalData.scaledPos;
-    imageDims = globalData.scaledDims;
-  }
-  else if (imageDims == undefined) {
-    let imageSize = await SizeOf(fileDir);
-    imageDims = [imageSize.width, imageSize.height];
-  }
-  let image = await Canvas.loadImage(fileDir);
-  context.drawImage(image, imagePos[0] + offsets[0], imagePos[1] + offsets[1], imageDims[0], imageDims[1]);
-  console.log('drawImage - ' + getTime(start).toString() + 'ms');
-  return;
+function fileTypeFunc(extension) {
+  if (imageTypes.includes(extension)) {return 'image';}
+  else if (videoTypes.includes(extension)) {return 'video';}
+  else if (extension == 'gif') {return 'gif';}
+  else if (audioTypes.includes(extension)) {return 'audio';}
+  else if (textTypes.includes(extension)) {return 'text';}
+  else {return 'link';}
 }
 async function userData(action, command, option, value) {
   let start = getTime();
@@ -602,6 +276,368 @@ async function userData(action, command, option, value) {
   }
   fs.writeFileSync('user-data.json', output, 'utf8');
   console.log('userData - ' + getTime(start).toString() + 'ms');
+  return;
+}
+async function generalScraper(scrapeType) {
+  try {
+    let start = getTime();
+    let message = globalData.message;
+    let searchParams = undefined
+
+    if (scrapeType === undefined) {scrapeType = 'link';}
+
+    if (scrapeType === 'image') { //grab images
+      let atc = null;
+      let emb = null;
+      searchParams = (m) => {
+        if (!m || !m.attachments || !m.embeds) return false;
+        atc = m.attachments.first();
+        emb = m.embeds;
+        return ((m.attachments.size > 0) && (atc != undefined) && 
+          ((atc.url.includes('.png'))    || 
+          (atc.url.includes('.jpg'))    || 
+          (atc.url.includes('.bmp'))    || 
+          (atc.url.includes('.jpeg'))   || 
+          (atc.url.includes('.jfif'))   || 
+          (atc.url.includes('.tiff')))) || 
+          (emb.length > 0 && 
+          (emb[0].data.type == 'image' || 
+            (emb[0].data.type == 'rich' && emb[0].data.image != undefined)));
+      }
+    }
+    else if (scrapeType === 'file') { //grab any file/embed
+      searchParams = (m) => ((m.embeds.length > 0 && (m.embeds[0].data.type == 'image' || m.embeds[0].data.type == 'video' || m.embeds[0].data.type == 'gifv' || (m.embeds[0].data.type == 'rich' && m.embeds[0].data.image != undefined))) || m.attachments.size > 0);
+    }
+    else if (scrapeType === 'twitter') { //Used for $twitter
+      searchParams = (m) => (((m.embeds.length > 0) && (m.embeds[0].data.type === 'rich') && (m.embeds[0].data.url != null) && (m.embeds[0].data.url.includes('twitter.com') || m.embeds[0].data.url.includes('x.com'))) || ((m.content.includes('https://twitter.com/') || m.content.includes('https://x.com/')) && m.content.includes('/status/')));
+    }
+
+    var scraperURL = message.channel.messages.fetch().then(async messageList => { //Message search
+    let lastMessage = await messageList.sort((a, b) => b.createdTimestamp - a.createdTimestamp).filter(searchParams).first();
+
+    if (message.reference != undefined) { //If a message is replied to it takes priority
+      let replyMessage =  await message.channel.messages.fetch(message.reference.messageId);
+      if (searchParams) {
+        lastMessage = replyMessage;
+      }
+    }
+    
+    globalData.targetMessage = await lastMessage; //Saves the message it locates
+
+    if (lastMessage == undefined) {
+      return undefined;
+    }
+
+    if (scrapeType == 'twitter' && lastMessage.embeds.length == 0) {
+      return lastMessage.content;
+    }
+
+    if (lastMessage.attachments.size > 0) {
+      let url = await lastMessage.attachments.first().url;
+      return url;
+    }
+
+    else if (lastMessage.embeds.length > 0) {
+      if (scrapeType == 'twitter') {
+        let url = await lastMessage.embeds[0].data.url;
+        return url;
+      }
+      else if (lastMessage.embeds[0].data.type == 'rich' && lastMessage.embeds[0].data.image != undefined) {
+        let url = await lastMessage.embeds[0].data.image.url;
+        return url;
+      }
+      else {
+        let url = await lastMessage.embeds[0].data.url;
+        return url;
+      }
+    }
+    });
+    var attachedFileURL = await scraperURL.then();
+    let outputURL = attachedFileURL;
+    console.log('generalScraper - ' + getTime(start).toString() + 'ms');
+    return outputURL;
+  } catch (error) {
+    console.error('Error in generalScraper:', error);
+    return undefined;
+  }
+}
+function uploadLimitCheck(fileDir, size = 8000000) {
+  const statz = fs.statSync(fileDir);
+  const fileSizeInBytes = statz.size;
+  if (fileSizeInBytes > size) {
+    //console.log(fileSizeInBytes);
+    return true;
+  }
+  else {
+    return false;
+  }
+}
+async function download(fileURL, fileDir) {
+  let start = getTime();
+  if (!fileURL || !fileDir) { // Prevents a download if the provided URL or directory is undefined
+    console.log('download - ' + getTime(start).toString() + 'ms');
+    return;
+  }
+
+  // Ensure the directory exists
+  fs.ensureDirSync(require('path').dirname(fileDir));
+
+  // Download URL to directory
+  const write = fs.createWriteStream(fileDir);
+  const response = await axios({
+    method: 'get',
+    url: fileURL,
+    responseType: 'stream'
+  });
+
+  response.data.pipe(write);
+
+  // Wait for download to finish using a Promise
+  await new Promise((resolve, reject) => {
+    write.on('finish', resolve);
+    write.on('error', reject);
+  });
+
+  // Check for metadata (e.g., PNG files)
+  let dirArray = fileDir.split('.');
+  if (dirArray[dirArray.length - 1] === 'png') {
+    let metadata = await exifr.parse(fileDir, { chunked: false }).then(output => {
+      if (output) {
+        return [output.ProfileName, output.Orientation];
+      }
+      return ['', ''];
+    }).catch(console.error);
+
+    if (metadata) {
+      // Rewrite PNG with generic color space if P3 detected
+      if (metadata[0] === 'kCGColorSpaceDisplayP3') {
+        let data = fs.readFileSync(fileDir);
+        let png = PNG.sync.read(data);
+        let buffer = PNG.sync.write(png);
+        fs.writeFileSync(fileDir, buffer);
+      }
+
+      // Handle orientation metadata
+      if (metadata[1] && metadata[1] !== '' && metadata[1] !== 'Horizontal (normal)') {
+        let imageSize = await SizeOf(fileDir);
+        let orient = metadata[1];
+        let angle = '180';
+
+        // Determine canvas size and rotation angle
+        if (orient.includes('CW')) { // Rotations that invert dimensions
+          await canvasInitialize([imageSize.height, imageSize.width]);
+          angle = orient.slice(-6, -3).trim();
+        } else {
+          await canvasInitialize([imageSize.width, imageSize.height]);
+        }
+
+        let canvas = globalData.canvas;
+        let context = globalData.context;
+        let image = await Canvas.loadImage(fileDir);
+
+        // Mirroring
+        if (orient.includes('Mirror horizontal') && !orient.includes('CW')) {
+          context.scale(-1, 1);
+          context.translate(-canvas.width, 0);
+        } else if (orient.includes('Mirror vertical') || (orient.includes('Mirror horizontal') && orient.includes('CW'))) {
+          context.scale(1, -1);
+          context.translate(0, -canvas.height);
+        }
+
+        // Rotation
+        if (orient.includes('rotate') || orient.includes('Rotate')) {
+          let displace = [canvas.width, canvas.height];
+          if (angle === '90') {
+            displace[1] = 0;
+          }
+          if (angle === '270') {
+            displace[0] = 0;
+          }
+          context.translate(displace[0], displace[1]);
+          context.rotate(Math.PI * parseInt(angle) / 180);
+        }
+
+        context.drawImage(image, 0, 0, imageSize.width, imageSize.height);
+        fs.writeFileSync(fileDir, canvas.toBuffer());
+      }
+    }
+  }
+
+  console.log('download - ' + getTime(start).toString() + 'ms');
+}
+async function typeCheck(fileURL){ //Checks the file type of the URL
+  let fileTypeArray = await fileURL.split('.'); //Splits URL at every '.'
+  let suffix = await fileTypeArray.pop(); //Takes the last split part (the file type)
+  if (await suffix.includes('?')) {
+    suffix = await suffix.split('?');
+    await suffix.pop();
+  }
+  if (suffix.length > 5) {
+    return undefined;
+  }
+  return suffix;
+}
+async function sendFile(fileURL, fileDir){
+  let start = getTime();
+  let message = globalData.message;
+  if (await uploadLimitCheck(fileDir)) { //If gif is over 8MB, embeds as link
+    console.log("over 8 mb");
+    if (await fileURL.includes('tenor.com/view') || fileURL.includes('.gif')) { //Fuck you Tenor
+      console.log(fileURL);
+      fileURL = await fileURL.split('.'); //Splits URL at every '.'
+                fileURL.pop(); //Removes file type (.gif)
+      fileURL = await fileURL.join('.'); //Joins URL at every '.'
+    }
+    console.log("embed");
+    return message.channel.send({content: fileURL});
+  }
+  var attachment = await new AttachmentBuilder(fileDir);
+  console.log('sendFile - ' + getTime(start).toString() + 'ms')
+  return message.channel.send({files: [attachment]});
+}
+async function canvasInitialize(canvasDims, background){
+  let start = getTime();
+  let canvas = Canvas.createCanvas(canvasDims[0], canvasDims[1]);
+  globalData.canvas = canvas;
+  let context = canvas.getContext('2d');
+  globalData.context = context;
+  //deciding background
+  let backgroundImage;
+  if (background == 'black') {
+    backgroundImage = await Canvas.loadImage('./files/templates/blackBox.jpg');
+  }
+  else if (background == 'white') {
+    backgroundImage = await Canvas.loadImage('./files/templates/whiteBox.jpg');
+  }
+  else if (background == 'png' || background == undefined) {
+    console.log('canvasInitialize - ' + getTime(start).toString() + 'ms');
+    return;
+  }
+  else {
+    backgroundImage = await Canvas.loadImage(background);
+  }
+  context.drawImage(backgroundImage, 0, 0, canvas.width, canvas.height);
+  console.log('canvasInitialize - ' + getTime(start).toString() + 'ms');
+  return;
+}
+async function imageToCanvas(funcArgs) {
+  //imageDims, widestRatio, tallestRatio, wideDims, tallDims, scaleLength, scaleAxis
+  let imageDims = funcArgs.imageDims;
+  let widestRatio = funcArgs.widestRatio;
+  let tallestRatio = funcArgs.tallestRatio;
+  let wideDims = funcArgs.wideDims;
+  let tallDims = funcArgs.tallDims;
+  let scaleLength = funcArgs.scaleLength;
+  let scaleAxis = funcArgs.scaleAxis;
+  // widestRatio, tallestRatio - the maximum allowed (width / height) or (height / width) respectively
+  // wideDims, tallDims - if the image is too wide (wideDims) or too tall (tallDims), these dimensions are used instead
+  // scaleLength - what size the final image should be scaled to (height or width)
+  // scaleAxis - 'height' or 'width' depending on what scaleLength represents
+  // (above 2 arguments can be left undefined for no scaling)
+  let imageWidth = imageDims[0];
+  let imageHeight = imageDims[1];
+  let wideWidth = wideDims[0];
+  let wideHeight = wideDims[1];
+  let tallWidth = tallDims[0];
+  let tallHeight = tallDims[1];
+
+  let width = imageWidth;
+  let height = imageHeight;
+  let imgEval = '';
+  // if too wide, height scaled to the "wide" dimensions (width is fit to edges)
+  if (imageWidth / imageHeight > widestRatio) {
+    imgEval = 'wide';
+    height = (imageWidth / wideWidth) * wideHeight;
+  } // if too tall, width scaled to the "tall" dimensions (height is fit to edges)
+  else if (imageHeight / imageWidth > tallestRatio) {
+    imgEval = 'tall';
+    width = (imageHeight / tallHeight) * tallWidth;
+  }
+
+  let scaleFactor = 1;
+  if (scaleAxis == 'height') {
+    scaleFactor = scaleLength / height;
+  }
+  else if (scaleAxis == 'width') {
+    scaleFactor = scaleLength / width;
+  }
+  globalData.imgCanvasDims = [width * scaleFactor, height * scaleFactor];
+  globalData.imgCanvasEval = imgEval;
+  return;
+}
+async function scaleImage(imageDims, scaleType, scaleDims) {
+  let canvas = globalData.canvas;
+  if (scaleDims == undefined) {
+    scaleDims = [canvas.width, canvas.height];
+  }
+  let width = imageDims[0];
+  let height = imageDims[1];
+  let imageRatio = height / width;
+  //determines whether scaleDim is treated as width or height, set dynamically for non-fit/fill (dependent on scaling up or down)
+  let imageBool = height > width;
+
+  let scaleDim = scaleDims;
+  if (typeof scaleDims == 'object') {
+    var scaleWidth = scaleDims[0];
+    var scaleHeight = scaleDims[1];
+    let scaleRatio = scaleHeight / scaleWidth;
+
+    if (scaleType == 'fit') {
+      if (imageRatio > scaleRatio) {//scaleDim set to more significant dimension of the image relative to scaleDims
+        scaleDim = scaleHeight;
+        imageBool = true;
+      }
+      else {
+        scaleDim = scaleWidth;
+        imageBool = false;
+      }
+
+    }
+    else if (scaleType == 'fill') {
+      if (imageRatio > scaleRatio) {//scaleDim set to the least significant dimension
+        scaleDim = scaleWidth;
+        imageBool = false;
+      }
+      else {
+        scaleDim = scaleHeight;
+        imageBool = true;
+      }
+    }
+  }
+  else if (scaleType == 'up') {
+    imageBool = !imageBool;
+  }
+  //actual scaling part
+  let newWidth;
+  let newHeight;
+  if (imageBool) {
+    newWidth = (scaleDim / height) * width;
+    newHeight = scaleDim;
+  }
+  else {
+    newHeight = (scaleDim / width) * height;
+    newWidth = scaleDim;
+  }
+  if (scaleWidth != undefined && scaleHeight != undefined) {
+    globalData.scaledPos = [(scaleWidth - newWidth)/2, (scaleHeight - newHeight)/2];
+  }
+  globalData.scaledDims = [newWidth, newHeight];
+  return;
+}
+async function drawImage(fileDir, offsets = [0,0], imagePos, imageDims) {
+  let start = getTime();
+  let context = globalData.context;
+  if (imagePos == undefined) {
+    imagePos = globalData.scaledPos;
+    imageDims = globalData.scaledDims;
+  }
+  else if (imageDims == undefined) {
+    let imageSize = await SizeOf(fileDir);
+    imageDims = [imageSize.width, imageSize.height];
+  }
+  let image = await Canvas.loadImage(fileDir);
+  context.drawImage(image, imagePos[0] + offsets[0], imagePos[1] + offsets[1], imageDims[0], imageDims[1]);
+  console.log('drawImage - ' + getTime(start).toString() + 'ms');
   return;
 }
 async function findEmoji(emojiString) {
@@ -1248,17 +1284,6 @@ async function infoScraper() {
   console.log('infoScraper - ' + getTime(start).toString() + 'ms');
   return;
 }
-function fileExtension(url) {
-  return url.split(/[#?]/)[0].split('.').pop().trim().toLowerCase();
-}
-function fileType(extension) {
-  if (imageTypes.includes(extension)) {return 'image';}
-  else if (videoTypes.includes(extension)) {return 'video';}
-  else if (extension == 'gif') {return 'gif';}
-  else if (audioTypes.includes(extension)) {return 'audio';}
-  else if (textTypes.includes(extension)) {return 'text';}
-  else {return 'link';}
-}
 function createFolders() { //Creates an empty folder if it is not there, as Github doesn't allow commits of empty folders. Add a case for all future empty folders
   if (!fs.existsSync('./files/buffer')) {
     fs.mkdirSync('./files/buffer')
@@ -1304,6 +1329,10 @@ function canManageMessages(msg) {
   return msg.member.permissionsIn(msg.channel).has('MANAGE_MESSAGES')
 }
 async function messageReturn(funcArgs) {
+  let messageOptions;
+  let message = globalData.message;
+  let targetMessage = globalData.targetMessage //this is specifically the message scraped by file scraper
+
   let start = getTime();
   //using conditional operator to create default values
   let input = funcArgs.input;//the main input (e.g. text, link, file path, buffer, embed, etc.)
@@ -1341,9 +1370,6 @@ async function messageReturn(funcArgs) {
   //        filename to send it with can be included (must be if it's a buffer), if not it is extracted from the file path
   //link: for sending a file as a link instead of an upload (ONLY IMAGES AND GIFs)
   //      practically quite similar to attach
-  let messageOptions;
-  let message = globalData.message;
-  let targetMessage = globalData.targetMessage//this is specifically the message scraped by file scraper
 
   let refID;
   if (message.reference != undefined) {//if message is referencing something, usually a reply
@@ -1389,7 +1415,7 @@ async function messageReturn(funcArgs) {
     let attachment = new AttachmentBuilder(input, {name: name});
     let image = null;
     let validEmbed = false;
-    if(fileType(name.split('.').pop()) == 'image' || fileType(name.split('.').pop()) == 'gif') {//only gifs and images make proper attachments
+    if(fileTypeFunc(name.split('.').pop()) == 'image' || fileTypeFunc(name.split('.').pop()) == 'gif') {//only gifs and images make proper attachments
       validEmbed = true;
       if (link) {
         image = input;
@@ -1459,4 +1485,4 @@ async function messageReturn(funcArgs) {
 module.exports = { generalScraper, download, canvasInitialize, imageToCanvas,
                   textHandler, getTime, wait, typeCheck, infoScraper, uploadLimitCheck, sendFile,
                   userData, textArgs, createFolders, findEmoji, getEmoji, fileNameVerify, scaleImage, 
-                  fileExtension, fileType, arcName, canManageMessages, messageReturn, drawImage, drawText };
+                  fileExtension, fileTypeFunc, arcName, canManageMessages, messageReturn, drawImage, drawText };

@@ -1,9 +1,21 @@
-FROM node:16.10.0
-ENV NODE_ENV=production
+FROM node:18
+
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    libcairo2-dev \
+    libpango1.0-dev \
+    libjpeg-dev \
+    libgif-dev \
+    librsvg2-dev \
+    pkg-config \
+    && rm -rf /var/lib/apt/lists/*
+
 WORKDIR /usr/src/app
-COPY ["package.json", "package-lock.json*", "npm-shrinkwrap.json*", "./"]
-RUN npm install --production --silent && mv node_modules ../
+
+COPY package*.json ./
+
+RUN npm install
+
 COPY . .
-RUN chown -R node /usr/src/app
-USER node
+
 CMD ["npm", "start"]

@@ -1,29 +1,24 @@
 const { Client, GatewayIntentBits, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, Events, ModalBuilder, TextInputBuilder, TextInputStyle, AttachmentBuilder } = require('discord.js');
-//const { webhookId, webhookToken } = require('./config.json');
-const sharp = require('sharp');
-const request = require(`request`);
-const stringify = require('json-stringify');
-const compress_images = require("compress-images");
 const systeminfo = require('systeminformation');
 const fs = require('fs-extra')
 const archiver = require('archiver');
-const webp = require('webp-converter');
 const emojiRegex = require('emoji-regex');
 const glitch = require('glitch-canvas');
-const Canvas = require('canvas');
 const SizeOf = require('image-size');
-const twitterGetUrl = require("twitter-url-direct")
 const apng2gif = require('apng2gif');
 const fetch = require('node-fetch');
-var ffmpeg = require('fluent-ffmpeg');
-var synonyms = require("synonyms");
-//var Twit = require('twit');
+let synonyms = require("synonyms");
 
-const func = require("./functions.js");
+var globalData = {};
 
-import { discordKey, prefixKey, twt_key, twt_secret } from './keys.js';
-import { catJamArrayStorage, stellarisArrayStorage, developerIDStorage } from './arrays.js';
-import { message } from 'synonyms/dictionary.js';
+module.exports = { globalData };
+
+const { fileExtension, fileTypeFunc, userData, generalScraper, download, canvasInitialize, imageToCanvas,
+  textHandler, getTime, wait, typeCheck, infoScraper, uploadLimitCheck, sendFile, textArgs, createFolders, findEmoji, getEmoji, fileNameVerify, scaleImage, 
+  arcName, canManageMessages, messageReturn, drawImage, drawText } = require('./functions.js');
+
+const { discordKey, prefixKey, twt_key, twt_secret } = require('./keys.js');
+const { catJamArrayStorage, stellarisArrayStorage, developerIDStorage } = require('./arrays.js');
 
 const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent, GatewayIntentBits.GuildMembers] });
 const DISCORDTOKEN = discordKey;
@@ -32,10 +27,9 @@ const catJamArray = catJamArrayStorage;
 const stellarisArray = stellarisArrayStorage;
 const devIDArray = developerIDStorage;
 
-var globalData = {};
-var crashLog = ''
-var currentdate = new Date(); 
-var startTime =    currentdate.getDate() + "-"
+let crashLog = ''
+let currentdate = new Date(); 
+let startTime =    currentdate.getDate() + "-"
                 + (currentdate.getMonth()+1)  + "-" 
                 + currentdate.getFullYear() + "_"  
                 + currentdate.getHours() + "."  
@@ -55,23 +49,28 @@ process.on('uncaughtException', function (err) {
   fs.writeFileSync('./files/crashlogs/crash-' + startTime + '.json', crashLog);
 
 });
+
 //client.on("debug", console.log).on("warn", console.log)
 client.on("ready", () => {
     console.log(`Logged in as ${client.user.tag}`);
     client.user.setActivity('In Development');
-    func.createFolders();
+    createFolders();
+
     setInterval(function(){ 
       //console.log('looping now :3'); 
     }, 2500);
 });
 
-func.userData('update');
+userData('update');
 
 globalData.globalPrefix = globalPrefix;
+
 let prefixArray = [globalPrefix];
+
 if (fs.existsSync('user-data.json')) {
-  func.userData('prefix').then(array => {
+  userData('prefix').then(array => {
     prefixArray = array;
+    console.log('Prefixes loaded: ' + prefixArray);
   });
 }
 
@@ -79,25 +78,34 @@ if (fs.existsSync('user-data.json')) {
 let running = false;
 let alreadyRunning = false;
 let command = '';
-let start = func.getTime();
+let start = getTime();
+
 async function commandLoop(message) { //All commands stored here
+
+  globalData.authorID = message.author.id;
+  globalData.message = message;
+  globalData.globalPrefix = globalPrefix;
+
   if (running) {
     alreadyRunning = true;
+    return;
   }
+
   if (message.mentions.has(client.user)) {
     if (message.content.includes('prefix')) {
-      globalData.authorID = message.author.id;
-      globalData.message = message;
-      await func.userData('get');
-      await func.userData('set', 'prefix', 'default', '');
-      return await func.messageReturn({input: `${globalData.toggledMSG}`, type: 'text'});
+      await userData('get');
+      await userData('set', 'prefix', 'default', '');
+      return await messageReturn({input: `${globalData.toggledMSG}`, type: 'text'});
     }
   }
-  if (!prefixArray.some(p => message.content.startsWith(p)) || message.author.bot) { return; }
-  globalData = {};
-  globalData.authorID = message.author.id;
-  await func.userData('get');
+
+  // if (!prefixArray.some(p => message.content.startsWith(p)) || message.author.bot) { return; }
+  // globalData = {};
+  // globalData.authorID = message.author.id;
+
+  await userData('get');
   let prefix;
+
   if (message.content.startsWith(globalData.userData.prefixC)) {
     prefix = globalData.userData.prefixC;
   }
@@ -107,11 +115,11 @@ async function commandLoop(message) { //All commands stored here
   else { return; }
   globalData.globalPrefix = globalPrefix;
   globalData.prefix = prefix;
-  let escapedPrefix = prefix.replaceAll(/[^\w\s]/g, '\\$&');//backslash escapes on non-alphanumeric characters
+  let escapedPrefix = prefix.replaceAll(/[^\w\s]/g, '\\$&'); //backslash escapes on non-alphanumeric characters
   globalData.escapedPrefix = escapedPrefix;
 
   running = true;
-  start = func.getTime();
+  start = getTime();
 	const args = message.content.slice(prefix.length).trim().split(' ');
 	command = args.shift().toLowerCase();
   let input = args[0];
@@ -427,7 +435,7 @@ async function commandLoop(message) { //All commands stored here
     }
     embed.setAuthor({name: message.member.displayName + ' : ' + globalData.globalPrefix + 'help' + input, iconURL: message.author.displayAvatarURL({ extension: 'png', size: 256, dynamic: true})});
     await message.delete();
-    return await func.messageReturn({input: {embeds: [embed],components: component}});
+    return await messageReturn({input: {embeds: [embed],components: component}});
   }
   else if (command === 'test' && developerCheck === true) {
     
@@ -457,7 +465,7 @@ async function commandLoop(message) { //All commands stored here
     else {
       link = catJamArray[(output - 60) / 5];
     }
-    return await func.messageReturn({input: link, type: 'link', filename: 'catjam.gif'});
+    return await messageReturn({input: link, type: 'link', filename: 'catjam.gif'});
 	}
   else if (command === 'stellaris') {
     let link;
@@ -467,7 +475,7 @@ async function commandLoop(message) { //All commands stored here
     else {
       link = stellarisArray[0];
     }
-    return await func.messageReturn({input: link, type: 'link', filename: 'stellaris.gif'});
+    return await messageReturn({input: link, type: 'link', filename: 'stellaris.gif'});
   }
   else if (command === 'dadon' || command === 'neco') {
     let dir = './files/' + command;
@@ -480,7 +488,7 @@ async function commandLoop(message) { //All commands stored here
       imageNum = input;
     }
     let joinedArray = imageArray.join('');
-    return await func.messageReturn({input: joinedArray, type: 'attach'});
+    return await messageReturn({input: joinedArray, type: 'attach'});
   }
   else if (command === '1984') {
     let link;
@@ -490,7 +498,7 @@ async function commandLoop(message) { //All commands stored here
     else {
         link = 'https://i.imgur.com/wInH3ud.gif'
     }
-    return await func.messageReturn({input: link, type: 'link', filename: '1984.gif'});
+    return await messageReturn({input: link, type: 'link', filename: '1984.gif'});
   }
   else if (command === 'poster' || command === 'meme' || command === 'literally1984' || command === 'point' || command === 'mario' || command === 'stuff' || command === 'stuffimage') {
     //text argument handling
@@ -498,16 +506,16 @@ async function commandLoop(message) { //All commands stored here
     switch(command) {
       case 'poster':
         bgOption = globalData.userData.posterBG;
-        await func.textArgs(2);
+        await textArgs(2);
         break;
       case 'meme':
-        await func.textArgs(3);
+        await textArgs(3);
         break;
       case 'point':
         bgOption = globalData.userData.pointBG;
         break;
       default:
-        await func.textArgs();
+        await textArgs();
     }
     let inputs = globalData.textInputs;
     let argsText = globalData.argsText;
@@ -531,14 +539,14 @@ async function commandLoop(message) { //All commands stored here
     let textScrape = false;
     if (!(command === 'literally1984' && inputs[0] != '') && command != 'stuff') {//literally1984 doesn't need to download an image if it has text
       var fileDir = `./files/buffer/${command}Buffer.png`;
-      var fileURL = await func.generalScraper('image');
+      var fileURL = await generalScraper('image');
       if (fileURL == undefined) {
         if (command === 'literally1984' && message.reference != undefined) {//is reply and is l1984 asking for text (since no image found text is fallback if it can be found in reply)
           textScrape = true;
         }
-        else {return await func.messageReturn({input: "No file found :(", type:'text'})}
+        else {return await messageReturn({input: "No file found :(", type:'text'})}
       }
-      await func.download(fileURL, fileDir);
+      await download(fileURL, fileDir);
       var imageSize = await SizeOf(fileDir);
       var imageDims = [imageSize.width, imageSize.height];
     }
@@ -552,13 +560,13 @@ async function commandLoop(message) { //All commands stored here
       //normalizing excessively small or large images
       if (command === 'point' || command === 'meme') {
         if (imageSize.height > 1500 || imageSize.width > 1500) {
-          await func.scaleImage(imageDims, 'down', 1500);
+          await scaleImage(imageDims, 'down', 1500);
           let scaledDims = globalData.scaledDims
           imageSize.width = scaledDims[0];
           imageSize.height = scaledDims[1];
         }
         if (imageSize.height < 100 || imageSize.width < 100) {
-          await func.scaleImage(imageDims, 'up', 100);
+          await scaleImage(imageDims, 'up', 100);
           let scaledDims = globalData.scaledDims
           imageSize.width = scaledDims[0];
           imageSize.height = scaledDims[1];
@@ -567,10 +575,10 @@ async function commandLoop(message) { //All commands stored here
       }
       //imageToCanvas
       if (command === 'poster') {
-        await func.imageToCanvas({imageDims:imageDims, widestRatio:2, tallestRatio:1.5, wideDims:[1200,600], tallDims:[400,600], scaleLength:600, scaleAxis:'height'});
+        await imageToCanvas({imageDims:imageDims, widestRatio:2, tallestRatio:1.5, wideDims:[1200,600], tallDims:[400,600], scaleLength:600, scaleAxis:'height'});
       }
       else if (command === 'meme') {
-        await func.imageToCanvas({imageDims:imageDims, widestRatio:3, tallestRatio:3, wideDims:[imageSize.width,(imageSize.width / 3)], tallDims:[(imageSize.height / 3),imageSize.height]});
+        await imageToCanvas({imageDims:imageDims, widestRatio:3, tallestRatio:3, wideDims:[imageSize.width,(imageSize.width / 3)], tallDims:[(imageSize.height / 3),imageSize.height]});
       }
       else if (command === 'point') {//special handling for small images, expanded upon later
         if (imageSize.height == 100 || imageSize.width == 100) {
@@ -578,7 +586,7 @@ async function commandLoop(message) { //All commands stored here
           globalData.imgCanvasDims = [640, 506];
         }
         else {
-          await func.imageToCanvas({imageDims:imageDims, widestRatio:2, tallestRatio:1, wideDims:[1920,1518], tallDims:[1920,1518]});
+          await imageToCanvas({imageDims:imageDims, widestRatio:2, tallestRatio:1, wideDims:[1920,1518], tallDims:[1920,1518]});
         }
       }
       else if (command === 'stuffimage') {
@@ -589,7 +597,7 @@ async function commandLoop(message) { //All commands stored here
         else if (stuffWidth < 920) {
           stuffWidth = 920;
         }
-        await func.imageToCanvas({imageDims:imageDims, widestRatio:3, tallestRatio:1, wideDims:[1533,511], tallDims:[920,920], scaleLength:stuffWidth, scaleAxis:'width'});
+        await imageToCanvas({imageDims:imageDims, widestRatio:3, tallestRatio:1, wideDims:[1533,511], tallDims:[920,920], scaleLength:stuffWidth, scaleAxis:'width'});
         globalData.imgCanvasDims[1] += 511;
         bgOption = './files/templates/eggshellBox.jpg';
       }
@@ -608,7 +616,7 @@ async function commandLoop(message) { //All commands stored here
       var stuffWidth = 1226;
       canvasDims = [1226, 511];
     }
-    await func.canvasInitialize(canvasDims, bgOption);
+    await canvasInitialize(canvasDims, bgOption);
     let canvas = globalData.canvas;
     let context = globalData.context;
     let canvasWidth = canvasDims[0];
@@ -634,11 +642,11 @@ async function commandLoop(message) { //All commands stored here
         smallSize = 50;
       }
       //big text
-      await func.textHandler({text:inputs[0], font:'Times New Roman', maxSize:150, maxWidth:(canvasWidth + 100), maxHeight:100, baseX:centerX, baseY:711+50, yAlign:'top'});
+      await textHandler({text:inputs[0], font:'Times New Roman', maxSize:150, maxWidth:(canvasWidth + 100), maxHeight:100, baseX:centerX, baseY:711+50, yAlign:'top'});
       let size1 = globalData.text1.size;
       let textHeight1 = globalData.text1.height;
       //small text
-      await func.textHandler({text:inputs[1], font:'Arial', maxSize:smallSize, maxWidth:(canvasWidth + 100), maxHeight:3, byLine:true, baseX:centerX, baseY:(711+50 + textHeight1 + 30), yAlign:'top'});
+      await textHandler({text:inputs[1], font:'Arial', maxSize:smallSize, maxWidth:(canvasWidth + 100), maxHeight:3, byLine:true, baseX:centerX, baseY:(711+50 + textHeight1 + 30), yAlign:'top'});
       let size2 = globalData.text2.size;
       let textHeight2 = globalData.text2.height;
       //canvas is padded on all sides, lower padding is dependent on text heights
@@ -655,12 +663,12 @@ async function commandLoop(message) { //All commands stored here
       else if (inputs[0] != '' && inputs[1] != '') {
         padding = (50 * 2 + 30) + textHeight1 + textHeight2;
       }
-      await func.canvasInitialize([(canvasWidth + 200), (canvasHeight + 111  + padding)], bgOption);
+      await canvasInitialize([(canvasWidth + 200), (canvasHeight + 111  + padding)], bgOption);
       //update canvas and context
       canvas = globalData.canvas;
       context = globalData.context;
-      await func.scaleImage(imageDims, 'fit', canvasDims);
-      await func.drawImage(fileDir, [100, 100]);
+      await scaleImage(imageDims, 'fit', canvasDims);
+      await drawImage(fileDir, [100, 100]);
       //black space is drawn with rectangles
       context.fillStyle = '#000000';
       context.fillRect(0, 0, (canvasWidth + 200), 100);//top rectangle
@@ -673,17 +681,17 @@ async function commandLoop(message) { //All commands stored here
       //fonts need to be assigned here since text handler was used in an abormal way where its context was overwritten
       context.fillStyle = '#ffffff';
       context.font = `${size1}px Times New Roman`;
-      await func.drawText();
+      await drawText();
       context.font = `${size2}px Arial`;
-      await func.drawText([0, yOffset2], 2);
+      await drawText([0, yOffset2], 2);
     }
     //-----------------------
     // MEME
     //-----------------------
     else if (command === 'meme') {
       //image scaled to fit (mostly redundant), then drawn
-      await func.scaleImage(imageDims, 'fit', canvasDims);
-      await func.drawImage(fileDir);
+      await scaleImage(imageDims, 'fit', canvasDims);
+      await drawImage(fileDir);
       context.fillStyle = '#ffffff';
       context.strokeStyle = '000000';
       context.lineJoin = 'round';
@@ -709,21 +717,21 @@ async function commandLoop(message) { //All commands stored here
       }
       //top text
       if (memeInput[0] !== undefined) {
-        await func.textHandler({text:memeInput[0].toUpperCase(), font:'impact', maxSize:max, maxWidth:(0.95 * canvasWidth), maxHeight:max, baseX:(canvasWidth / 2), baseY:(0.01 * canvasHeight), yAlign:'top'});
+        await textHandler({text:memeInput[0].toUpperCase(), font:'impact', maxSize:max, maxWidth:(0.95 * canvasWidth), maxHeight:max, baseX:(canvasWidth / 2), baseY:(0.01 * canvasHeight), yAlign:'top'});
         context.lineWidth = 2 * (globalData.text1.baselineHeight * 0.06);
-        await func.drawText([0,0], 1, true);
+        await drawText([0,0], 1, true);
       }
       //middle text
       if (memeInput[1] !== undefined) {
-        await func.textHandler({text:memeInput[1].toUpperCase(), font:'impact', maxSize:max, maxWidth:(0.95 * canvasWidth), maxHeight:max, baseX:(canvasWidth / 2), baseY:(canvasHeight / 2)});
+        await textHandler({text:memeInput[1].toUpperCase(), font:'impact', maxSize:max, maxWidth:(0.95 * canvasWidth), maxHeight:max, baseX:(canvasWidth / 2), baseY:(canvasHeight / 2)});
         context.lineWidth = 2 * (globalData.text1.baselineHeight * 0.06);
-        await func.drawText([0,0], 1, true);
+        await drawText([0,0], 1, true);
       }
       //bottom text
       if (memeInput[2] !== undefined) {
-        await func.textHandler({text:memeInput[2].toUpperCase(), font:'impact', maxSize:max, maxWidth:(0.95 * canvasWidth), maxHeight:max, baseX:(canvasWidth / 2), baseY:(0.99 * canvasHeight), yAlign:'bottom'});
+        await textHandler({text:memeInput[2].toUpperCase(), font:'impact', maxSize:max, maxWidth:(0.95 * canvasWidth), maxHeight:max, baseX:(canvasWidth / 2), baseY:(0.99 * canvasHeight), yAlign:'bottom'});
         context.lineWidth = 2 * (globalData.text1.baselineHeight * 0.06);
-        await func.drawText([0,0], 1, true);
+        await drawText([0,0], 1, true);
       }
     }
     //-----------------------
@@ -732,14 +740,14 @@ async function commandLoop(message) { //All commands stored here
     else if (command === 'literally1984') {
       //if text input present, does text stuff
       if (inputs[0] != '') {
-        await func.textHandler({text:inputs[0], font:'sans-serif', maxSize:175, maxWidth:699, maxHeight:242, baseX:455.5, baseY:150});
+        await textHandler({text:inputs[0], font:'sans-serif', maxSize:175, maxWidth:699, maxHeight:242, baseX:455.5, baseY:150});
         context.fillStyle = '#000000';
-        await func.drawText();
+        await drawText();
       }
       //if no text inputs, uses image
       else {
-        await func.scaleImage(imageDims, 'fit', [699, 242]);
-        await func.drawImage(fileDir, [106, 29]);
+        await scaleImage(imageDims, 'fit', [699, 242]);
+        await drawImage(fileDir, [106, 29]);
       }
     }
     //-----------------------
@@ -751,15 +759,15 @@ async function commandLoop(message) { //All commands stored here
         //deviations from the center are to make it look generally nicer in frame, lining up with the direction being pointed at
         let xAxis = (Math.abs(canvasWidth - imageSize.width) / 2) - 35;
         let yAxis = (Math.abs(canvasHeight - imageSize.height) / 2) - 70;
-        await func.drawImage(fileDir, [0,0], [xAxis,yAxis], imageDims);
+        await drawImage(fileDir, [0,0], [xAxis,yAxis], imageDims);
       }
       else {
         //scaled to fit canvas, is only actually scaled if it's wide or tall
-        await func.scaleImage(imageDims, 'fit', canvasDims);
+        await scaleImage(imageDims, 'fit', canvasDims);
         if (globalData.imgCanvasEval == 'wide') {
           globalData.scaledPos[1] = globalData.scaledPos[1] / 2;
         }
-        await func.drawImage(fileDir);
+        await drawImage(fileDir);
       }
       let pointImage1 = './files/templates/pointing/pointing1.png';
       let pointImage2 = './files/templates/pointing/pointing2.png';
@@ -787,9 +795,9 @@ async function commandLoop(message) { //All commands stored here
         pointImage2 = './files/templates/pointing/pointing2.png';
       }
       //they're both always stuck to the edges of the screen, so all we need is their scaled widths, and scaled height which is the same for both
-      await func.scaleImage([864,1518], 'fit', canvasDims);//pointImage1
+      await scaleImage([864,1518], 'fit', canvasDims);//pointImage1
       let scaledWidth1 = globalData.scaledDims[0];
-      await func.scaleImage([1056,1518], 'fit', canvasDims);//pointImage2
+      await scaleImage([1056,1518], 'fit', canvasDims);//pointImage2
       let scaledWidth2 = globalData.scaledDims[0];
       let scaledHeightP = globalData.scaledDims[1];
       //x-axis for dude 2 is also calculated here, just so that he is on the very right edge of screen
@@ -798,63 +806,63 @@ async function commandLoop(message) { //All commands stored here
       if (explosionImage != undefined){
         let scaledHeightE = 673 * (scaledHeightP / 1518);
         let scaledWidthE = 578 * (((scaledWidth1 + scaledWidth2) / 2) / 960);
-        await func.drawImage(explosionImage, [0,0], [(canvasWidth/2 - scaledWidthE/2), (canvasHeight/2 - scaledHeightE/2)], [scaledWidthE, scaledHeightE]);
+        await drawImage(explosionImage, [0,0], [(canvasWidth/2 - scaledWidthE/2), (canvasHeight/2 - scaledHeightE/2)], [scaledWidthE, scaledHeightE]);
       }
-      await func.drawImage(pointImage2, [0,0], [xAxis2 ,0], [scaledWidth2, scaledHeightP]);
-      await func.drawImage(pointImage1, [0,0], [0,0], [scaledWidth1, scaledHeightP]);
+      await drawImage(pointImage2, [0,0], [xAxis2 ,0], [scaledWidth2, scaledHeightP]);
+      await drawImage(pointImage1, [0,0], [0,0], [scaledWidth1, scaledHeightP]);
     }
     //-----------------------
     // MARIO
     //-----------------------
     else if (command === 'mario') {
       //scale to fill entire canvas
-      await func.scaleImage(imageDims, 'fill', [730, 973]);
+      await scaleImage(imageDims, 'fill', [730, 973]);
       //draw given image and mario template on top
-      await func.drawImage(fileDir, [595,53]);
-      await func.drawImage('./files/templates/mario.png', [0,0], [0,0], canvasDims);
+      await drawImage(fileDir, [595,53]);
+      await drawImage('./files/templates/mario.png', [0,0], [0,0], canvasDims);
       //text handling
-      await func.textHandler({text:inputs[0].toUpperCase(), font:'Trebuchet MS', style:'bold ', maxSize:75, maxWidth:526, maxHeight:1, byLine:true, spacing:0, baseX:275, baseY:897, xAlign:'left'});
+      await textHandler({text:inputs[0].toUpperCase(), font:'Trebuchet MS', style:'bold ', maxSize:75, maxWidth:526, maxHeight:1, byLine:true, spacing:0, baseX:275, baseY:897, xAlign:'left'});
       context.fillStyle = '#ffffff';
       if (globalData.emojiMatch != undefined) {//font gets weird with emojis
-        await func.drawText([0, 0.1 * globalData.text1.baselineHeight]);
+        await drawText([0, 0.1 * globalData.text1.baselineHeight]);
       }
       else {
-        await func.drawText();
+        await drawText();
       }
     }
     else if (command === 'stuff' || command === 'stuffimage') {
       let adjustedHeight = canvasHeight - 511;
       if (command == 'stuffimage') {
-        await func.scaleImage(imageDims, 'fit', [canvasWidth, adjustedHeight]);
-        await func.drawImage(fileDir);
+        await scaleImage(imageDims, 'fit', [canvasWidth, adjustedHeight]);
+        await drawImage(fileDir);
       }
-      await func.drawImage('./files/templates/stuff.png', [0,0], [0, adjustedHeight]);
+      await drawImage('./files/templates/stuff.png', [0,0], [0, adjustedHeight]);
       let textWidth = canvasWidth - 602 - 50;
-      await func.textHandler({text:inputs[0], font:'arial', style:'bold ', maxSize:100, maxWidth:textWidth, maxHeight:450, baseX:(textWidth/2 + 602 + 25), baseY:255.5});
+      await textHandler({text:inputs[0], font:'arial', style:'bold ', maxSize:100, maxWidth:textWidth, maxHeight:450, baseX:(textWidth/2 + 602 + 25), baseY:255.5});
       context.fillStyle = '#000000'
-      await func.drawText([0, adjustedHeight]);
+      await drawText([0, adjustedHeight]);
     }
-    return await func.messageReturn({input: canvas.toBuffer(), type: 'attach', filename: `${command}.png`, transformative: false});
+    return await messageReturn({input: canvas.toBuffer(), type: 'attach', filename: `${command}.png`, transformative: false});
   }
   else if (command === 'scatter' || command === 'obradinn' || command === 'glitch') {
     let filter = command;
     //basic get image make canvas from that image
     let fileDir = './files/buffer/filterBuffer.png';
-    let fileURL = await func.generalScraper('image');
-    if (fileURL == undefined) {return await func.messageReturn({input: "No file found :(", type: 'text'})}
-    await func.download(fileURL, fileDir);
+    let fileURL = await generalScraper('image');
+    if (fileURL == undefined) {return await messageReturn({input: "No file found :(", type: 'text'})}
+    await download(fileURL, fileDir);
     let imageSize = await SizeOf(fileDir);
     //obra dinn shrinks image to 250 pixels tall
     if (filter == 'obradinn') {
-      await func.canvasInitialize([(250 * imageSize.width / imageSize.height), 250], fileDir);
+      await canvasInitialize([(250 * imageSize.width / imageSize.height), 250], fileDir);
     }
     else if (filter == 'scatter' && (imageSize.width > 400 || imageSize.height > 400)) {
-      await func.scaleImage([imageSize.width, imageSize.height], 'down', 400);
+      await scaleImage([imageSize.width, imageSize.height], 'down', 400);
       let dims = globalData.scaledDims;
-      await func.canvasInitialize(dims, fileDir);
+      await canvasInitialize(dims, fileDir);
     }
     else {
-      await func.canvasInitialize([imageSize.width, imageSize.height], fileDir);
+      await canvasInitialize([imageSize.width, imageSize.height], fileDir);
     }
     let canvas = globalData.canvas;
     let context = globalData.context;
@@ -904,7 +912,7 @@ async function commandLoop(message) { //All commands stored here
       }
       //console.log('loop 4 done')
       context.putImageData(pixelData,0,0);
-      return await func.messageReturn({input: canvas.toBuffer(), type: 'attach', filename: 'scatter.png'});
+      return await messageReturn({input: canvas.toBuffer(), type: 'attach', filename: 'scatter.png'});
     }
     //-----------------------
     // OBRA DINN
@@ -955,7 +963,7 @@ async function commandLoop(message) { //All commands stored here
 
       }
       context.putImageData(pixelData,0,0);
-      return await func.messageReturn({input: canvas.toBuffer(), type: 'attach', filename: 'obraDinn.png'});
+      return await messageReturn({input: canvas.toBuffer(), type: 'attach', filename: 'obraDinn.png'});
     }
     //-----------------------
     // GLITCH
@@ -964,7 +972,7 @@ async function commandLoop(message) { //All commands stored here
       //glitch-canvas module using buffer
       let buffer = canvas.toBuffer();
       let glitchedBuffer = await glitch({ amount: 0, seed: Math.floor(Math.random()* 101), iterations: Math.floor(Math.random() * 16 + 10), quality: 60}).fromBuffer(buffer).toBuffer();
-      return await func.messageReturn({input: glitchedBuffer, type: 'attach', filename: 'glitch.png'});
+      return await messageReturn({input: glitchedBuffer, type: 'attach', filename: 'glitch.png'});
     }
   }
   else if (command === 'pref') {
@@ -976,11 +984,11 @@ async function commandLoop(message) { //All commands stored here
         input3 = '';
       }
       //(see userData function)
-      await func.userData('set', input.toLowerCase(), input2.toLowerCase(), input3.toLowerCase());
+      await userData('set', input.toLowerCase(), input2.toLowerCase(), input3.toLowerCase());
       if (globalData.changedPrefix) {
-        prefixArray = await func.userData('prefix');
+        prefixArray = await userData('prefix');
       }
-      return await func.messageReturn({input: `${globalData.toggledMSG}`, type: 'text'});
+      return await messageReturn({input: `${globalData.toggledMSG}`, type: 'text'});
     }
     //if input undefined sends your preferences
     else {
@@ -1001,20 +1009,20 @@ async function commandLoop(message) { //All commands stored here
         )
         .setFooter({text:'Usage: ' + prefix + 'pref [command] [setting] [value]\ne.g. ' + prefix + 'pref point background png\n"reset" can be used as a command or value to restore defaults'})
         .setThumbnail(thumb);
-      return await func.messageReturn({input: {embeds: [embed]}});
+      return await messageReturn({input: {embeds: [embed]}});
     }
   }
-  else if (command === 'server') {
-    let cpuSpeed = await systeminfo.cpuCurrentSpeed().then();
-    let memInfo = await systeminfo.mem().then();
-    let embed = new EmbedBuilder()
-      .setTitle("Server PC Status")
-      .setColor(0x686868)
-      .setDescription("CPU Speed: " + cpuSpeed.avg + "GHz\nMemory Used: " + (Math.round((memInfo.used/1073741824) * 10) / 10) + "GB / " + (Math.round((memInfo.total/1073741824) * 10) / 10) + "GB")
-      .setFooter({text: message.member.displayName + ' : ' + globalData.globalPrefix + 'server', iconURL: message.author.displayAvatarURL({ extension: 'png', size: 256, dynamic: true})});
-    await message.delete();
-    return await func.messageReturn({input: {embeds: [embed]}});
-  }
+  // else if (command === 'server') {
+  //   let cpuSpeed = await systeminfo.cpuCurrentSpeed().then();
+  //   let memInfo = await systeminfo.mem().then();
+  //   let embed = new EmbedBuilder()
+  //     .setTitle("Server PC Status")
+  //     .setColor(0x686868)
+  //     .setDescription("CPU Speed: " + cpuSpeed.avg + "GHz\nMemory Used: " + (Math.round((memInfo.used/1073741824) * 10) / 10) + "GB / " + (Math.round((memInfo.total/1073741824) * 10) / 10) + "GB")
+  //     .setFooter({text: message.member.displayName + ' : ' + globalData.globalPrefix + 'server', iconURL: message.author.displayAvatarURL({ extension: 'png', size: 256, dynamic: true})});
+  //   await message.delete();
+  //   return await messageReturn({input: {embeds: [embed]}});
+  // }
   else if (command === 'get' || command === 'avatar') {
     //catch for alternate commands
     let errorMsg = "Couldn't find an avatar, emoji, or sticker from that input.";
@@ -1060,12 +1068,12 @@ async function commandLoop(message) { //All commands stored here
         link = sticker.url;
       }
       else if (sticker.format == 2) {
-        await func.download(sticker.url, fileDir);
+        await download(sticker.url, fileDir);
         apng2gif.sync(fileDir, './files/buffer/' + sticker.id.toString() + '.gif');
         fileDir = './files/buffer/' + sticker.id.toString() + '.gif';
       }
       else {
-        await func.download(sticker.url, './files/buffer/' + sticker.id.toString() + '.json');
+        await download(sticker.url, './files/buffer/' + sticker.id.toString() + '.json');
         fileDir = './files/buffer/' + sticker.id.toString() + '.json';
       }
     }
@@ -1081,7 +1089,7 @@ async function commandLoop(message) { //All commands stored here
           //console.log(link)
         }
         else {
-          return await func.messageReturn({input: errorMsg, type: 'text', title: "Bad Input!"});
+          return await messageReturn({input: errorMsg, type: 'text', title: "Bad Input!"});
         }
       }
       else {
@@ -1127,16 +1135,16 @@ async function commandLoop(message) { //All commands stored here
         }
       });
       if (emoji == '') {
-        return await func.messageReturn({input: errorMsg, type: 'text', title: "Bad Input!"});
+        return await messageReturn({input: errorMsg, type: 'text', title: "Bad Input!"});
       }
-      await func.getEmoji(emoji);
+      await getEmoji(emoji);
       foundEmoji = true;
     }
     //-----------------------
     // EMOJI
     //-----------------------
     else if ((fullInput.search(defaultRegex) != -1 || fullInput.search(customRegex) != -1 || fullInput.search(animRegex) != -1) && !(command === 'avatar')) {
-      await func.getEmoji(fullInput);
+      await getEmoji(fullInput);
       foundEmoji = true;
     }
     //-----------------------
@@ -1153,7 +1161,7 @@ async function commandLoop(message) { //All commands stored here
         link = user.displayAvatarURL({ extension: 'png', size: 1024, dynamic: true});
       }
       else {
-        return await func.messageReturn({input: errorMsg, type: 'text', title: "Bad Input!"});
+        return await messageReturn({input: errorMsg, type: 'text', title: "Bad Input!"});
       }
     }
     //-----------------------
@@ -1180,7 +1188,7 @@ async function commandLoop(message) { //All commands stored here
         }
       }
       else {
-        return await func.messageReturn({input: errorMsg, type: 'text', title: "Bad Input!"});
+        return await messageReturn({input: errorMsg, type: 'text', title: "Bad Input!"});
       }
     }
     else {//if no emojis can be found, the user being replied to has their avatar grabbed instead
@@ -1192,7 +1200,7 @@ async function commandLoop(message) { //All commands stored here
     //-----------------------
     if (foundEmoji) {
       //invalid emoji
-      if (globalData.emojiStatus == 'invalid') { return await func.messageReturn({input: errorMsg, type: 'text', title: "Bad Input!"}); }
+      if (globalData.emojiStatus == 'invalid') { return await messageReturn({input: errorMsg, type: 'text', title: "Bad Input!"}); }
       //single emoji
       else if (globalData.emojiStatus == 'single') {
         let files = [];
@@ -1206,7 +1214,7 @@ async function commandLoop(message) { //All commands stored here
         archive.pipe(output);
         await archive.directory('./files/buffer/emojiDownload/', false).finalize();
         while (fs.existsSync('./files/buffer/emojis.zip') == false) {
-          await func.wait(25);
+          await wait(25);
         }
         fileDir = './files/buffer/emojis.zip';
       }
@@ -1219,17 +1227,17 @@ async function commandLoop(message) { //All commands stored here
         fileDir = fileDir.slice(0,-3);
         fileDir += 'gif';
       }
-     await func.download(link, fileDir)
+     await download(link, fileDir)
     }
-    return await func.messageReturn({input: fileDir, type: 'attach'});//what does this do, are message return args right?
+    return await messageReturn({input: fileDir, type: 'attach'});//what does this do, are message return args right?
   }
   else if (command === 'bpm' && developerCheck === true) {
     const msg = await message.channel.send(`Press 🏁 to begin, count 10 beats (starting on 1) then press the 🛑.`); //Sends initial message
     let iterator = await 0;
     await msg.react("🏁");
-    await func.wait(500);
+    await wait(500);
     while (await msg.reactions.cache.get('🏁').count < 2) { //waits for a user to press 🏁
-      await func.wait(10);
+      await wait(10);
       iterator++;
       if (iterator > 3000) {
         msg.delete();
@@ -1237,7 +1245,7 @@ async function commandLoop(message) { //All commands stored here
       }
     }
 
-    let startTimer = func.getTime();
+    let startTimer = getTime();
 
     iterator = await 0;
     await msg.reactions.cache.get('🏁').remove();
@@ -1245,14 +1253,14 @@ async function commandLoop(message) { //All commands stored here
     msg.edit("Count 10 beats then press the 🛑.");
 
     while (await msg.reactions.cache.get('🛑').count < 2) { //waits for a user to press 🛑
-      await func.wait(10);
+      await wait(10);
       iterator++;
       if (iterator > 3000) {
         msg.delete();
         return message.channel.send(`Command Timed Out`);
       }
     }
-    let endTimer = func.getTime(startTimer);
+    let endTimer = getTime(startTimer);
     await msg.reactions.cache.get('🛑').remove();
 
     let minutesPerBeat = endTimer / 60000;
@@ -1270,7 +1278,7 @@ async function commandLoop(message) { //All commands stored here
     }
     let attachment = new AttachmentBuilder('https://i.imgur.com/xzE6qF4.gif');
     const msg = await message.channel.send({files: [attachment]});
-    await func.wait(2100);
+    await wait(2100);
     msg.delete();
     if (input == undefined) {
       input = ''
@@ -1279,17 +1287,17 @@ async function commandLoop(message) { //All commands stored here
       input = ' ' + input
     }
     if (odds > Math.random()) {
-      return await func.messageReturn({input: "Success! / Heads / Yes", type: 'text', commandDisplay: 'flip' + input});
+      return await messageReturn({input: "Success! / Heads / Yes", type: 'text', commandDisplay: 'flip' + input});
     }
     else {
-      return await func.messageReturn({input: "Failure! / Tails / No", type: 'text', commandDisplay: 'flip' + input});
+      return await messageReturn({input: "Failure! / Tails / No", type: 'text', commandDisplay: 'flip' + input});
     }
   }
   else if (command === 'twitter') {
-    let originalURL = await func.generalScraper('twitter');
+    let originalURL = await generalScraper('twitter');
 
     let lastMessage = await globalData.targetMessage;
-    if (lastMessage == undefined) { return await func.messageReturn({input: "No Twitter link found :(", type: 'text'});}
+    if (lastMessage == undefined) { return await messageReturn({input: "No Twitter link found :(", type: 'text'});}
     let nickName;
     if (lastMessage.member === null) {
       let member = await lastMessage.guild.members.fetch(lastMessage.author.id).catch(console.error);
@@ -1308,108 +1316,28 @@ async function commandLoop(message) { //All commands stored here
       joinedURL = tokenSplitURL[0];
       message.delete();
       lastMessage.delete();
-      console.log(command + ' - ' + func.getTime(start).toString() + 'ms');
+      console.log(command + ' - ' + getTime(start).toString() + 'ms');
       message.channel.send("Tweet was sent by: **" + nickName + "\n**" + messageContent[0] + "\n" + joinedURL);
       return;
     }
     else {
-      return await func.messageReturn({input: "This is not a twitter link.", type: 'text'});
+      return await messageReturn({input: "This is not a twitter link.", type: 'text'});
     }
   }
   else if (command === 'starpic') {
-    let fileURL = await func.generalScraper('image');
+    let fileURL = await generalScraper('image');
     
-    if (fileURL == undefined) {return await func.messageReturn({input: "No file found :(", type: 'text'});}
-    let fileType = await func.typeCheck(fileURL).then();
-    if (fileType == undefined) {return await func.messageReturn({input: "Bad embed :(", type: 'text'});}
+    if (fileURL == undefined) {return await messageReturn({input: "No file found :(", type: 'text'});}
+    let fileType = await typeCheck(fileURL).then();
+    if (fileType == undefined) {return await messageReturn({input: "Bad embed :(", type: 'text'});}
 
     let fileDir = './files/buffer/starBuffer.' + fileType;
 
-    await func.download(fileURL, fileDir);
+    await download(fileURL, fileDir);
     message.delete();
-    const starMessage = await func.sendFile(fileURL, fileDir);
+    const starMessage = await sendFile(fileURL, fileDir);
     starMessage.react("⭐");
     return;
-  }
-  else if (command === 't2' && developerCheck === true) {
-    let originalURL = await func.generalScraper('twitter');
-
-    let lastMessage = await globalData.targetMessage;
-    if (lastMessage == undefined) { return await func.messageReturn({input: "No Twitter link found :(", type: 'text'});}
-
-    let response = await twitterGetUrl(originalURL);
-
-    /*
-
-    let maxUrlLoops = response[dimensionsAvailable];
-    let urlArray;
-
-    for (let i = 0; i < maxUrlLoops; i++) {
-      if (response['download'][i]['url'].includes('.mp4')) {
-        urlArray.push(response['download'][i]['url'])
-      }
-    }
-
-    */
-
-    const embed = new EmbedBuilder()
-      .setTitle("Your Preferences")
-      .setColor(0x686868)
-      .setUrl("https://video.twimg.com/amplify_video/1524843595550838793/vid/1280x720/FuCjDx79xZOfPc83.mp4?tag=14")
-    return await func.messageReturn({input: {embeds: [embed]}});
-
-    /*if(response['found'] == 'false') {return func.messageReturn({input: 'Invalid Link', type: 'text'});}
-    if(response['type'] == 'video') {
-
-    }
-    if(response['type'] == 'image') {
-      
-    }*/
-
-    //return console.log('response JSON: ' + response['download'][0]['url']);
-    return console.log('response String: ' + JSON.stringify(response));
-    //return func.messageReturn(JSON.stringify(response));
-  }
-  else if (command === 't3' && developerCheck === true) {
-    let originalURL = await func.generalScraper('twitter');
-
-    //Download twitter video from originalURL
-    let response = await twitterGetUrl(originalURL);
-    console.log('response String: ' + JSON.stringify(response));
-    if (response['found'] == 'false') {return func.messageReturn({input: 'Invalid Link', type: 'text'});}
-    if (response['type'] == 'video') {
-      let dimensionsAvailable = response['dimensionsAvailable'];
-      let videoURL = response['download'][dimensionsAvailable-1]['url'];
-      let videoDir = './files/buffer/videoBuffer.' + "mp4";
-      await func.download(videoURL, videoDir);
-      await func.sendFile(videoURL, videoDir);
-      return;
-    }
-    if (response['type'] == 'image') {
-      let dimensionsAvailable = response['dimensionsAvailable'];
-      let imageURL = response['download'][dimensionsAvailable-1]['url'];
-      let imageDir = './files/buffer/imageBuffer.' + "jpg";
-      await func.download(imageURL, imageDir);
-      await func.sendFile(imageURL, imageDir);
-      return;
-    }
-  }
-  else if (command === 't4' && developerCheck === true) {
-    //let originalURL = await func.generalScraper('twitter');
-    //Get twitter profile from tweet url (originalURL)
-
-
-    //let targetChannel = await message.guild.channels.fetch('').catch(console.error);
-    //let targetMessage = await targetChannel.messages.fetch('');
-    //let targetMessage = await message.channel.messages.fetch('');
-    //console.log(targetMessage.member === null);
-    //let member = await targetMessage.guild.members.fetch(targetMessage.author.id).catch(console.error);
-    //console.log(member.displayName);
-
-    //console.log(targetMessage);
-    //console.log(targetMessage.member);
-    //console.log(targetMessage.member.displayName);
-
   }
   else if (command === 'vidT' && developerCheck === true) {
     new FFmpeg()
@@ -1419,7 +1347,7 @@ async function commandLoop(message) { //All commands stored here
 
     return;
 
-    //return await func.messageReturn();
+    //return await messageReturn();
   }
   else if (command === 'reaction' && developerCheck === true) {
     var SearchInput = '';
@@ -1499,7 +1427,7 @@ async function commandLoop(message) { //All commands stored here
     
     var link = memeSort[0].link.toString();
     
-    return await func.messageReturn({input: link, type: 'attach', filename: 'reaction.jpg'});
+    return await messageReturn({input: link, type: 'attach', filename: 'reaction.jpg'});
 
   }
   else if (command === 'YoutubeDownload' && developerCheck === true) {
@@ -1510,60 +1438,60 @@ async function commandLoop(message) { //All commands stored here
     console.log(args);
 
     return;*/
-    //return await func.messageReturn();
+    //return await messageReturn();
   }
   else if (command === 'switch' && developerCheck === true) {
     //basic get image make canvas from that image
     let fileDir = './files/buffer/switchBuffer.png';
-    let fileURL = await func.generalScraper('image');
-    if (fileURL == undefined) {return await func.messageReturn({input: "No file found :(", type: 'text'})}
-    await func.download(fileURL, fileDir);
+    let fileURL = await generalScraper('image');
+    if (fileURL == undefined) {return await messageReturn({input: "No file found :(", type: 'text'})}
+    await download(fileURL, fileDir);
     let imageSize = await SizeOf(fileDir);
     //reduce image resolution
     let canvasRes = [imageSize.width*0.1, imageSize.height*0.1]
-    await func.canvasInitialize(canvasRes, fileDir);
+    await canvasInitialize(canvasRes, fileDir);
     let canvas = globalData.canvas;
     let context = globalData.context;
     let canvasWidth = canvas.width;
     let canvasHeight = canvas.height;
 
     canvasRes = [imageSize.width, imageSize.height]
-    await func.canvasInitialize(canvasRes, fileDir);
+    await canvasInitialize(canvasRes, fileDir);
     canvas = globalData.canvas;
     context = globalData.context;
     canvasWidth = canvas.width;
     canvasHeight = canvas.height;
 
-    return await func.messageReturn({input: canvas.toBuffer(), type: 'attach', filename: 'switch.png'});
+    return await messageReturn({input: canvas.toBuffer(), type: 'attach', filename: 'switch.png'});
   }
   else if (command === 'repost' && developerCheck === true) {
-    //let fileURL = await func.generalScraper('file');
+    //let fileURL = await generalScraper('file');
 
     let fileURL = 'https://twitter.com/i/videos/tweet/1524844800574378003';
 
-    if (fileURL == undefined) {return await func.messageReturn({input: "No file found :(", type: 'text'});}
+    if (fileURL == undefined) {return await messageReturn({input: "No file found :(", type: 'text'});}
 
-    //let fileType = await func.typeCheck(fileURL).then();
+    //let fileType = await typeCheck(fileURL).then();
     let fileType = 'mp4';
-    if (fileType == undefined) {return await func.messageReturn({input: "Bad embed :(", type: 'text'});}
+    if (fileType == undefined) {return await messageReturn({input: "Bad embed :(", type: 'text'});}
 
     let fileDir = './files/buffer/testBuffer.' + fileType;
 
-    await func.download(fileURL, fileDir);
-    await func.sendFile(fileURL, fileDir);
+    await download(fileURL, fileDir);
+    await sendFile(fileURL, fileDir);
     return;
   }
   else if (command === 'info' && developerCheck === true) {
-    await func.infoScraper();
+    await infoScraper();
     return;
   }
   else if (command === 'probe' && developerCheck === true) {
-    await func.infoScraper();
+    await infoScraper();
     //console.log(link);
     return;
   }
   else if (command === 'link' && developerCheck === true) {
-    let link = await func.generalScraper('file');
+    let link = await generalScraper('file');
     console.log(message.reference);
 
     console.log('$link link: ' + link);    
@@ -1575,92 +1503,6 @@ async function commandLoop(message) { //All commands stored here
   else if (command === 'kill' && developerCheck === true) {
     log();
     return;
-  }
-  else if (command === 'twitter_search' && developerCheck === true) {
-    // Stored cause totally working, but only searches past 30 days, so not of use right now.
-    
-    var twitsearchPhrase = '';
-    var twitsearchAny = '';
-    var twitSearchArr = [];
-
-    if (false) {
-      for (let i = 0; i < args.length; i++) { //Turns args into a string
-        twitsearchPhrase += args[i] + ' ';
-      }
-
-      twitsearchPhrase = twitsearchPhrase.trim(); //Removes last space
-      twitSearchArr = twitsearchPhrase.split('"'); //Splits string into array by ' " '
-      twitsearchPhrase = '';
-
-      for (let i = 0; i < twitSearchArr.length; i++) {
-        if(i % 2 == 0) {
-          twitSearchArr[i] = twitSearchArr[i].trim();
-          twitsearchAny += twitSearchArr[i] + ' ';
-        }
-        else {
-          twitsearchPhrase += '"' + twitSearchArr[i] + '" ';
-        }
-      }
-
-      twitsearchAny = twitsearchAny.trim();
-      twitsearchPhrase = twitsearchPhrase.trim(); //Removes last space
-      twitSearchArr = twitsearchAny.split(' '); //Splits string into array by ' '
-      twitsearchAny = '';
-
-      for (let i = 0; i < twitSearchArr.length; i++) { //Turns args into a string
-        twitsearchAny += twitSearchArr[i] + ' OR ';
-      }
-
-      twitsearchAny = twitsearchAny.substring(0, twitsearchAny.length - 4); // Removes last ' OR '
-      twitSearchArr = [];
-
-      if (twitsearchPhrase != '') {
-        twitsearchPhrase = twitsearchPhrase + ' ';
-      }
-      if (twitsearchAny != '') {
-        twitsearchAny = '(' + twitsearchAny + ') ';
-      }
-
-      /*twit.get('search/tweets', { q: 'from (from:reactjpg)', count: 20 }, function (err, data, response) {
-        console.log(data);
-        console.log(data.statuses.length);
-        
-        if (twitSearchCompare != '') {
-          twitSearchCompare = twitSearchCompare.replace(/[()]/g, '');
-          twitSearchArr = twitSearchCompare.split(' OR ');
-          for (let i = 0; i < twitSearchArr.length; i++) {
-            twitSearchArr[i] = twitSearchArr[i].trim();
-          }
-          console.log('CRASH');
-          for (let i = 0; i < data.statuses.length; i++) {
-            console.log('for loop A: ' + i);
-            for (let j = 0; j < twitSearchArr.length; j++) {
-              console.log('for loop B: ' + j);
-              if (data.statuses[i].text.includes(twitSearchArr[j])) {
-                currentSearchMatches++;
-              }
-            }
-            console.log('update4');
-            if (currentSearchMatches > bestSearchMatches) {
-              console.log('updateIF');
-              bestSearchMatches = currentSearchMatches;
-              bestSearch = i;
-            }
-          }
-        }
-        else {
-          console.log('updateElse');
-          bestSearch = 0;
-        }
-        console.log('update6');
-        
-        console.log(data.statuses[bestSearch].text);
-      });*/
-
-      console.log('Results: "' + twitsearchPhrase + twitsearchAny + '"');
-      console.log('twitsearchPhrase: "' + twitsearchPhrase + '"');
-      console.log('twitsearchAny: "' + twitsearchAny + '"');
-  }
   }
   else if ((command === 'math' || command === 'm') && developerCheck === true) { // Math
     let fullMessage = message.toString();
@@ -1719,42 +1561,10 @@ async function commandLoop(message) { //All commands stored here
         returnMessage = 'NaN';
       }
 
-      await func.messageReturn({input: returnMessage.toString(), type: 'text', title: fullMessage[i]});
+      await messageReturn({input: returnMessage.toString(), type: 'text', title: fullMessage[i]});
     }
     
     return;
-  }
-  else if ((command === 'convert' || command === 'conv') && developerCheck === true) {
-    /*
-    let fileURL = await func.generalScraper('file');
-
-    console.log(input);
-    console.log(input2);
-
-    if (fileURL == undefined) {return message.channel.send("No File Found :(");}
-
-    let fileType = await func.typeCheck(fileURL).then();
-    if (fileType == undefined) {return message.channel.send("Bad Embed :(");}
-
-    let fileDirBase = await './files/buffer/conversionDownload/filePreConversion.';
-    let fileDirInput = await fileDirBase + fileType;
-    let fileDirOutput = await './files/buffer/conversionDownload/filePostConversion.' + input;
-    console.log(fileDirOutput);
-
-    await func.download(fileURL, fileDirInput);
-
-    await func.wait(1000)
-
-    if (fileType === 'webp') {
-      console.log("This is a .webp, SAD!");
-      const result = await webp.dwebp(fileDirInput, fileDirOutput);
-      result.then((response) => {console.log(response)});
-    }
-
-    attachment = await new MessageAttachment(fileDirOutput);
-    return message.channel.send(attachment);
-    */
-   return;
   }
   else { //archive
     //arc, serverarc, and custom command checks:
@@ -1774,15 +1584,15 @@ async function commandLoop(message) { //All commands stored here
     else {//everything after command
       name = fullInput;
     }
-    await func.findEmoji(name);
+    await findEmoji(name);
     let matches = globalData.emojiMatch;
     for (var match of matches) {
       if (match[3] != match[0]) {
         name = name.replace(match[3], match[2])
       }
     }
-    name = await func.fileNameVerify(name);//used for checking JSON and button IDs
-    let compareName = await func.arcName(name);
+    name = await fileNameVerify(name);//used for checking JSON and button IDs
+    let compareName = await arcName(name);
     let id;
     let title;
     let listThumb = null;
@@ -1815,7 +1625,7 @@ async function commandLoop(message) { //All commands stored here
       for (let i = 0; i < archiveList.length; i++) {
         let fileType =  archiveList[i].type;
         if (fileType === 'link') {//check if link fits other types
-          fileType = await func.fileType(archiveList[i].extension);
+          fileType = await fileTypeFunc(archiveList[i].extension);
         }
         if (fileType === 'image') { //File is an image
           imageList.push(' ' + archiveList[i].name)
@@ -1852,16 +1662,16 @@ async function commandLoop(message) { //All commands stored here
       if (textList.length > 0) {embedDescription.text   = '**Text:** ' + '\n' + textList + '\n\n';}
       if (otherList.length > 0) {embedDescription.other = '**Other:** ' + '\n' + otherList + '\n\n\n';}
 
-      return await func.messageReturn({input: embedDescription.image + embedDescription.video + embedDescription.gif + embedDescription.audio + embedDescription.text + embedDescription.other, type: 'text', title: title, thumbnail: listThumb, commandDisplay: prefix + command + ' list'});
+      return await messageReturn({input: embedDescription.image + embedDescription.video + embedDescription.gif + embedDescription.audio + embedDescription.text + embedDescription.other, type: 'text', title: title, thumbnail: listThumb, commandDisplay: prefix + command + ' list'});
     }
     else if (input === undefined && !customCMD) {//no file name included
-      return await func.messageReturn({input: 'Please include a file name.', type: 'text'});
+      return await messageReturn({input: 'Please include a file name.', type: 'text'});
     }
     else { // SEND or ADD File
       let fileExists = false;
       let arrayPosition;
       for (let i = 0; i < archiveList.length; i++) { //Check if the given name exists in the JSON
-        if (await func.arcName(archiveList[i].name) === compareName) {
+        if (await arcName(archiveList[i].name) === compareName) {
           fileExists = true;
           arrayPosition = i;
           break;
@@ -1887,7 +1697,7 @@ async function commandLoop(message) { //All commands stored here
         archiveList = await filteredArchiveList;
           
         for (let i = 0; i < archiveList.length; i++) {//search re-executed
-          if (await func.arcName(archiveList[i].name) === compareName) {
+          if (await arcName(archiveList[i].name) === compareName) {
             fileExists = true;
             arrayPosition = i;
             break;
@@ -1895,9 +1705,9 @@ async function commandLoop(message) { //All commands stored here
         }
       }
       if (!fileExists && !customCMD) { //ADD FILE
-        let link = await func.generalScraper('file'); //Searches for any embed
+        let link = await generalScraper('file'); //Searches for any embed
         if (link === undefined) {
-          return await func.messageReturn({input: 'Not a valid embed.', type: 'text'});
+          return await messageReturn({input: 'Not a valid embed.', type: 'text'});
         }
         if (link.includes('https://tenor.com/') && link.includes('-gif-')) {//if tenor, scrape actual link from raw html
           let response = await fetch(link);
@@ -1906,8 +1716,8 @@ async function commandLoop(message) { //All commands stored here
           let pos2 = rawHTML.indexOf('.gif"',pos1)
           link = rawHTML.substring(pos1 + 1, pos2 + 4);
         }
-        let extension = await func.fileExtension(link);
-        let fileType = await func.fileType(extension);
+        let extension = await fileExtension(link);
+        let fileType = await fileTypeFunc(extension);
         
         let textType = 'File';
         if (fileType == 'link') {//used for embed display (File saved as... vs. Link saved as...)
@@ -1916,8 +1726,8 @@ async function commandLoop(message) { //All commands stored here
 
         if (fileType == 'image' || fileType == 'gif') {//check if too big for embed, which breaks at >50 MB
           let archiveBuffer = './files/buffer/' + name + '.' + extension
-          await func.download(link, archiveBuffer)
-          if (func.uploadLimitCheck(archiveBuffer, 50000000)) {
+          await download(link, archiveBuffer)
+          if (uploadLimitCheck(archiveBuffer, 50000000)) {
             fileType = 'link';
           }
         }
@@ -1938,7 +1748,7 @@ async function commandLoop(message) { //All commands stored here
           thumb = link;
         }
         
-        return await func.messageReturn({input: textType + ' saved as "' + name + '"', type: 'text', thumbnail: thumb});
+        return await messageReturn({input: textType + ' saved as "' + name + '"', type: 'text', thumbnail: thumb});
       }
       else if (fileExists) {//SEND FILE
         let file = archiveList[arrayPosition];
@@ -1957,9 +1767,9 @@ async function commandLoop(message) { //All commands stored here
           }
           else {
             archiveBuffer = './files/buffer/' + name + '.' + extension;
-            await func.download(link, archiveBuffer);
+            await download(link, archiveBuffer);
             messageType = 'attach';
-            if (func.uploadLimitCheck(archiveBuffer) === true) {//file too big to download
+            if (uploadLimitCheck(archiveBuffer) === true) {//file too big to download
               archiveBuffer = link;
               if (link.includes('https://media.tenor.com/')) {//tenor falls back to being a normal embedded link if too big to download (still less cringe than sending raw link)
                 messageType = 'link'
@@ -1981,10 +1791,10 @@ async function commandLoop(message) { //All commands stored here
                 .setLabel('Rename') 
                 .setStyle(ButtonStyle.Primary)
             );
-            return await func.messageReturn({input: archiveBuffer, type: messageType, filename: name + '.' + archiveList[arrayPosition].extension, components: [row]});
+            return await messageReturn({input: archiveBuffer, type: messageType, filename: name + '.' + archiveList[arrayPosition].extension, components: [row]});
           }
           else {
-            return await func.messageReturn({input: archiveBuffer, type: messageType, filename: name + '.' + archiveList[arrayPosition].extension, commandDisplay: prefix + name});
+            return await messageReturn({input: archiveBuffer, type: messageType, filename: name + '.' + archiveList[arrayPosition].extension, commandDisplay: prefix + name});
           }
         }
         else if (fileExists === true && typeLink === true) { //File name already exists in JSON - File is a link - Send given link
@@ -2000,10 +1810,10 @@ async function commandLoop(message) { //All commands stored here
                 .setLabel('Rename') 
                 .setStyle(ButtonStyle.Primary)
             );
-            return await func.messageReturn({input: link, type: 'raw', components: [row]});
+            return await messageReturn({input: link, type: 'raw', components: [row]});
           }
           else {
-            return await func.messageReturn({input: link, type: 'raw'});
+            return await messageReturn({input: link, type: 'raw'});
           }
         }
       }
@@ -2030,7 +1840,7 @@ client.on(Events.InteractionCreate, async interaction => {
       let arrayPosition;
       if (info[2] == 'delete') { //DELETE
         for (let i = 0; i < archiveList.length; i++) { //Check if the given name exists in the JSON
-          if (await func.arcName(archiveList[i].name) === name) {
+          if (await arcName(archiveList[i].name) === name) {
             fileExists = true;
             arrayPosition = i;
             break;
@@ -2144,17 +1954,17 @@ client.on(Events.InteractionCreate, async interaction => {
       if (info[2] == 'rename') {
         let newName = interaction.fields.getTextInputValue(info.slice(0,5).join(' ') + ' textBox');//concats all info, omitting modal and adding textBox, to recreate textbox customId
         //emoji handling
-        func.findEmoji(newName);
+        findEmoji(newName);
         let matches = globalData.emojiMatch;
         for (var match of matches) {
           if (match[3] != match[0]) {
             newName = newName.replace(match[3], match[2])
           }
         }
-        newName = await func.fileNameVerify(newName).then();
+        newName = await fileNameVerify(newName).then();
 
         for (let i = 0; i < archiveList.length; i++) { //Check if the original name exists in the JSON
-          if (await func.arcName(archiveList[i].name) === name) {
+          if (await arcName(archiveList[i].name) === name) {
             fileExists = true;
             arrayPosition = i;
             break;
@@ -2163,7 +1973,7 @@ client.on(Events.InteractionCreate, async interaction => {
 
         let newNameExists = false;
         for (let i = 0; i < archiveList.length; i++) { //Check if the new name exists in the JSON
-          if (await func.arcName(archiveList[i].name) === await func.arcName(newName) && arrayPosition != i) {//array position check means something can be renamed to its own name (for case/spacing differences)
+          if (await arcName(archiveList[i].name) === await arcName(newName) && arrayPosition != i) {//array position check means something can be renamed to its own name (for case/spacing differences)
             newNameExists = true;
             break;
           }
@@ -2176,8 +1986,7 @@ client.on(Events.InteractionCreate, async interaction => {
           return;
         }
 
- 
-        name = archiveList[arrayPosition].name;//restore spaces etc. to name
+        name = archiveList[arrayPosition].name; //restore spaces etc. to name
         let embed;
         if (fileExists === true) {
           let thumb = null;
@@ -2192,7 +2001,7 @@ client.on(Events.InteractionCreate, async interaction => {
             .setTitle('"' + name + '"' + ' has been renamed to ' + '"' + newName + '".')
             .setThumbnail(thumb);
         }
-        else {//can't find file
+        else { //can't find file
           embed = new EmbedBuilder()
             .setColor(0x686868)
             .setTitle('Error encountered!');
@@ -2200,25 +2009,19 @@ client.on(Events.InteractionCreate, async interaction => {
         interaction.update({embeds: [embed], content: '', files: [], components: []});
       }
     }
-
   }
 });
 
 client.on('messageCreate', async message => {
 	await commandLoop(message).then( sendTime => {
     if (running && !alreadyRunning) {
-      let totalTime = func.getTime(start);
-      if (sendTime != undefined) {
-        console.log(`[ ${command} - ${totalTime}ms ] ( ${(totalTime - sendTime)}ms + ${sendTime}ms )`);
-      }
-      else {
-        console.log(`[ ${command} - ${totalTime}ms ]`);
-      }
+      let totalTime = getTime(start);
+      if (sendTime != undefined) { console.log(`[ ${command} - ${totalTime}ms ] ( ${(totalTime - sendTime)}ms + ${sendTime}ms )`); }
+      else { console.log(`[ ${command} - ${totalTime}ms ]`); }
       running = false
     }
     alreadyRunning = false;
   });
 });
 
-export { globalData };
 client.login(DISCORDTOKEN);

@@ -6,15 +6,21 @@ A very scuffed bot made by some very scuffed men.
 
 CatJam's Utilities is a Discord bot that aim's to be Kitchen Sink's spiritual successor, allowing for features such as meme creation, photo manipulation, cross platform file archiving, and much more.
 
-### Run Instructions:
+### Setup (Docker):
 
-- Download and install [``Node.js v16.10.0``](https://nodejs.org/download/release/v16.10.0/)
+- Duplicate the file named `CHECK_README.js` and rename it to `keys.js`. Then enter the required tokens inside the file `keys.js`.
 
-- Open the root directory of the bot and run ``npm install.bat``, this will install all the required node modules as specified in 'package.json'.
+- Enter `docker-compose up` in terminal or Compose Up `compose.yml` via VScode extension.
 
-- Duplicate the file named ``CHECK_README.js`` and rename it to ``keys.js``. Then enter the required tokens inside the file 'keys.js'.
+### Setup (Windows Terminal):
 
-- Run CatJam's Utilities with either the provided ``run.bat``.
+- Download and install [`Node.js v18.20.7`](https://nodejs.org/download/release/v18.20.7/)
+
+- Open the root directory of the bot and run `npm install.bat`, this will install all the required node modules as specified in 'package.json'.
+
+- Duplicate the file named `CHECK_README.js` and rename it to `keys.js`. Then enter the required tokens inside the file 'keys.js'.
+
+- Run CatJam's Utilities with either the provided `run.bat`.
 
 ### Bot Usage:
 
