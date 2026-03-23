@@ -1,7 +1,7 @@
 const fs = require('fs-extra');
 const emojiRegex = require('emoji-regex');
 const nEmoji = require('node-emoji');
-const axios = require('axios');
+
 const { globalData } = require('../state.js');
 const { getTime } = require('./misc.js');
 

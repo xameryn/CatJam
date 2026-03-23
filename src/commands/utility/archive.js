@@ -1,6 +1,6 @@
 const { SlashCommandBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } = require('discord.js');
 const fs = require('fs-extra');
-const fetch = require('node-fetch');
+
 const { globalData } = require('../../state.js');
 const { messageReturn, generalScraper, download } = require('../../utils/discord.js');
 const { fileNameVerify, fileExtension, fileTypeFunc, uploadLimitCheck } = require('../../utils/file.js');

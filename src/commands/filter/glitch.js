@@ -1,9 +1,8 @@
 const { SlashCommandBuilder } = require('discord.js');
 const { globalData } = require('../../state.js');
 const { messageReturn, generalScraper, download } = require('../../utils/discord.js');
-const { canvasInitialize } = require('../../utils/canvas.js');
+const { canvasInitialize, glitchImage } = require('../../utils/canvas.js');
 const SizeOf = require('image-size');
-const glitch = require('glitch-canvas');
 
 module.exports = {
     name: 'glitch',
@@ -30,13 +29,12 @@ module.exports = {
         await canvasInitialize([imageSize.width, imageSize.height], fileDir);
         
         let canvas = globalData.canvas;
-        let buffer = canvas.toBuffer();
-        let glitchedBuffer = await glitch({ 
-            amount: 0, 
+        
+        let glitchedBuffer = await glitchImage(canvas, { 
             seed: Math.floor(Math.random() * 101), 
             iterations: Math.floor(Math.random() * 16 + 10), 
             quality: 60 
-        }).fromBuffer(buffer).toBuffer();
+        });
         
         return await messageReturn({ input: glitchedBuffer, type: 'attach', filename: 'glitch.png' });
     }

@@ -1,4 +1,4 @@
-const Canvas = require('canvas');
+const Canvas = require('skia-canvas');
 const fs = require('fs-extra');
 const SizeOf = require('image-size');
 const emojiRegex = require('emoji-regex');
@@ -407,4 +407,24 @@ async function drawText(offsets = [0, 0], channel = 1, stroke = false) {
     return;
 }
 
-module.exports = { canvasInitialize, imageToCanvas, scaleImage, drawImage, textHandler, drawText };
+async function glitchImage(canvas, options = {}) {
+    const { amount = 0, seed = 0, iterations = 10, quality = 60 } = options;
+    const buffer = await canvas.toBuffer('jpeg', { quality: quality / 100 });
+    
+    // Simple JPEG glitching: skip the header and swap some bytes
+    const headerSize = 100; // rough estimate for JPEG header
+    const glitched = Buffer.from(buffer);
+    const random = (s) => {
+        let x = Math.sin(s) * 10000;
+        return x - Math.floor(x);
+    };
+
+    for (let i = 0; i < iterations; i++) {
+        const pos = Math.floor(headerSize + random(seed + i) * (glitched.length - headerSize - 1));
+        glitched[pos] = Math.floor(random(seed + i + 0.1) * 256);
+    }
+    
+    return glitched;
+}
+
+module.exports = { canvasInitialize, imageToCanvas, scaleImage, drawImage, textHandler, drawText, glitchImage };

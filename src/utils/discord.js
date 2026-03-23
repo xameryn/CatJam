@@ -1,13 +1,13 @@
 const { AttachmentBuilder, EmbedBuilder } = require('discord.js');
 const fs = require('fs-extra');
-const axios = require('axios');
 const exifr = require('exifr');
-const Canvas = require('canvas');
+const Canvas = require('skia-canvas');
 const SizeOf = require('image-size');
 const PNG = require("pngjs").PNG;
 const { globalData } = require('../state.js');
 const { getTime } = require('./misc.js');
 const { fileTypeFunc, fileNameVerify, uploadLimitCheck } = require('./file.js');
+const path = require('path');
 
 async function download(fileURL, fileDir) {
     let start = getTime();
@@ -16,21 +16,14 @@ async function download(fileURL, fileDir) {
         return;
     }
 
-    fs.ensureDirSync(require('path').dirname(fileDir));
+    fs.ensureDirSync(path.dirname(fileDir));
 
-    const write = fs.createWriteStream(fileDir);
-    const response = await axios({
-        method: 'get',
-        url: fileURL,
-        responseType: 'stream'
-    });
-
-    response.data.pipe(write);
-
-    await new Promise((resolve, reject) => {
-        write.on('finish', resolve);
-        write.on('error', reject);
-    });
+    const response = await fetch(fileURL);
+    if (!response.ok) throw new Error(`Failed to fetch ${fileURL}: ${response.statusText}`);
+    
+    const arrayBuffer = await response.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+    await fs.writeFile(fileDir, buffer);
 
     let dirArray = fileDir.split('.');
     if (dirArray[dirArray.length - 1] === 'png') {
@@ -88,7 +81,7 @@ async function download(fileURL, fileDir) {
                 }
 
                 context.drawImage(image, 0, 0, imageSize.width, imageSize.height);
-                fs.writeFileSync(fileDir, canvas.toBuffer());
+                fs.writeFileSync(fileDir, await canvas.toBuffer('png'));
             }
         }
     }
