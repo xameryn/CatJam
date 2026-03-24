@@ -1,3 +1,3 @@
-npm start
+bun start
 
 TITLE CatJam Discord Bot
