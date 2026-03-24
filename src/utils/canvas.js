@@ -1,4 +1,4 @@
-const Canvas = require('skia-canvas');
+const { Canvas, loadImage } = require('skia-canvas');
 const fs = require('fs-extra');
 const SizeOf = require('image-size');
 const emojiRegex = require('emoji-regex');
@@ -8,24 +8,24 @@ const { getEmoji, findEmoji } = require('./emoji.js');
 
 async function canvasInitialize(canvasDims, background) {
     let start = getTime();
-    let canvas = Canvas.createCanvas(canvasDims[0], canvasDims[1]);
+    let canvas = new Canvas(canvasDims[0], canvasDims[1]);
     globalData.canvas = canvas;
     let context = canvas.getContext('2d');
     globalData.context = context;
 
     let backgroundImage;
     if (background == 'black') {
-        backgroundImage = await Canvas.loadImage('./files/templates/blackBox.jpg');
+        backgroundImage = await loadImage('./files/templates/blackBox.jpg');
     }
     else if (background == 'white') {
-        backgroundImage = await Canvas.loadImage('./files/templates/whiteBox.jpg');
+        backgroundImage = await loadImage('./files/templates/whiteBox.jpg');
     }
     else if (background == 'png' || background == undefined) {
         console.log('canvasInitialize - ' + getTime(start).toString() + 'ms');
         return;
     }
     else {
-        backgroundImage = await Canvas.loadImage(background);
+        backgroundImage = await loadImage(background);
     }
     context.drawImage(backgroundImage, 0, 0, canvas.width, canvas.height);
     console.log('canvasInitialize - ' + getTime(start).toString() + 'ms');
@@ -136,7 +136,7 @@ async function drawImage(fileDir, offsets = [0, 0], imagePos, imageDims) {
         let imageSize = await SizeOf(fileDir);
         imageDims = [imageSize.width, imageSize.height];
     }
-    let image = await Canvas.loadImage(fileDir);
+    let image = await loadImage(fileDir);
     context.drawImage(image, imagePos[0] + offsets[0], imagePos[1] + offsets[1], imageDims[0], imageDims[1]);
     console.log('drawImage - ' + getTime(start).toString() + 'ms');
     return;
@@ -396,7 +396,7 @@ async function drawText(offsets = [0, 0], channel = 1, stroke = false) {
                     offsets[0] += (lineHeight - emojiWidth) / 2;
                 }
             }
-            let emoji = await Canvas.loadImage(fileDir);
+            let emoji = await loadImage(fileDir);
             context.drawImage(emoji, emojiPos[0][i] + offsets[0], (pos[1][emojiLines[i]] - emojiPos[1] + offsets[1]), emojiWidth, emojiHeight);
             offsets[0] -= (lineHeight - emojiWidth) / 2;
             offsets[1] -= (lineHeight - emojiHeight) / 2;

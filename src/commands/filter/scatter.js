@@ -71,6 +71,6 @@ module.exports = {
         }
 
         context.putImageData(pixelData, 0, 0);
-        return await messageReturn({ input: canvas.toBuffer(), type: 'attach', filename: 'scatter.png' });
+        return await messageReturn({ input: await canvas.toBuffer(), type: 'attach', filename: 'scatter.png' });
     }
 };

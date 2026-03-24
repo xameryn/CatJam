@@ -1,4 +1,4 @@
-let globalData = {
+const initialData = {
     userData: {},
     authorIndex: 0,
     toggledMSG: '',
@@ -26,4 +26,10 @@ let globalData = {
     changedPrefix: false
 };
 
-module.exports = { globalData };
+let globalData = { ...initialData };
+
+function resetGlobalData() {
+    Object.assign(globalData, JSON.parse(JSON.stringify(initialData)));
+}
+
+module.exports = { globalData, resetGlobalData };

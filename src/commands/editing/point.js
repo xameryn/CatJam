@@ -139,6 +139,6 @@ module.exports = {
         await drawImage(pointImage2, [0, 0], [xAxis2, 0], [scaledWidth2, scaledHeightP]);
         await drawImage(pointImage1, [0, 0], [0, 0], [scaledWidth1, scaledHeightP]);
 
-        return await messageReturn({ input: canvas.toBuffer(), type: 'attach', filename: `point.png`, transformative: false });
+        return await messageReturn({ input: await canvas.toBuffer(), type: 'attach', filename: `point.png`, transformative: false });
     }
 };

@@ -71,6 +71,6 @@ module.exports = {
             await drawImage(`./files/buffer/${command}Buffer.png`, [106, 29]);
         }
 
-        return await messageReturn({ input: canvas.toBuffer(), type: 'attach', filename: `literally1984.png`, transformative: false });
+        return await messageReturn({ input: await canvas.toBuffer(), type: 'attach', filename: `literally1984.png`, transformative: false });
     }
 };

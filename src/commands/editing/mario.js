@@ -53,6 +53,6 @@ module.exports = {
             await drawText();
         }
 
-        return await messageReturn({ input: canvas.toBuffer(), type: 'attach', filename: `mario.png`, transformative: false });
+        return await messageReturn({ input: await canvas.toBuffer(), type: 'attach', filename: `mario.png`, transformative: false });
     }
 };

@@ -3,7 +3,7 @@ const path = require('path');
 const { Events, REST, Routes } = require('discord.js');
 const { client } = require('./client.js');
 const { DISCORDTOKEN, GLOBAL_PREFIX, DEV_ID_ARRAY } = require('./config.js');
-const { globalData } = require('./state.js');
+const { globalData, resetGlobalData } = require('./state.js');
 const { getTime, createFolders } = require('./utils/misc.js');
 const { userData } = require('./utils/user.js');
 
@@ -66,6 +66,7 @@ client.once(Events.ClientReady, c => {
 client.on(Events.MessageCreate, async message => {
     if (message.author.bot) return;
 
+    resetGlobalData();
     globalData.authorID = message.author.id;
     globalData.message = message;
     globalData.globalPrefix = GLOBAL_PREFIX;
@@ -129,7 +130,6 @@ client.on(Events.MessageCreate, async message => {
             }
         } catch (error) {
             console.error(error);
-            // await message.reply('There was an error while executing this command!');
         }
     }
 
@@ -146,11 +146,12 @@ client.on(Events.InteractionCreate, async interaction => {
     const command = client.commands.get(interaction.commandName);
     if (!command) return;
 
+    resetGlobalData();
     globalData.authorID = interaction.user.id;
     globalData.message = interaction;
     globalData.globalPrefix = GLOBAL_PREFIX;
     globalData.trueCommand = command.name;
-    globalData.args = []; // Interaction options are handled within the command
+    globalData.args = []; 
 
     try {
         await interaction.deferReply();

@@ -85,6 +85,6 @@ module.exports = {
         context.fillStyle = '#000000';
         await drawText([0, adjustedHeight]);
 
-        return await messageReturn({ input: canvas.toBuffer(), type: 'attach', filename: `${command}.png`, transformative: false });
+        return await messageReturn({ input: await canvas.toBuffer(), type: 'attach', filename: `${command}.png`, transformative: false });
     }
 };

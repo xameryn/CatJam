@@ -116,6 +116,6 @@ module.exports = {
         context.font = `${size2}px Arial`;
         await drawText([0, yOffset2], 2);
 
-        return await messageReturn({ input: canvas.toBuffer(), type: 'attach', filename: `poster.png`, transformative: false });
+        return await messageReturn({ input: await canvas.toBuffer(), type: 'attach', filename: `poster.png`, transformative: false });
     }
 };

@@ -116,6 +116,6 @@ module.exports = {
             await drawText([0, 0], 1, true);
         }
 
-        return await messageReturn({ input: canvas.toBuffer(), type: 'attach', filename: `meme.png`, transformative: false });
+        return await messageReturn({ input: await canvas.toBuffer(), type: 'attach', filename: `meme.png`, transformative: false });
     }
 };

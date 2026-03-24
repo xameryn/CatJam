@@ -26,7 +26,7 @@ module.exports = {
         canvasRes = [imageSize.width, imageSize.height];
         await canvasInitialize(canvasRes, fileDir);
         
-        return await messageReturn({ input: globalData.canvas.toBuffer(), type: 'attach', filename: 'switch.png' });
+        return await messageReturn({ input: await globalData.canvas.toBuffer(), type: 'attach', filename: 'switch.png' });
     },
     async executeSlash(interaction) {
         if (!DEV_ID_ARRAY.includes(interaction.user.id)) {

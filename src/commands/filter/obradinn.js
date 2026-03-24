@@ -73,6 +73,6 @@ module.exports = {
             }
         }
         context.putImageData(pixelData, 0, 0);
-        return await messageReturn({ input: canvas.toBuffer(), type: 'attach', filename: 'obraDinn.png' });
+        return await messageReturn({ input: await canvas.toBuffer(), type: 'attach', filename: 'obraDinn.png' });
     }
 };
