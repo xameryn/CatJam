@@ -167,9 +167,9 @@ async function drawImage(fileDir, offsets = [0, 0], imagePos, imageDims) {
 
 async function textHandler(funcArgs) {
     let start = getTime();
-    let defaults = { style: '', minSize: 1, byLine: false, spacing: 0.2, xAlign: 'center', yAlign: 'center' };
+    let defaults = { style: '', minSize: 1, byLine: false, spacing: 0.2, xAlign: 'center', yAlign: 'center', metrics: null };
     funcArgs = { ...defaults, ...funcArgs };
-    let { text, font, style, maxSize, minSize, maxWidth, maxHeight, byLine, spacing, baseX, baseY, yAlign, xAlign } = funcArgs;
+    let { text, font, style, maxSize, minSize, maxWidth, maxHeight, byLine, spacing, baseX, baseY, yAlign, xAlign, metrics } = funcArgs;
 
     let defaultRegex = emojiRegex();
     let customRegex = /<:(\w+):(\d+)>/gmd;
@@ -197,7 +197,8 @@ async function textHandler(funcArgs) {
     let size, lines, heights, height;
     for (var n = maxSize; n >= minSize; n--) {
         context.font = style + `${n}px "` + font + `"`;
-        heights = [context.measureText(text).actualBoundingBoxDescent, context.measureText(text).actualBoundingBoxAscent];
+        let metricsText = metrics || text;
+        heights = [context.measureText(metricsText).actualBoundingBoxDescent, context.measureText(metricsText).actualBoundingBoxAscent];
         if (((heights[0] + heights[1]) <= 1 && text != '') || matches != undefined) {
             heights = [context.measureText('Qq').actualBoundingBoxDescent, context.measureText('Qq').actualBoundingBoxAscent];
         }
