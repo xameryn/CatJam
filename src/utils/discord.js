@@ -104,11 +104,11 @@ async function generalScraper(scrapeType) {
                 let emb = m.embeds;
                 return ((m.attachments.size > 0) && (atc != undefined) &&
                     ((atc.url.includes('.png')) ||
-                    (atc.url.includes('.jpg')) ||
-                    (atc.url.includes('.bmp')) ||
-                    (atc.url.includes('.jpeg')) ||
-                    (atc.url.includes('.jfif')) ||
-                    (atc.url.includes('.tiff')))) ||
+                        (atc.url.includes('.jpg')) ||
+                        (atc.url.includes('.bmp')) ||
+                        (atc.url.includes('.jpeg')) ||
+                        (atc.url.includes('.jfif')) ||
+                        (atc.url.includes('.tiff')))) ||
                     (emb.length > 0 &&
                         (emb[0].data.type == 'image' ||
                             (emb[0].data.type == 'rich' && emb[0].data.image != undefined)));
@@ -316,10 +316,7 @@ async function messageReturn(funcArgs) {
         messageOptions.components = components;
     }
 
-    // Handle Deletion for Prefix Commands
-    if (!isInteraction && message.delete && typeof message.delete === 'function' && (message.attachments?.size == 0 || !transformative)) {
-        message.delete().catch(() => null);
-    }
+    let shouldDelete = !isInteraction && message.delete && typeof message.delete === 'function' && (message.attachments?.size == 0 || !transformative);
 
     if (isInteraction) {
         if (message.replied || message.deferred) {
@@ -338,6 +335,9 @@ async function messageReturn(funcArgs) {
         if (refMessage) await refMessage.reply(messageOptions).catch(() => message.channel.send(messageOptions));
         else await message.channel.send(messageOptions);
     }
+    else if (shouldDelete) { // If we're deleting the command message, don't reply to it. 
+        await message.channel.send(messageOptions);
+    }
     else if (message.reply && !message.deleted) {
          await message.reply(messageOptions).catch(() => message.channel.send(messageOptions));
     }
@@ -345,8 +345,13 @@ async function messageReturn(funcArgs) {
         await message.channel.send(messageOptions);
     }
 
+    if (shouldDelete) { // Execute deletion after sending response
+        message.delete().catch(() => null);
+    }
+
     const resultTime = getTime(start);
 
+    // Disk cleanup
     fs.emptyDir('./files/buffer/emojiDownload/').catch(() => null);
     if (fs.existsSync('./files/buffer/emojis.zip')) {
         fs.unlink('./files/buffer/emojis.zip').catch(() => null);
