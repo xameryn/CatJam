@@ -242,10 +242,12 @@ async function messageReturn(funcArgs) {
 
     let caller;
     if (message.guild) {
-        caller = await message.guild.members.fetch(message.author.id).catch(() => null);
+        caller = await message.guild.members.fetch(message.author ? message.author.id : message.user.id).catch(() => null);
     }
-    let username = caller ? caller.displayName : (message.author ? message.author.username : 'Unknown');
-    let avatarURL = caller ? caller.displayAvatarURL({ extension: 'png', size: 256, dynamic: true }) : (message.author ? message.author.displayAvatarURL({ extension: 'png', size: 256, dynamic: true }) : null);
+    
+    let userObj = message.author || message.user;
+    let username = caller ? caller.displayName : (userObj ? userObj.username : 'Unknown');
+    let avatarURL = caller ? caller.displayAvatarURL({ extension: 'png', size: 256, dynamic: true }) : (userObj ? userObj.displayAvatarURL({ extension: 'png', size: 256, dynamic: true }) : null);
 
     if (type == 'text') {
         if (title == null) {
@@ -262,8 +264,11 @@ async function messageReturn(funcArgs) {
             .setThumbnail(thumbnail);
         messageOptions = { embeds: [embed] };
 
-        if (message.delete && (message.attachments.size == 0 || !transformative)) {
-            await message.delete().catch(() => null);
+        if (message.delete && typeof message.delete === 'function' && (message.attachments?.size == 0 || !transformative)) {
+            const deleteResult = message.delete();
+            if (deleteResult && typeof deleteResult.catch === 'function') {
+                await deleteResult.catch(() => null);
+            }
         }
     }
 
@@ -302,8 +307,11 @@ async function messageReturn(funcArgs) {
             messageOptions.files = [attachment];
         }
 
-        if (message.delete && (message.attachments.size == 0 || !transformative)) {
-            await message.delete().catch(() => null);
+        if (message.delete && typeof message.delete === 'function' && (message.attachments?.size == 0 || !transformative)) {
+            const deleteResult = message.delete();
+            if (deleteResult && typeof deleteResult.catch === 'function') {
+                await deleteResult.catch(() => null);
+            }
         }
         var noReply = false;
         if (!transformative && targetMessage != undefined) {
