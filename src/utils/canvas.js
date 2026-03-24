@@ -6,6 +6,17 @@ const { globalData } = require('../state.js');
 const { getTime } = require('./misc.js');
 const { getEmoji, findEmoji } = require('./emoji.js');
 
+async function loadImage(fileDir) {
+    try {
+        return await loadImage(fileDir);
+    } catch (e) {
+        let stats = fs.existsSync(fileDir) ? fs.statSync(fileDir) : null;
+        console.error(`[Canvas Error] Could not decode: ${fileDir}`);
+        if (stats) console.error(`[Canvas Error] File Size: ${stats.size} bytes`);
+        return null;
+    }
+}
+
 async function canvasInitialize(canvasDims, background) {
     let start = getTime();
     let canvas = new Canvas(canvasDims[0], canvasDims[1]);
@@ -27,7 +38,11 @@ async function canvasInitialize(canvasDims, background) {
     else {
         backgroundImage = await loadImage(background);
     }
-    context.drawImage(backgroundImage, 0, 0, canvas.width, canvas.height);
+
+    if (backgroundImage) {
+        context.drawImage(backgroundImage, 0, 0, canvas.width, canvas.height);
+    }
+    
     console.log('canvasInitialize - ' + getTime(start).toString() + 'ms');
     return;
 }
@@ -133,11 +148,19 @@ async function drawImage(fileDir, offsets = [0, 0], imagePos, imageDims) {
         imageDims = globalData.scaledDims;
     }
     else if (imageDims == undefined) {
-        let imageSize = await SizeOf(fileDir);
-        imageDims = [imageSize.width, imageSize.height];
+        try {
+            let imageSize = await SizeOf(fileDir);
+            imageDims = [imageSize.width, imageSize.height];
+        } catch (e) {
+            imageDims = [100, 100];
+        }
     }
+    
     let image = await loadImage(fileDir);
-    context.drawImage(image, imagePos[0] + offsets[0], imagePos[1] + offsets[1], imageDims[0], imageDims[1]);
+    if (image) {
+        context.drawImage(image, imagePos[0] + offsets[0], imagePos[1] + offsets[1], imageDims[0], imageDims[1]);
+    }
+
     console.log('drawImage - ' + getTime(start).toString() + 'ms');
     return;
 }
@@ -397,7 +420,9 @@ async function drawText(offsets = [0, 0], channel = 1, stroke = false) {
                 }
             }
             let emoji = await loadImage(fileDir);
-            context.drawImage(emoji, emojiPos[0][i] + offsets[0], (pos[1][emojiLines[i]] - emojiPos[1] + offsets[1]), emojiWidth, emojiHeight);
+            if (emoji) {
+                context.drawImage(emoji, emojiPos[0][i] + offsets[0], (pos[1][emojiLines[i]] - emojiPos[1] + offsets[1]), emojiWidth, emojiHeight);
+            }
             offsets[0] -= (lineHeight - emojiWidth) / 2;
             offsets[1] -= (lineHeight - emojiHeight) / 2;
         }
@@ -411,8 +436,7 @@ async function glitchImage(canvas, options = {}) {
     const { amount = 0, seed = 0, iterations = 10, quality = 60 } = options;
     const buffer = await canvas.toBuffer('jpeg', { quality: quality / 100 });
     
-    // Simple JPEG glitching: skip the header and swap some bytes
-    const headerSize = 100; // rough estimate for JPEG header
+    const headerSize = 100;
     const glitched = Buffer.from(buffer);
     const random = (s) => {
         let x = Math.sin(s) * 10000;

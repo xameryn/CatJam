@@ -5,7 +5,7 @@ const { typeCheck } = require('../../utils/file.js');
 
 module.exports = {
     name: 'starpic',
-    aliases: ['sp'],
+    aliases: ['sp', 'star'],
     description: 'Reposts an image with a star reaction.',
     data: new SlashCommandBuilder()
         .setName('starpic')

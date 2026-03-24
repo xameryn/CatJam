@@ -68,7 +68,7 @@ module.exports = {
         if (!DEV_ID_ARRAY.includes(interaction.user.id)) {
             return await interaction.reply({ content: 'Developer only!', ephemeral: true });
         }
-        // Simplified for slash: only evaluates one expression
+        
         let expr = interaction.options.getString('expression');
         let returnMessage = 0.0;
         let tempMessage;

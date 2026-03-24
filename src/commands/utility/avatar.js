@@ -42,14 +42,13 @@ module.exports = {
             author: messageOrInteraction.user,
             guild: messageOrInteraction.guild,
             channel: messageOrInteraction.channel,
-            mentions: { users: new Map(), members: new Map() }, // simplified
+            mentions: { users: new Map(), members: new Map() },
             reference: null,
             stickers: new Map(),
             content: globalData.args.join(' '),
             delete: async () => {}
         } : messageOrInteraction;
         
-        // Complex logic from main.js needs to be adapted
         let errorMsg = "Couldn't find an avatar, emoji, or sticker from that input.";
         let guildAvy = true;
         let fullInput = globalData.args.join(' ');

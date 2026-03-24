@@ -46,10 +46,6 @@ module.exports = {
     },
     async executeSlash(interaction) {
         globalData.message = interaction;
-        // In slash commands, we can't easily delete someone else's message unless we have permissions, 
-        // and we can't delete the slash command interaction message if we want to reply.
-        // Actually, this command is better as a prefix command since it deletes messages.
-        // But I'll implement it anyway.
         let originalURL = await generalScraper('twitter');
         let lastMessage = globalData.targetMessage;
         

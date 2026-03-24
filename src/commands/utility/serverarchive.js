@@ -34,8 +34,6 @@ module.exports = {
         return await this.run(interaction);
     },
     async run(messageOrInteraction) {
-        // Reuse archive logic but set serverArc to true
-        // Actually, the run method in archive.js already handles this based on trueCommand
         const archive = require('./archive.js');
         return await archive.run(messageOrInteraction);
     }

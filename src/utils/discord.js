@@ -23,10 +23,17 @@ async function download(fileURL, fileDir) {
     
     const arrayBuffer = await response.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
+    
+    if (buffer.length < 100) {
+        throw new Error(`Downloaded file is too small (${buffer.length} bytes) and likely corrupted.`);
+    }
+    
     await fs.writeFile(fileDir, buffer);
 
-    let dirArray = fileDir.split('.');
-    if (dirArray[dirArray.length - 1] === 'png') {
+    const isJPEG = buffer[0] === 0xFF && buffer[1] === 0xD8 && buffer[2] === 0xFF;
+    const isPNG = buffer[0] === 0x89 && buffer[1] === 0x50 && buffer[2] === 0x4E && buffer[3] === 0x47;
+
+    if (isJPEG || isPNG) {
         let metadata = await exifr.parse(fileDir, { chunked: false }).then(output => {
             if (output) {
                 return [output.ProfileName, output.Orientation];
