@@ -132,14 +132,16 @@ module.exports = {
             }
 
             if (!fileExists && customCMD) {
-                id = serverArc ? message.author.id : message.guild.id;
-                if (!fs.existsSync(`./files/archive/${id}.json`)) fs.writeFileSync(`./files/archive/${id}.json`, '[]');
-                importJSON = fs.readFileSync(`./files/archive/${id}.json`, 'utf8');
-                archiveList = JSON.parse(importJSON).filter(el => el != null);
-                for (let i = 0; i < archiveList.length; i++) {
-                    if (await arcName(archiveList[i].name) === compareName) {
+                let fallbackID = serverArc ? author.id : guild.id;
+                if (!fs.existsSync(`./files/archive/${fallbackID}.json`)) fs.writeFileSync(`./files/archive/${fallbackID}.json`, '[]');
+                importJSON = fs.readFileSync(`./files/archive/${fallbackID}.json`, 'utf8');
+                let fallbackList = JSON.parse(importJSON).filter(el => el != null);
+                for (let i = 0; i < fallbackList.length; i++) {
+                    if (await arcName(fallbackList[i].name) === compareName) {
                         fileExists = true;
                         arrayPosition = i;
+                        archiveList = fallbackList;
+                        id = fallbackID;
                         break;
                     }
                 }
@@ -202,8 +204,8 @@ module.exports = {
 
                 if (!customCMD) {
                     let row = new ActionRowBuilder().addComponents(
-                        new ButtonBuilder().setCustomId('arc ' + (message.author ? message.author.id : messageOrInteraction.user.id) + ' delete ' + compareName + ' ' + id).setLabel('Delete').setStyle(ButtonStyle.Danger),
-                        new ButtonBuilder().setCustomId('arc ' + (message.author ? message.author.id : messageOrInteraction.user.id) + ' rename ' + compareName + ' ' + id).setLabel('Rename').setStyle(ButtonStyle.Primary)
+                        new ButtonBuilder().setCustomId('arc ' + author.id + ' delete ' + compareName + ' ' + id).setLabel('Delete').setStyle(ButtonStyle.Danger),
+                        new ButtonBuilder().setCustomId('arc ' + author.id + ' rename ' + compareName + ' ' + id).setLabel('Rename').setStyle(ButtonStyle.Primary)
                     );
                     return await messageReturn({ input: archiveBuffer, type: messageType, filename: name + '.' + (extension || ''), components: [row] });
                 } else {
