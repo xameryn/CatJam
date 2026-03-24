@@ -1,6 +1,7 @@
-# Node
+# Bun / Node
 node_modules
 npm-debug.log
+bun-debug.log
 yarn-debug.log
 yarn-error.log
 
@@ -12,6 +13,7 @@ yarn-error.log
 .env.*.local
 .dockerignore
 Dockerfile
+compose.yml
 docker-compose.yml
 README.md
 

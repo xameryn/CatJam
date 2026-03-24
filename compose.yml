@@ -4,4 +4,3 @@ services:
     build: .
     container_name: discord-catjam
     restart: unless-stopped
-    command: npm start

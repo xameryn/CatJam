@@ -1,4 +1,4 @@
-FROM node:18
+FROM oven/bun:1
 
 RUN apt-get update && apt-get install -y \
     build-essential \
@@ -12,10 +12,10 @@ RUN apt-get update && apt-get install -y \
 
 WORKDIR /usr/src/app
 
-COPY package*.json ./
+COPY package.json bun.lock ./
 
-RUN npm install
+RUN bun install --frozen-lockfile
 
 COPY . .
 
-CMD ["npm", "start"]
+CMD ["bun", "run", "start"]
