@@ -7,7 +7,7 @@ const SizeOf = require('image-size');
 
 module.exports = {
     name: 'healthbar',
-    description: 'Dark Souls boss healthbar.',
+    description: 'Souls-like boss healthbar.',
     aliases: ['hb', 'health'],
     data: new SlashCommandBuilder()
         .setName('healthbar')
@@ -72,7 +72,7 @@ module.exports = {
 
         await drawImage(healthbarPath, [0, 0], [hbX, hbY], [hbWidth, hbHeight]);
 
-        let fontName = 'Adobe Garamond'; 
+        let fontName = 'Adobe Garamond'; // TODO: Add Elden Ring font
 
         await textHandler({ 
             text: bossName, 
