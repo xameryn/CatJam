@@ -12,15 +12,15 @@ CatJam's Utilities is a Discord bot that aim's to be Kitchen Sink's spiritual su
 
 - Enter `docker-compose up` in terminal or Compose Up `compose.yml` via VScode extension.
 
-### Setup (Windows Terminal):
+### Setup (Bun):
 
-- Download and install [`Node.js v18.20.7`](https://nodejs.org/download/release/v18.20.7/)
+- Install [Bun](https://bun.sh/).
 
-- Open the root directory of the bot and run `npm install.bat`, this will install all the required node modules as specified in 'package.json'.
+- Open the root directory and run `bun install`.
 
-- Duplicate the file named `CHECK_README.js` and rename it to `keys.js`. Then enter the required tokens inside the file 'keys.js'.
+- Create a `.env` file (you can copy `.env.example`) and enter your bot tokens.
 
-- Run CatJam's Utilities with either the provided `run.bat`.
+- Run with `bun start`.
 
 ### Bot Usage:
 
