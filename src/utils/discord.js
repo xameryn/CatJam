@@ -104,11 +104,11 @@ async function generalScraper(scrapeType) {
                 let emb = m.embeds;
                 return ((m.attachments.size > 0) && (atc != undefined) &&
                     ((atc.url.includes('.png')) ||
-                        (atc.url.includes('.jpg')) ||
-                        (atc.url.includes('.bmp')) ||
-                        (atc.url.includes('.jpeg')) ||
-                        (atc.url.includes('.jfif')) ||
-                        (atc.url.includes('.tiff')))) ||
+                    (atc.url.includes('.jpg')) ||
+                    (atc.url.includes('.bmp')) ||
+                    (atc.url.includes('.jpeg')) ||
+                    (atc.url.includes('.jfif')) ||
+                    (atc.url.includes('.tiff')))) ||
                     (emb.length > 0 &&
                         (emb[0].data.type == 'image' ||
                             (emb[0].data.type == 'rich' && emb[0].data.image != undefined)));
@@ -242,18 +242,17 @@ async function messageReturn(funcArgs) {
         refID = message.reference.messageId;
     }
 
-    let caller;
+    let caller = message.member; 
     let userObj = message.author || message.user;
 
-    if (message.guild) {
+    if (!caller && message.guild) {
         caller = message.guild.members.cache.get(userObj.id);
-        if (!caller) {
-            caller = await message.guild.members.fetch(userObj.id).catch(() => null);
-        }
     }
     
-    let username = caller ? caller.displayName : (userObj ? userObj.username : 'Unknown');
-    let avatarURL = caller ? caller.displayAvatarURL({ extension: 'png', size: 256, dynamic: true }) : (userObj ? userObj.displayAvatarURL({ extension: 'png', size: 256, dynamic: true }) : null);
+    let username = caller ? (caller.displayName || userObj.username) : userObj.username;
+    let avatarURL = (caller && typeof caller.displayAvatarURL === 'function') 
+        ? caller.displayAvatarURL({ extension: 'png', size: 256, dynamic: true }) 
+        : userObj.displayAvatarURL({ extension: 'png', size: 256, dynamic: true });
 
     if (type == 'text') {
         if (title == null) {
@@ -319,7 +318,7 @@ async function messageReturn(funcArgs) {
 
     // Handle Deletion for Prefix Commands
     if (!isInteraction && message.delete && typeof message.delete === 'function' && (message.attachments?.size == 0 || !transformative)) {
-        await message.delete().catch(() => null);
+        message.delete().catch(() => null);
     }
 
     if (isInteraction) {
@@ -346,11 +345,14 @@ async function messageReturn(funcArgs) {
         await message.channel.send(messageOptions);
     }
 
-    fs.emptyDirSync('./files/buffer/emojiDownload/');
-    if (fs.existsSync('./files/buffer/emojis.zip') == true) {
-        fs.unlinkSync('./files/buffer/emojis.zip');
+    const resultTime = getTime(start);
+
+    fs.emptyDir('./files/buffer/emojiDownload/').catch(() => null);
+    if (fs.existsSync('./files/buffer/emojis.zip')) {
+        fs.unlink('./files/buffer/emojis.zip').catch(() => null);
     }
-    return getTime(start);
+
+    return resultTime;
 }
 
 module.exports = { download, generalScraper, sendFile, infoScraper, canManageMessages, messageReturn };
