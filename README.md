@@ -8,7 +8,7 @@ CatJam's Utilities is a Discord bot that aim's to be Kitchen Sink's spiritual su
 
 ### Setup (Docker):
 
-- Duplicate the file named `CHECK_README.js` and rename it to `keys.js`. Then enter the required tokens inside the file `keys.js`.
+- Create a `.env` file (you can copy `.env.example`) and enter your bot tokens.
 
 - Enter `docker-compose up` in terminal or Compose Up `compose.yml` via VScode extension.
 
@@ -20,7 +20,7 @@ CatJam's Utilities is a Discord bot that aim's to be Kitchen Sink's spiritual su
 
 - Create a `.env` file (you can copy `.env.example`) and enter your bot tokens.
 
-- Run with `bun start`.
+- Run with `bun start` or use the included `run.bat`.
 
 ### Bot Usage:
 
@@ -28,4 +28,4 @@ CatJam's Utilities is a Discord bot that aim's to be Kitchen Sink's spiritual su
 
 ### Permissions:
 
-- Feel free to download and try CatJam's Utilities on your own machine and server, expect many bugs and crashes until we reach a point where we're happy with the bots stability.
+- Feel free to download and try CatJam's Utilities on your own machine and server, expect some bugs and crashes.
