@@ -196,7 +196,7 @@ async function textHandler(funcArgs) {
 
     let size, lines, heights, height;
     for (var n = maxSize; n >= minSize; n--) {
-        context.font = style + `${n}px ` + font;
+        context.font = style + `${n}px "` + font + `"`;
         heights = [context.measureText(text).actualBoundingBoxDescent, context.measureText(text).actualBoundingBoxAscent];
         if (((heights[0] + heights[1]) <= 1 && text != '') || matches != undefined) {
             heights = [context.measureText('Qq').actualBoundingBoxDescent, context.measureText('Qq').actualBoundingBoxAscent];

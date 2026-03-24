@@ -111,7 +111,7 @@ module.exports = {
         context.strokeRect(100 - 10, 100 - 10, canvasWidth + 20, canvasHeight + 20);
 
         context.fillStyle = '#ffffff';
-        context.font = `${size1}px Times New Roman`;
+        context.font = `${size1}px "Times New Roman"`;
         await drawText();
         context.font = `${size2}px Arial`;
         await drawText([0, yOffset2], 2);

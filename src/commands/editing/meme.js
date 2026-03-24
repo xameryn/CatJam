@@ -101,17 +101,17 @@ module.exports = {
         }
 
         if (memeInput[0] !== undefined) {
-            await textHandler({ text: memeInput[0].toUpperCase(), font: 'impact', maxSize: max, maxWidth: (0.95 * canvasWidth), maxHeight: max, baseX: (canvasWidth / 2), baseY: (0.01 * canvasHeight), yAlign: 'top' });
+            await textHandler({ text: memeInput[0].toUpperCase(), font: 'Impact', maxSize: max, maxWidth: (0.95 * canvasWidth), maxHeight: max, baseX: (canvasWidth / 2), baseY: (0.01 * canvasHeight), yAlign: 'top' });
             context.lineWidth = 2 * (globalData.text1.baselineHeight * 0.06);
             await drawText([0, 0], 1, true);
         }
         if (memeInput[1] !== undefined) {
-            await textHandler({ text: memeInput[1].toUpperCase(), font: 'impact', maxSize: max, maxWidth: (0.95 * canvasWidth), maxHeight: max, baseX: (canvasWidth / 2), baseY: (canvasHeight / 2) });
+            await textHandler({ text: memeInput[1].toUpperCase(), font: 'Impact', maxSize: max, maxWidth: (0.95 * canvasWidth), maxHeight: max, baseX: (canvasWidth / 2), baseY: (canvasHeight / 2) });
             context.lineWidth = 2 * (globalData.text1.baselineHeight * 0.06);
             await drawText([0, 0], 1, true);
         }
         if (memeInput[2] !== undefined) {
-            await textHandler({ text: memeInput[2].toUpperCase(), font: 'impact', maxSize: max, maxWidth: (0.95 * canvasWidth), maxHeight: max, baseX: (canvasWidth / 2), baseY: (0.99 * canvasHeight), yAlign: 'bottom' });
+            await textHandler({ text: memeInput[2].toUpperCase(), font: 'Impact', maxSize: max, maxWidth: (0.95 * canvasWidth), maxHeight: max, baseX: (canvasWidth / 2), baseY: (0.99 * canvasHeight), yAlign: 'bottom' });
             context.lineWidth = 2 * (globalData.text1.baselineHeight * 0.06);
             await drawText([0, 0], 1, true);
         }
