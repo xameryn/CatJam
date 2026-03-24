@@ -6,7 +6,7 @@ const { globalData } = require('../state.js');
 const { getTime } = require('./misc.js');
 const { getEmoji, findEmoji } = require('./emoji.js');
 
-async function loadImage(fileDir) {
+async function safeLoadImage(fileDir) {
     try {
         return await loadImage(fileDir);
     } catch (e) {
@@ -26,17 +26,17 @@ async function canvasInitialize(canvasDims, background) {
 
     let backgroundImage;
     if (background == 'black') {
-        backgroundImage = await loadImage('./files/templates/blackBox.jpg');
+        backgroundImage = await safeLoadImage('./files/templates/blackBox.jpg');
     }
     else if (background == 'white') {
-        backgroundImage = await loadImage('./files/templates/whiteBox.jpg');
+        backgroundImage = await safeLoadImage('./files/templates/whiteBox.jpg');
     }
     else if (background == 'png' || background == undefined) {
         console.log('canvasInitialize - ' + getTime(start).toString() + 'ms');
         return;
     }
     else {
-        backgroundImage = await loadImage(background);
+        backgroundImage = await safeLoadImage(background);
     }
 
     if (backgroundImage) {
@@ -156,7 +156,7 @@ async function drawImage(fileDir, offsets = [0, 0], imagePos, imageDims) {
         }
     }
     
-    let image = await loadImage(fileDir);
+    let image = await safeLoadImage(fileDir);
     if (image) {
         context.drawImage(image, imagePos[0] + offsets[0], imagePos[1] + offsets[1], imageDims[0], imageDims[1]);
     }
@@ -419,7 +419,7 @@ async function drawText(offsets = [0, 0], channel = 1, stroke = false) {
                     offsets[0] += (lineHeight - emojiWidth) / 2;
                 }
             }
-            let emoji = await loadImage(fileDir);
+            let emoji = await safeLoadImage(fileDir);
             if (emoji) {
                 context.drawImage(emoji, emojiPos[0][i] + offsets[0], (pos[1][emojiLines[i]] - emojiPos[1] + offsets[1]), emojiWidth, emojiHeight);
             }
