@@ -152,7 +152,6 @@ async function userData(action, command, option, value) {
         }
     }
     fs.writeFileSync('user-data.json', lines.join('\r\n'), 'utf8');
-    console.log('userData - ' + getTime(start).toString() + 'ms');
 }
 
 module.exports = { userData };

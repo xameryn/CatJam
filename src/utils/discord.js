@@ -246,7 +246,10 @@ async function messageReturn(funcArgs) {
     let userObj = message.author || message.user;
 
     if (message.guild) {
-        caller = await message.guild.members.fetch(userObj.id).catch(() => null);
+        caller = message.guild.members.cache.get(userObj.id);
+        if (!caller) {
+            caller = await message.guild.members.fetch(userObj.id).catch(() => null);
+        }
     }
     
     let username = caller ? caller.displayName : (userObj ? userObj.username : 'Unknown');

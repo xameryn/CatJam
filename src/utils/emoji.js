@@ -22,7 +22,6 @@ async function findEmoji(emojiString) {
     }
     matches.sort((a, b) => { return a[1] - b[1]; });
     globalData.emojiMatch = matches;
-    console.log('findEmoji - ' + getTime(start).toString() + 'ms');
     return;
 }
 
@@ -35,7 +34,6 @@ async function getEmoji(emoji) {
     }
     let matches = globalData.emojiMatch;
     if (matches == undefined) {
-        console.log('getEmoji - ' + getTime(start).toString() + 'ms');
         return;
     }
 
