@@ -33,13 +33,6 @@ module.exports = {
     },
     async executeSlash(interaction) {
         let bpm = interaction.options.getInteger('bpm');
-        let args = bpm ? [bpm] : [];
-        // We need to adapt messageReturn to handle interactions as well, 
-        // or mock the message object for now.
-        // Actually, let's just use execute with a mocked message for simplicity 
-        // if we want to reuse logic, but better to refactor execute to be agnostic.
-        
-        // For now, I'll keep them somewhat separate but shared logic.
         let output = bpm ? (Math.round((bpm) / 5)) * 5 : 0;
         let link;
         if (!bpm) {
@@ -55,18 +48,7 @@ module.exports = {
             link = CAT_JAM_ARRAY[(output - 60) / 5];
         }
         
-        // Mocking message for messageReturn
-        globalData.message = {
-            author: interaction.user,
-            guild: interaction.guild,
-            channel: interaction.channel,
-            delete: () => {}, // slash commands don't delete original message this way
-            reference: null,
-            attachments: new Map()
-        };
-        
-        // In slash commands, we usually use interaction.reply.
-        // I should refactor messageReturn to handle both.
+        globalData.message = interaction;
         return await messageReturn({ input: link, type: 'link', filename: 'catjam.gif' });
     }
 };

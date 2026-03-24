@@ -34,15 +34,10 @@ module.exports = {
         return await this.run(interaction);
     },
     async run(messageOrInteraction) {
-        let message = messageOrInteraction.isInteraction ? {
-            author: messageOrInteraction.user,
-            guild: messageOrInteraction.guild,
-            channel: messageOrInteraction.channel,
-            content: messageOrInteraction.commandName + ' ' + (globalData.args.join(' ')),
-            delete: async () => {},
-            attachments: new Map(),
-            reference: null
-        } : messageOrInteraction;
+        let isInteraction = messageOrInteraction.isChatInputCommand || messageOrInteraction.isButton || messageOrInteraction.isModalSubmit || messageOrInteraction.replied !== undefined;
+        let author = isInteraction ? messageOrInteraction.user : messageOrInteraction.author;
+        let guild = messageOrInteraction.guild;
+        let channel = messageOrInteraction.channel;
 
         let command = 'archive';
         let prefix = globalData.prefix || globalData.globalPrefix;
@@ -60,7 +55,7 @@ module.exports = {
 
         let name;
         if (customCMD) {
-            name = message.content.slice(prefix.length).trim();
+            name = isInteraction ? globalData.trueCommand : messageOrInteraction.content.slice(prefix.length).trim();
         } else {
             name = fullInput;
         }
@@ -79,15 +74,15 @@ module.exports = {
         let listThumb = null;
 
         if (serverArc) {
-            id = message.guild.id;
+            id = guild.id;
             title = 'Server Archived File List';
-            if (message.guild.iconURL() != null) {
-                listThumb = message.guild.iconURL({ extension: 'png', size: 1024, dynamic: true });
+            if (guild.iconURL() != null) {
+                listThumb = guild.iconURL({ extension: 'png', size: 1024, dynamic: true });
             }
         } else {
-            id = message.author.id;
+            id = author.id;
             title = 'User Archived File List';
-            listThumb = (message.author || messageOrInteraction.user).displayAvatarURL({ extension: 'png', size: 1024, dynamic: true });
+            listThumb = author.displayAvatarURL({ extension: 'png', size: 1024, dynamic: true });
         }
 
         if (!fs.existsSync(`./files/archive/${id}.json`)) {

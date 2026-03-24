@@ -217,6 +217,8 @@ async function messageReturn(funcArgs) {
     let type = funcArgs.type ? funcArgs.type : 'raw';
     let filename = funcArgs.filename ? funcArgs.filename : '';
 
+    let isInteraction = message.isCommand || message.isChatInputCommand || message.isButton || message.isModalSubmit || message.replied !== undefined;
+
     let link = false;
     if (type == 'link') {
         type = 'attach';
@@ -236,16 +238,17 @@ async function messageReturn(funcArgs) {
     }
 
     let refID;
-    if (message.reference != undefined) {
+    if (!isInteraction && message.reference != undefined) {
         refID = message.reference.messageId;
     }
 
     let caller;
+    let userObj = message.author || message.user;
+
     if (message.guild) {
-        caller = await message.guild.members.fetch(message.author ? message.author.id : message.user.id).catch(() => null);
+        caller = await message.guild.members.fetch(userObj.id).catch(() => null);
     }
     
-    let userObj = message.author || message.user;
     let username = caller ? caller.displayName : (userObj ? userObj.username : 'Unknown');
     let avatarURL = caller ? caller.displayAvatarURL({ extension: 'png', size: 256, dynamic: true }) : (userObj ? userObj.displayAvatarURL({ extension: 'png', size: 256, dynamic: true }) : null);
 
@@ -263,18 +266,11 @@ async function messageReturn(funcArgs) {
             .setDescription(input)
             .setThumbnail(thumbnail);
         messageOptions = { embeds: [embed] };
-
-        if (message.delete && typeof message.delete === 'function' && (message.attachments?.size == 0 || !transformative)) {
-            const deleteResult = message.delete();
-            if (deleteResult && typeof deleteResult.catch === 'function') {
-                await deleteResult.catch(() => null);
-            }
-        }
     }
 
     else if (type == 'attach') {
         if (filename == '') {
-            filename = input.split('/').pop();
+            filename = typeof input === 'string' ? input.split('/').pop() : 'file.png';
         }
         let name = await fileNameVerify(filename);
         name = name.replaceAll(' ', '_').replaceAll(/[~\(\)\!'&@\$\+\,;\=#\[\]\{\}\^%]+/g, '');
@@ -306,23 +302,6 @@ async function messageReturn(funcArgs) {
         if (!link) {
             messageOptions.files = [attachment];
         }
-
-        if (message.delete && typeof message.delete === 'function' && (message.attachments?.size == 0 || !transformative)) {
-            const deleteResult = message.delete();
-            if (deleteResult && typeof deleteResult.catch === 'function') {
-                await deleteResult.catch(() => null);
-            }
-        }
-        var noReply = false;
-        if (!transformative && targetMessage != undefined) {
-            let lastMessage = await message.channel.messages.fetch({ limit: 1 }).then(async messages => {
-                return messages.first();
-            }).catch(() => null);
-            if (lastMessage && lastMessage.id == targetMessage.id && targetMessage.author.id == (caller ? caller.id : message.author.id) && targetMessage.content == '') {
-                noReply = true;
-                await targetMessage.delete().catch(() => null);
-            }
-        }
     }
     else if (typeof input == 'string') {
         messageOptions = { content: input };
@@ -330,14 +309,24 @@ async function messageReturn(funcArgs) {
     else {
         messageOptions = input;
     }
+
     if (components != undefined) {
         messageOptions.components = components;
     }
 
-    if (message.replied || message.deferred) { // Handle Interactions
-        await message.editReply(messageOptions);
+    // Handle Deletion for Prefix Commands
+    if (!isInteraction && message.delete && typeof message.delete === 'function' && (message.attachments?.size == 0 || !transformative)) {
+        await message.delete().catch(() => null);
     }
-    else if (targetMessage != undefined && (message.id != targetMessage.id && !noReply)) {
+
+    if (isInteraction) {
+        if (message.replied || message.deferred) {
+            await message.editReply(messageOptions);
+        } else {
+            await message.reply(messageOptions);
+        }
+    }
+    else if (targetMessage != undefined && (message.id != targetMessage.id)) {
         messageOptions.allowedMentions = { repliedUser: false };
         await targetMessage.reply(messageOptions).catch(() => message.channel.send(messageOptions));
     }
@@ -353,6 +342,7 @@ async function messageReturn(funcArgs) {
     else {
         await message.channel.send(messageOptions);
     }
+
     fs.emptyDirSync('./files/buffer/emojiDownload/');
     if (fs.existsSync('./files/buffer/emojis.zip') == true) {
         fs.unlinkSync('./files/buffer/emojis.zip');
