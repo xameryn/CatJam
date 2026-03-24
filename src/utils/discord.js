@@ -263,7 +263,7 @@ async function messageReturn(funcArgs) {
             .setURL(url)
             .setAuthor(author)
             .setFooter({ text: username + ' : ' + commandDisplay, iconURL: avatarURL })
-            .setDescription(input)
+            .setDescription(input && input.trim().length > 0 ? input : null)
             .setThumbnail(thumbnail);
         messageOptions = { embeds: [embed] };
     }
@@ -296,7 +296,7 @@ async function messageReturn(funcArgs) {
             .setAuthor(author)
             .setFooter({ text: username + ' : ' + commandDisplay, iconURL: avatarURL })
             .setImage(image)
-            .setDescription(desc);
+            .setDescription(desc && desc.trim().length > 0 ? desc : null);
         messageOptions = { embeds: [embed] };
 
         if (!link) {
