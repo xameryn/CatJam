@@ -93,6 +93,13 @@ module.exports = {
             case 'l1984':
                 embed.setTitle(p + "literally1984 [optional text input]").setColor(0x686868).setDescription("For when it is literally 1984.");
                 break;
+            case 'healthbar':
+            case 'hb':
+            case 'health':
+            case 'ds':
+            case 'er':
+                embed.setTitle(p + "healthbar [ds / er] [boss name]").setColor(0x686868).setDescription("Adds a Dark Souls or Elden Ring boss healthbar to an image.");
+                break;
             case 'stuff':
             case 'stuffimage':
             case 'stuffimg':
@@ -156,7 +163,7 @@ module.exports = {
                             name: '\u200B', value:
                                 "**__Media:__**\n" + p + "catjam\n" + p + "stellaris\n" + p + "dadon\n" + p + "neco\n" + p + "1984\n" + p + "stuff\n\n" +
                                 "**__Filter:__**\n" + p + "scatter\n" + p + "glitch\n" + p + "obradinn\n\n" +
-                                "**__Media Editing:__** \n" + p + "poster\n" + p + "point\n" + p + "meme\n" + p + "mario\n" + p + "literally1984⠀",
+                                "**__Media Editing:__** \n" + p + "poster\n" + p + "point\n" + p + "meme\n" + p + "mario\n" + p + "literally1984\n" + p + "healthbar⠀",
                             inline: true
                         },
                         {
