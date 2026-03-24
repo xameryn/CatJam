@@ -29,5 +29,9 @@
   },
   "keywords": [],
   "description": "",
-  "devDependencies": {}
+  "devDependencies": {},
+  "trustedDependencies": [
+    "skia-canvas",
+    "sharp"
+  ]
 }
