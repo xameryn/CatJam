@@ -72,7 +72,7 @@ module.exports = {
 
         await drawImage(healthbarPath, [0, 0], [hbX, hbY], [hbWidth, hbHeight]);
 
-        let fontName = 'Adobe Garamond'; // TODO: Add Elden Ring font
+        let fontName = subcommand === 'ds' ? 'Adobe Garamond' : 'Agmena Pro';
 
         await textHandler({ 
             text: bossName, 

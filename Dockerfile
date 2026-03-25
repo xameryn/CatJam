@@ -22,4 +22,8 @@ RUN bun install --frozen-lockfile
 
 COPY . .
 
+RUN mkdir -p /usr/share/fonts/local && \
+    if [ -d "files/fonts" ]; then cp -r files/fonts/* /usr/share/fonts/local/; fi && \
+    fc-cache -fv
+
 CMD ["bun", "run", "start"]
