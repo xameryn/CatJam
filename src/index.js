@@ -66,15 +66,15 @@ client.once(Events.ClientReady, c => {
 client.on(Events.MessageCreate, async message => {
     if (message.author.bot) return;
 
-    resetGlobalData();
-    globalData.authorID = message.author.id;
-    globalData.message = message;
-    globalData.globalPrefix = GLOBAL_PREFIX;
-
     if (running) {
         alreadyRunning = true;
         return;
     }
+
+    resetGlobalData();
+    globalData.authorID = message.author.id;
+    globalData.message = message;
+    globalData.globalPrefix = GLOBAL_PREFIX;
 
     if (message.mentions.has(client.user)) {
         if (message.content.includes('prefix')) {
@@ -138,8 +138,20 @@ client.on(Events.MessageCreate, async message => {
 });
 
 client.on(Events.InteractionCreate, async interaction => {
+    if (running) {
+        if (interaction.isChatInputCommand()) {
+            await interaction.reply({ content: "CatJam's currently busy, please try again in a moment.", ephemeral: true });
+        }
+        return;
+    }
+
     if (!interaction.isChatInputCommand()) {
-        await handleInteractions(interaction);
+        running = true;
+        try {
+            await handleInteractions(interaction);
+        } finally {
+            running = false;
+        }
         return;
     }
 
@@ -153,6 +165,7 @@ client.on(Events.InteractionCreate, async interaction => {
     globalData.trueCommand = command.name;
     globalData.args = []; 
 
+    running = true;
     try {
         await interaction.deferReply();
         await command.executeSlash(interaction);
@@ -163,6 +176,8 @@ client.on(Events.InteractionCreate, async interaction => {
         } else {
             await interaction.reply({ content: 'There was an error while executing this command!', ephemeral: true });
         }
+    } finally {
+        running = false;
     }
 });
 
