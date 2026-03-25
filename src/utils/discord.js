@@ -1,15 +1,14 @@
 const { AttachmentBuilder, EmbedBuilder } = require('discord.js');
 const fs = require('fs-extra');
-const exifr = require('exifr');
-const Canvas = require('skia-canvas');
-const SizeOf = require('image-size');
-const PNG = require("pngjs").PNG;
+const sharp = require('sharp');
+const { execSync } = require('child_process');
 const { globalData } = require('../state.js');
 const { getTime } = require('./misc.js');
-const { fileTypeFunc, fileNameVerify, uploadLimitCheck } = require('./file.js');
+const { fileTypeFunc, fileNameVerify, uploadLimitCheck, fileExtension } = require('./file.js');
+const { IMAGE_TYPES, VIDEO_TYPES } = require('../config.js');
 const path = require('path');
 
-async function download(fileURL, fileDir) {
+async function download(fileURL, fileDir, maxRes = 1080) {
     let start = getTime();
     if (!fileURL || !fileDir) {
         console.log('download - ' + getTime(start).toString() + 'ms');
@@ -27,72 +26,51 @@ async function download(fileURL, fileDir) {
     if (buffer.length < 100) {
         throw new Error(`Downloaded file is too small (${buffer.length} bytes) and likely corrupted.`);
     }
-    
-    await fs.writeFile(fileDir, buffer);
 
-    const isJPEG = buffer[0] === 0xFF && buffer[1] === 0xD8 && buffer[2] === 0xFF;
-    const isPNG = buffer[0] === 0x89 && buffer[1] === 0x50 && buffer[2] === 0x4E && buffer[3] === 0x47;
+    const extension = fileExtension(fileURL);
+    const isImage = IMAGE_TYPES.includes(extension);
+    const isVideo = VIDEO_TYPES.includes(extension);
 
-    if (isJPEG || isPNG) {
-        let metadata = await exifr.parse(fileDir, { chunked: false }).then(output => {
-            if (output) {
-                return [output.ProfileName, output.Orientation];
-            }
-            return ['', ''];
-        }).catch(console.error);
-
-        if (metadata) {
-            if (metadata[0] === 'kCGColorSpaceDisplayP3') {
-                let data = fs.readFileSync(fileDir);
-                let png = PNG.sync.read(data);
-                let buffer = PNG.sync.write(png);
-                fs.writeFileSync(fileDir, buffer);
-            }
-
-            if (metadata[1] && metadata[1] !== '' && metadata[1] !== 'Horizontal (normal)') {
-                let imageSize = await SizeOf(fileDir);
-                let orient = metadata[1];
-                let angle = '180';
-
-                const { canvasInitialize } = require('./canvas.js');
-
-                if (orient.includes('CW')) {
-                    await canvasInitialize([imageSize.height, imageSize.width]);
-                    angle = orient.slice(-6, -3).trim();
-                } else {
-                    await canvasInitialize([imageSize.width, imageSize.height]);
-                }
-
-                let canvas = globalData.canvas;
-                let context = globalData.context;
-                let image = await Canvas.loadImage(fileDir);
-
-                if (orient.includes('Mirror horizontal') && !orient.includes('CW')) {
-                    context.scale(-1, 1);
-                    context.translate(-canvas.width, 0);
-                } else if (orient.includes('Mirror vertical') || (orient.includes('Mirror horizontal') && orient.includes('CW'))) {
-                    context.scale(1, -1);
-                    context.translate(0, -canvas.height);
-                }
-
-                if (orient.includes('rotate') || orient.includes('Rotate')) {
-                    let displace = [canvas.width, canvas.height];
-                    if (angle === '90') {
-                        displace[1] = 0;
-                    }
-                    if (angle === '270') {
-                        displace[0] = 0;
-                    }
-                    context.translate(displace[0], displace[1]);
-                    context.rotate(Math.PI * parseInt(angle) / 180);
-                }
-
-                context.drawImage(image, 0, 0, imageSize.width, imageSize.height);
-                fs.writeFileSync(fileDir, await canvas.toBuffer('png'));
-            }
-        }
+    if (!fileDir.toLowerCase().endsWith('.png')) {
+        console.warn(`Warning: The target file ${fileDir} does not have a .png extension.`);
     }
 
+    if (isImage) {
+        try {
+            await sharp(buffer)
+                .rotate()
+                .resize({
+                    width: maxRes,
+                    height: maxRes,
+                    fit: 'inside',
+                    withoutEnlargement: true
+                })
+                .toColorspace('srgb')
+                .toFormat('png')
+                .toFile(fileDir);
+            console.log(`download (image to png) - ` + getTime(start).toString() + 'ms');
+            return;
+        } catch (err) {
+            console.error('Sharp conversion failed:', err);
+        }
+    } else if (isVideo) {
+        try {
+            const tempVideoPath = fileDir + '.temp';
+            await fs.writeFile(tempVideoPath, buffer);
+            
+            const scaleFilter = `scale='if(gt(iw,ih),min(${maxRes},iw),-2)':'if(gt(ih,iw),min(${maxRes},ih),-2)':force_original_aspect_ratio=decrease`;
+            
+            execSync(`ffmpeg -y -i "${tempVideoPath}" -vf "${scaleFilter}" -frames:v 1 "${fileDir}"`, { stdio: 'ignore' });
+            
+            await fs.remove(tempVideoPath);
+            console.log(`download (video to png) - ` + getTime(start).toString() + 'ms');
+            return;
+        } catch (err) {
+            console.error('FFmpeg conversion failed:', err);
+        }
+    }
+    
+    await fs.writeFile(fileDir, buffer);
     console.log('download - ' + getTime(start).toString() + 'ms');
 }
 
@@ -109,16 +87,8 @@ async function generalScraper(scrapeType) {
                 if (!m || !m.attachments || !m.embeds) return false;
                 let atc = m.attachments.first();
                 let emb = m.embeds;
-                return ((m.attachments.size > 0) && (atc != undefined) &&
-                    ((atc.url.includes('.png')) ||
-                        (atc.url.includes('.jpg')) ||
-                        (atc.url.includes('.bmp')) ||
-                        (atc.url.includes('.jpeg')) ||
-                        (atc.url.includes('.jfif')) ||
-                        (atc.url.includes('.tiff')))) ||
-                    (emb.length > 0 &&
-                        (emb[0].data.type == 'image' ||
-                            (emb[0].data.type == 'rich' && emb[0].data.image != undefined)));
+                return ((m.attachments.size > 0) && (atc != undefined) && (IMAGE_TYPES.includes(fileExtension(atc.url)))) || 
+                (emb.length > 0 && (emb[0].data.type == 'image' || (emb[0].data.type == 'rich' && emb[0].data.image != undefined)));
             };
         }
         else if (scrapeType === 'file') {
